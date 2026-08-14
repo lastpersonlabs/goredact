@@ -12,13 +12,19 @@ at the start of input and on both sides of a real 64 KiB chunk boundary. Test
 failures contain only rule IDs, format labels, ordinals, and aggregate counts;
 fixture values and redacted output must never appear in CI logs.
 
-The optional Gitleaks differential is offline: install or provide a pinned
-`gitleaks` binary, then select only rules whose semantics intentionally overlap:
+The optional scanner differentials are offline oracles against Gitleaks and
+[Betterleaks](https://github.com/betterleaks/betterleaks), its successor from
+the same authors. Install or provide pinned binaries, then select only rules
+whose semantics intentionally overlap:
 
 ```sh
 GITLEAKS_BIN=/path/to/gitleaks \
 GOREDACT_GITLEAKS_RULES=gitlab-pat \
 go test ./internal/accuracy -run TestGitleaksDifferential -v
+
+BETTERLEAKS_BIN=/path/to/betterleaks \
+GOREDACT_BETTERLEAKS_RULES=gitlab-pat \
+go test ./internal/accuracy -run TestBetterleaksDifferential -v
 ```
 
 The harness never downloads tools and suppresses scanner output because it may
@@ -41,6 +47,13 @@ placeholder tokens while Gitleaks reports that shape. A compatibility run found
 both real-shape GitHub fixtures and also reported one such placeholder.
 Keeping the subset explicit prevents a difference in documented placeholder
 policy from being misreported as a detector regression.
+
+The Betterleaks 1.7.4 differential passed on 2026-08-14 for the same
+exact-overlap `gitlab-pat` subset: recall was 2/2 with 0/3 false positives.
+Betterleaks inherits Gitleaks' placeholder behavior: a `github-pat`
+compatibility run found all twelve real-shape fixtures and also reported the
+repeated-character placeholder, so `github-pat` stays outside the exact subset
+for both scanners.
 
 ## SecretBench evaluation
 

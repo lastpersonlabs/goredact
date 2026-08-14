@@ -112,6 +112,40 @@ RUNS=3 zsh ./scripts/benchmark-gitleaks.zsh \
   /tmp/goredact-corpus/corpus-000.log /tmp/goredact "$(command -v gitleaks)"
 ```
 
+## One-core comparison with Betterleaks
+
+On 2026-08-14, GoRedact at commit `d71e6383eca4` and
+[Betterleaks](https://github.com/betterleaks/betterleaks) v1.7.4 — the
+successor scanner to Gitleaks from the same authors — scanned the same
+deterministic 512 MiB `quiet` corpus under the same protocol as the Gitleaks
+comparison above, on the same host: one warm-up followed by three measured
+runs, both processes pinned to CPU 0 with `taskset`, `GOMAXPROCS=1`, and one
+input file on tmpfs.
+
+| Tool | Median wall time | Throughput | Median peak RSS |
+| --- | ---: | ---: | ---: |
+| GoRedact, balanced profile | 0.73 s | 701.37 MiB/s | 7,304 KiB |
+| Betterleaks, default rules | 4.52 s | 113.27 MiB/s | 41,528 KiB |
+
+GoRedact was **6.2x faster** on this workload. Its measured wall times were
+0.73, 0.73, and 0.74 seconds; Betterleaks measured 4.52, 4.52, and 4.51
+seconds, a large improvement over Gitleaks on the identical corpus. GoRedact
+streamed its redacted output to `/dev/null`. Betterleaks scanned the
+containing directory with archive extraction and decoding disabled and wrote a
+redacted JSON report. Neither tool reported a secret. As with the Gitleaks
+comparison, this measures baseline scanning throughput, not relative recall or
+precision.
+
+Reproduce the run on Linux with zsh and util-linux `taskset`:
+
+```sh
+go build -o /tmp/goredact ./cmd/goredact
+go run ./tools/corpusfiles -output /tmp/goredact-corpus -scenario quiet \
+  -files 1 -file-size 536870912
+RUNS=3 zsh ./scripts/benchmark-betterleaks.zsh \
+  /tmp/goredact-corpus/corpus-000.log /tmp/goredact "$(command -v betterleaks)"
+```
+
 ## Producing release reports
 
 Run the full matrix independently on dedicated `linux/amd64` and `linux/arm64`
