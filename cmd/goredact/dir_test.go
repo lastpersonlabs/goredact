@@ -50,14 +50,18 @@ func TestRunDirJSONReport(t *testing.T) {
 
 func TestRunDirReportFormats(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "leak.txt"), []byte("AKIAUJZDEGXDNCF32EPF"), 0o600); err != nil {
+	secret := "AKIAUJZDEGXDNCF32EPF"
+	if err := os.WriteFile(filepath.Join(dir, "leak.txt"), []byte(secret), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, format := range []string{"csv", "junit", "sarif"} {
 		t.Run(format, func(t *testing.T) {
 			var output bytes.Buffer
-			if err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=0", "-report-format=" + format, dir}, nil, &output, io.Discard); err != nil {
+			if err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=0", "-show-secrets", "-report-format=" + format, dir}, nil, &output, io.Discard); err != nil {
 				t.Fatal(err)
+			}
+			if !strings.Contains(output.String(), secret) {
+				t.Fatalf("%s report omitted secret with -show-secrets", format)
 			}
 			switch format {
 			case "csv":
@@ -77,6 +81,25 @@ func TestRunDirReportFormats(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRunDirJSONShowSecretsIsExplicit(t *testing.T) {
+	dir := t.TempDir()
+	secret := "AKIAUJZDEGXDNCF32EPF"
+	if err := os.WriteFile(filepath.Join(dir, "leak.txt"), []byte(secret), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	if err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=0", "-show-secrets", dir}, nil, &output, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	var report scanReport
+	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+	if !report.ShowsSecrets || len(report.Findings) != 1 || report.Findings[0].Secret != secret {
+		t.Fatalf("report = %+v", report)
 	}
 }
 

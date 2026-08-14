@@ -50,6 +50,19 @@ bytes scanned. `-exit-code N` selects the finding exit code from 1 through 125;
 exit with status 1. If the report already exists inside the scan root, it is
 excluded from the input set.
 
+By default, reports deliberately omit matched values. Pass `-show-secrets` to
+include the exact secret in every finding:
+
+```sh
+goredact dir -show-secrets -report-format json \
+  -report-path findings-with-secrets.json ./workspace
+```
+
+Treat such a report as sensitive credential material: do not publish it as a
+CI artifact, attach it to a public issue, or write it to shared logs. Rotate
+any live credential it contains. File reports are created with mode `0600`,
+but stdout inherits the security properties of its destination.
+
 ## Multipart uploads
 
 [`examples/multipartupload`](../examples/multipartupload/upload.go) supplies a

@@ -19,6 +19,7 @@ type dirOptions struct {
 	reportFormat string
 	reportPath   string
 	exitCode     int
+	showSecrets  bool
 }
 
 type reportFinding struct {
@@ -27,6 +28,7 @@ type reportFinding struct {
 	File       string `json:"file"`
 	StartByte  int64  `json:"start_byte"`
 	EndByte    int64  `json:"end_byte"`
+	Secret     string `json:"secret,omitempty"`
 }
 
 type scanReport struct {
@@ -35,6 +37,7 @@ type scanReport struct {
 	FilesScanned int             `json:"files_scanned"`
 	BytesRead    int64           `json:"bytes_read"`
 	Findings     []reportFinding `json:"findings"`
+	ShowsSecrets bool            `json:"shows_secrets"`
 }
 
 type findingsError struct{ code int }
@@ -49,6 +52,7 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 	fs.StringVar(&o.reportFormat, "report-format", "json", "report format: json, csv, junit, or sarif")
 	fs.StringVar(&o.reportPath, "report-path", "-", "report file ('-' for stdout)")
 	fs.IntVar(&o.exitCode, "exit-code", 1, "exit code when findings are present (0 disables)")
+	fs.BoolVar(&o.showSecrets, "show-secrets", false, "include matched secret values in the report (unsafe)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -82,7 +86,7 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 		}
 		paths = excludePath(paths, reportPath)
 	}
-	report := scanReport{Schema: "goredact/v1", Profile: profile.String(), Findings: []reportFinding{}}
+	report := scanReport{Schema: "goredact/v1", Profile: profile.String(), Findings: []reportFinding{}, ShowsSecrets: o.showSecrets}
 	for _, path := range paths {
 		if err := ctx.Err(); err != nil {
 			return safeScanError(err)
@@ -107,10 +111,17 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 			return errors.New("goredact dir: cannot open input file")
 		}
 		stats, scanErr := engine.Redact(ctx, io.Discard, f)
-		closeErr := f.Close()
 		if scanErr != nil {
+			_ = f.Close()
 			return safeScanError(scanErr)
 		}
+		if o.showSecrets {
+			if err := loadSecrets(f, fileFindings); err != nil {
+				_ = f.Close()
+				return errors.New("goredact dir: cannot read matched secret")
+			}
+		}
+		closeErr := f.Close()
 		if closeErr != nil {
 			return errors.New("goredact dir: cannot close input file")
 		}
@@ -124,6 +135,22 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 	}
 	if len(report.Findings) > 0 && o.exitCode != 0 {
 		return findingsError{code: o.exitCode}
+	}
+	return nil
+}
+
+func loadSecrets(file *os.File, findings []reportFinding) error {
+	maxInt := int64(^uint(0) >> 1)
+	for i := range findings {
+		length := findings[i].EndByte - findings[i].StartByte
+		if length < 0 || length > maxInt {
+			return errors.New("invalid finding range")
+		}
+		secret := make([]byte, int(length))
+		if _, err := io.ReadFull(io.NewSectionReader(file, findings[i].StartByte, length), secret); err != nil {
+			return err
+		}
+		findings[i].Secret = string(secret)
 	}
 	return nil
 }

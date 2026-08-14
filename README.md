@@ -38,9 +38,14 @@ goredact dir -report-format sarif -report-path findings.sarif ./workspace
 The `stream` command also accepts `-input` and `-output`; it removes incomplete
 output after a failed scan. The `dir` command recursively scans regular files
 and writes JSON, CSV, JUnit, or SARIF findings without including matched secret
-values. Progress, statistics, and reports contain metadata and counts only. See
+values. By default, progress, statistics, and reports contain metadata and
+counts only. See
 [`docs/CLI_AND_UPLOAD.md`](docs/CLI_AND_UPLOAD.md) for reports, compression, and
 multipart upload integration.
+
+Directory reports omit matched values by default. `dir -show-secrets` includes
+them when explicitly requested; its output must be handled as credential
+material.
 
 ## Detection and guarantees
 

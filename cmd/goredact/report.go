@@ -53,12 +53,20 @@ func writeReport(name, format string, report scanReport, stdout io.Writer) error
 
 func writeCSV(dst io.Writer, report scanReport) error {
 	w := csv.NewWriter(dst)
-	if err := w.Write([]string{"rule_id", "confidence", "file", "start_byte", "end_byte"}); err != nil {
+	header := []string{"rule_id", "confidence", "file", "start_byte", "end_byte"}
+	if report.ShowsSecrets {
+		header = append(header, "secret")
+	}
+	if err := w.Write(header); err != nil {
 		return err
 	}
 	for _, finding := range report.Findings {
-		if err := w.Write([]string{finding.RuleID, finding.Confidence, finding.File,
-			strconv.FormatInt(finding.StartByte, 10), strconv.FormatInt(finding.EndByte, 10)}); err != nil {
+		record := []string{finding.RuleID, finding.Confidence, finding.File,
+			strconv.FormatInt(finding.StartByte, 10), strconv.FormatInt(finding.EndByte, 10)}
+		if report.ShowsSecrets {
+			record = append(record, finding.Secret)
+		}
+		if err := w.Write(record); err != nil {
 			return err
 		}
 	}
@@ -88,7 +96,7 @@ type junitFailure struct {
 func writeJUnit(dst io.Writer, report scanReport) error {
 	suite := junitSuite{Name: "goredact", Tests: len(report.Findings), Failures: len(report.Findings)}
 	for _, finding := range report.Findings {
-		message := fmt.Sprintf("%s finding at bytes %d-%d", finding.RuleID, finding.StartByte, finding.EndByte)
+		message := findingMessage(finding, report.ShowsSecrets)
 		suite.TestCases = append(suite.TestCases, junitCase{Name: finding.RuleID, Classname: finding.File,
 			Failure: &junitFailure{Message: message, Text: message}})
 	}
@@ -158,7 +166,7 @@ func writeSARIF(dst io.Writer, report scanReport) error {
 	for _, finding := range report.Findings {
 		results = append(results, sarifResult{
 			RuleID: finding.RuleID, Level: sarifLevel(finding.Confidence),
-			Message: sarifMessage{Text: "Secret detected by " + finding.RuleID},
+			Message: sarifMessage{Text: findingMessage(finding, report.ShowsSecrets)},
 			Locations: []sarifLocation{{PhysicalLocation: sarifPhysicalLocation{
 				ArtifactLocation: sarifArtifactLocation{URI: finding.File},
 				Region:           sarifRegion{ByteOffset: finding.StartByte, ByteLength: finding.EndByte - finding.StartByte},
@@ -170,6 +178,14 @@ func writeSARIF(dst io.Writer, report scanReport) error {
 	encoder := json.NewEncoder(dst)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(value)
+}
+
+func findingMessage(finding reportFinding, showSecret bool) string {
+	message := fmt.Sprintf("%s finding at bytes %d-%d", finding.RuleID, finding.StartByte, finding.EndByte)
+	if showSecret {
+		message += ": " + finding.Secret
+	}
+	return message
 }
 
 func sarifLevel(confidence string) string {
