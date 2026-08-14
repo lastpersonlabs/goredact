@@ -56,7 +56,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "anthropic-api-key",
 			match:   []string{"Authorization: Bearer sk-ant-api03-L6VtNHDzbvOYIs52KThe1DBzYMxIsTnjxqnzKJgS1niDgzJKhy20RHoBqBbuVcPjhcUAwu89LeznSyn2bpa26sQIrfAA", "ANTHROPIC_API_KEY=sk-ant-admin01-V9AoHGzkZ5UL5o2kDCaFfewEFjXIn7vunFmrPxZZ28kDnJnDY4XLZ6XJmYO2aYzQMmLdhMAA83LqYzEQa8qbJ", "{\"config\": {\"anthropic_api_key\": \"sk-ant-api03-L6VtNHDzbvOYIs52KThe1DBzYMxIsTnjxqnzKJgS1niDgzJKhy20RHoBqBbuVcPjhcUAwu89LeznSyn2bpa26sQIrfAA\"}}"},
-			nomatch: []string{"sk-ant-api03-short", "ANTHROPIC_API_KEY=sk-ant-xxxxxxxx…", "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "The zoo increased its risk-ant-eater enclosure budget this year."},
+			nomatch: []string{"sk-ant-api03-short", "ANTHROPIC_API_KEY=sk-ant-xxxxxxxx…", "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "The zoo increased its risk-ant-eater enclosure budget this year.", "ANTHROPIC_API_KEY=sk-ant-api03-jQrK7vN2mPxY8zT5aB6cD9eF1gH4iJ"},
 		},
 		{
 			id:      "authorization-bearer",
@@ -81,7 +81,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "command-line-password-flag",
 			match:   []string{"mysql -h db.prod.internal -u app --password=tR8kW3nQ7zXm2 app_db", "vault login --token=hvs.9kQ3vR7wL4mN2xT6bF0jH5cD", "deploy --api-key 'Zp8kQ3vR7wL4mN2xT6bF9jH0' --env prod", "{\"cmd\":\"pg_restore --passwd=Xq7Lm2Vt9zR4 -d app\"}"},
-			nomatch: []string{"pg_dump --password-file /run/secrets/pgpass -h db", "fetch --token-url https://auth.example.com/oauth/token", "mysql --password= --host db.internal", "run.sh --password ${DB_PASSWORD}", "docs: use --api-key <your-key> to authenticate", "login --secret changeme --user svc", "deploy --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set token}"},
+			nomatch: []string{"pg_dump --password-file /run/secrets/pgpass -h db", "fetch --token-url https://auth.example.com/oauth/token", "mysql --password= --host db.internal", "run.sh --password ${DB_PASSWORD}", "docs: use --api-key <your-key> to authenticate", "login --secret changeme --user svc", "deploy --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set token}", "mysql -u root --password=hunter2 mydb"},
 		},
 		{
 			id:      "cookie-session-token",
@@ -101,17 +101,17 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "generic-api-key-assignment",
 			match:   []string{"export API_KEY=sk_live_9fQ2vR7wL4mN8pX1sT6bF3jH0cD5yUaZ9k", "api_key: \"aZ9kQ2vR7wL4mN8pX1sT6bF3jH0cD5yU\"", "{\"access_token\": \"Xk9mP2vQ7Rt4Ws8LbN3jF6hZ1cYdA0eB5g\"}", "secret_key_base: \"tfYGCfFfu10pV8G5gtUJ1do3LDwnu+eWBfL1sNtK8+bEwo6gNzFQZtWkdNQVlt+V\"", "SESSION_SECRET = 'C7vR2mX9qL4nP8sT1wK6jH3bF0dA5yUz'"},
-			nomatch: []string{"api_key = \"your-api-key-here-1234567890\"", "client_secret: \"550e8400-e29b-41d4-a716-446655440000\"", "secret_key = \"hello_world_this_is_config\"", "secret_key_base = \"development-only-placeholder\"", "session_secret = process.env.SESSION_SECRET", "capi_key = \"randomsecretvalueXk9mP2vQ7Rt4Ws8\"", "api_key: Optional[str]", "api_key: Option<String>", "api_key=os.environ.get(\"GROQ_API_KEY\")", "api_key=process.env.GROQ_API_KEY", "api_key=${ANTHROPIC_API_KEY:-fallback}", "api_key=op://ExampleVault/Anthropic/key", "api-key: https://developers.example.invalid/docs/api-keys", "api_key=cfg.typesense_api_key", "api_key=dev_resend_api_key\\nnext_field", "client_secret=dev-client-secret", "`x_api_key=` still fires — preceding `_`", "api_key=`still fires — preceding`", "api_key=SG.Yx-zfSAN2cW7GfP6R7o425.U85hfj..."},
+			nomatch: []string{"api_key = \"your-api-key-here-1234567890\"", "client_secret: \"550e8400-e29b-41d4-a716-446655440000\"", "secret_key = \"hello_world_this_is_config\"", "secret_key_base = \"development-only-placeholder\"", "session_secret = process.env.SESSION_SECRET", "capi_key = \"randomsecretvalueXk9mP2vQ7Rt4Ws8\"", "api_key: Optional[str]", "api_key: Option<String>", "api_key=os.environ.get(\"GROQ_API_KEY\")", "api_key=process.env.GROQ_API_KEY", "api_key=${ANTHROPIC_API_KEY:-fallback}", "api_key=op://ExampleVault/Anthropic/key", "api-key: https://developers.example.invalid/docs/api-keys", "api_key=cfg.typesense_api_key", "api_key=dev_resend_api_key\\nnext_field", "client_secret=dev-client-secret", "`x_api_key=` still fires — preceding `_`", "api_key=`still fires — preceding`", "api_key=SG.Yx-zfSAN2cW7GfP6R7o425.U85hfj...", "api_key = k.cfg.DataStreamsKey", "apiKey = normalizedSecretValue"},
 		},
 		{
 			id:      "generic-bearer-like-token-assignment",
 			match:   []string{"export TOKEN=aZ9kQ2vR7wL4mN8pX1sT6bF3jH0cD5yUaZ9k", "token: \"Xk9mP2vQ7Rt4Ws8LbN3jF6hZ1cYdA0eB5gC7h\"", "{\"auth_token\": \"k3JmQz9XpL2vN7wR5tY8bC1sD4fA6hE0uI2oP\"}"},
-			nomatch: []string{"token = csv.next()", "token: <YOUR_TOKEN>", "token = \"your-token-here-1234567890abcdef\"", "token: \"550e8400-e29b-41d4-a716-446655440000\"", "token = \"helloworldconfigurationvalue\"", "token = sqlc.arg(claim_token)", "token=${GIT_REPOSITORY_INTERNAL_TOKEN:-fallback}", "token=op://ExampleVault/Cloudflare/token", "token=EXCLUDED.refresh_token", "token=bearerToken(request.headers.get(\"authorization\"))", "token=var.cloudflare_api_token", "token=BASE_WATCHER_INTERNAL_API_TOKEN", "token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "token=BASE_WATCHER_INTERNAL_API_TOKEN\\\\\\\"", "`token=` pairs fire once", "token=`github_pat_` + fgpatP1b + `", "token=ntn_LFn3YnrPf6lJOdoQdQqA5zd5SriKEc8WlTo9..."},
+			nomatch: []string{"token = csv.next()", "token: <YOUR_TOKEN>", "token = \"your-token-here-1234567890abcdef\"", "token: \"550e8400-e29b-41d4-a716-446655440000\"", "token = \"helloworldconfigurationvalue\"", "token = sqlc.arg(claim_token)", "token=${GIT_REPOSITORY_INTERNAL_TOKEN:-fallback}", "token=op://ExampleVault/Cloudflare/token", "token=EXCLUDED.refresh_token", "token=bearerToken(request.headers.get(\"authorization\"))", "token=var.cloudflare_api_token", "token=BASE_WATCHER_INTERNAL_API_TOKEN", "token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "token=BASE_WATCHER_INTERNAL_API_TOKEN\\\\\\\"", "`token=` pairs fire once", "token=`github_pat_` + fgpatP1b + `", "token=ntn_LFn3YnrPf6lJOdoQdQqA5zd5SriKEc8WlTo9...", "token = this.erc20ReturnFalseMock", "token: options.awsContainerAuthorizationToken", "token = originalReviewGithubToken", "use light_token::instruction::derive_token_ata;"},
 		},
 		{
 			id:      "generic-password-assignment",
 			match:   []string{"export PASSWORD=Xk9mP2vQ7Rt4Ws8Lb", "password: \"Zt7Qp2Xk9mLwR4vN8\"", "{\"pwd\": \"aZ9kQ2vR7wL4mN8pX1sT6bF3\"}"},
-			nomatch: []string{"password = \"changeme\"", "passwd: \"550e8400-e29b-41d4-a716-446655440000\"", "password = \"configuration\"", "pwd", "$ pwd", "passwd: files systemd", "password=${STORAGE_SECRET_ACCESS_KEY:-fallback}", "password=String(data.get(\"password\"))", "password=op://ExampleVault/Postgres/password", "password=secret123\\nnext"},
+			nomatch: []string{"password = \"changeme\"", "passwd: \"550e8400-e29b-41d4-a716-446655440000\"", "password = \"configuration\"", "pwd", "$ pwd", "passwd: files systemd", "password=${STORAGE_SECRET_ACCESS_KEY:-fallback}", "password=String(data.get(\"password\"))", "password=op://ExampleVault/Postgres/password", "password=secret123\\nnext", "password = \"correct horse battery staple\"", "password: URLPatternComponentResult", "password = 'trimmed prose, not a credential value. '"},
 		},
 		{
 			id:      "github-app-token",
@@ -131,7 +131,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "github-pat",
 			match:   []string{"ghp_16C7e42F292c6912E7710c838347Ae178B4a", "ghp_OhbVrpoiVgRV5IfLBcbfnoGMbJmTPSIAoCLr"},
-			nomatch: []string{"ghp_short", "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "ghp_u8jzPde0IgxLd6GncfBAepfJBd0Kh8oOOL8dA"},
+			nomatch: []string{"ghp_short", "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "ghp_u8jzPde0IgxLd6GncfBAepfJBd0Kh8oOOL8dA", "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"},
 		},
 		{
 			id:      "github-refresh-token",
@@ -190,7 +190,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "pem-private-key",
-			match:   []string{"-----BEGIN OPENSSH PRIVATE KEY-----\nrpvGMXOAKGX6B+kpekdCsOtzCoV+ZuCNdBcPTT9hA6rOjKjGc6MefdDU8p5oXcY7\nrmqoDH0qVi/huXgpY1qHTa43gddwT5TXFrrNosHPdl19o2Z+/7piAa2GqytsZN3C\n2uCmH6CHd67YEB0uS5MMuWrzaXnJ0gfBwd91bSrUJj9LZRsK1PbRQUyZJjzlxYuw\n75dnx5rqKXyLS8Zhms26Wg==\n-----END OPENSSH PRIVATE KEY-----\n", "-----BEGIN RSA PRIVATE KEY-----\n+d8lz6RCC7suHWdngVelufP37AbgZFNOdJDmYi8VNuz6KOrxYDc15SKUJi+H3/sV\nJNHCUb7b3BpnOGRLa+2yMuias21KPFR8Axm4JzRUdrDSzQz+J0dAs2b7Dic7gm2O\nHwdixVZHihKkCBzhlDoM4CMLCKwn83R/n895ffXcXqy9pHuEd0qu9765175ufW5h\n-----END RSA PRIVATE KEY-----\n", "{\"event\":\"agent_exec\",\"secret\":\"-----BEGIN OPENSSH PRIVATE KEY-----\\nMPjfSFCnwhGTQ+Nb7jYRFRuaHWmQZy/qYe4benpW2R0Ipl3erdPWAsL8ju10Qwgr\\nFBwciFpPb32JqfTqqxEhjtg47xRCoOfQbEJfUzmdn52uzmNOJqnmNKCyiLf9QWsq\\n-----END OPENSSH PRIVATE KEY-----\\n\"}", "-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,A1B2C3D4E5F60718293A4B5C6D7E8F90\n\ntLQfbEBiLk97Gc+CQPmipyAB7Ve5n/Vw+LWbnt0ao6mWMkOGu4gFlxRMIzmEBqeo\n6jNqZ5NfymdkR6RBmPsCQ9qLSdrpmeeEsJS0XG6On2Vu+B2s17OWsV0yKXc0ubiG\n-----END RSA PRIVATE KEY-----\n", "-----BEGIN PRIVATE KEY-----\npXIKj1muE8wjxUB4P1NbhSPqyP1epR04JEmb6DTk/MjMhfvfk9bIc/z+mHPIuvz/\n2xmt9Ru7t5EBG+JmdLz4/hKQL6tv1KsQb7VSpSIMeFwomJ620IQMBajXgnRC8f0w\nYmicg//E+BFDyb76VongDyy7sllrDOdbcTeMkg5yJvwRQXxIaYNi0BhkMfrL08Lz"},
+			match:   []string{"-----BEGIN OPENSSH PRIVATE KEY-----\nrpvGMXOAKGX6B+kpekdCsOtzCoV+ZuCNdBcPTT9hA6rOjKjGc6MefdDU8p5oXcY7\nrmqoDH0qVi/huXgpY1qHTa43gddwT5TXFrrNosHPdl19o2Z+/7piAa2GqytsZN3C\n2uCmH6CHd67YEB0uS5MMuWrzaXnJ0gfBwd91bSrUJj9LZRsK1PbRQUyZJjzlxYuw\n75dnx5rqKXyLS8Zhms26Wg==\n-----END OPENSSH PRIVATE KEY-----\n", "-----BEGIN RSA PRIVATE KEY-----\n+d8lz6RCC7suHWdngVelufP37AbgZFNOdJDmYi8VNuz6KOrxYDc15SKUJi+H3/sV\nJNHCUb7b3BpnOGRLa+2yMuias21KPFR8Axm4JzRUdrDSzQz+J0dAs2b7Dic7gm2O\nHwdixVZHihKkCBzhlDoM4CMLCKwn83R/n895ffXcXqy9pHuEd0qu9765175ufW5h\n-----END RSA PRIVATE KEY-----\n", "{\"event\":\"agent_exec\",\"secret\":\"-----BEGIN OPENSSH PRIVATE KEY-----\\nMPjfSFCnwhGTQ+Nb7jYRFRuaHWmQZy/qYe4benpW2R0Ipl3erdPWAsL8ju10Qwgr\\nFBwciFpPb32JqfTqqxEhjtg47xRCoOfQbEJfUzmdn52uzmNOJqnmNKCyiLf9QWsq\\n-----END OPENSSH PRIVATE KEY-----\\n\"}", "-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,A1B2C3D4E5F60718293A4B5C6D7E8F90\n\ntLQfbEBiLk97Gc+CQPmipyAB7Ve5n/Vw+LWbnt0ao6mWMkOGu4gFlxRMIzmEBqeo\n6jNqZ5NfymdkR6RBmPsCQ9qLSdrpmeeEsJS0XG6On2Vu+B2s17OWsV0yKXc0ubiG\n-----END RSA PRIVATE KEY-----\n", "-----BEGIN PRIVATE KEY-----\npXIKj1muE8wjxUB4P1NbhSPqyP1epR04JEmb6DTk/MjMhfvfk9bIc/z+mHPIuvz/\n2xmt9Ru7t5EBG+JmdLz4/hKQL6tv1KsQb7VSpSIMeFwomJ620IQMBajXgnRC8f0w\nYmicg//E+BFDyb76VongDyy7sllrDOdbcTeMkg5yJvwRQXxIaYNi0BhkMfrL08Lz", "{\"tool_result\": \"{\\\"output\\\": \\\"-----BEGIN RSA PRIVATE KEY-----\\\\nrpvGMXOAKGX6B+kpekdCsOtzCoV+ZuCNdBcPTT9hA6rOjKjGc6MefdDU8p5oXcY7\\\\n2uCmH6CHd67YEB0uS5MMuWrzaXnJ0gfBwd91bSrUJj9LZRsK1PbRQUyZJjzlxYuw\\\\n-----END RSA PRIVATE KEY-----\\\\n\\\"}\"}"},
 			nomatch: []string{"-----BEGIN CERTIFICATE-----\nFc6xc4/fGGyOOMLU524WciLQYdWNI1g0r0yU5Zt2vWuLiLGoL4my/oP7adWIj2Rk\n-----END CERTIFICATE-----\n", "-----BEGIN PUBLIC KEY-----\nDgTef9Rdy/5scNY8uQgLKB9qLJNYHnvJ51I7WIcAmgkh28NbBFn9gqwcO8ma5pJ9\n-----END PUBLIC KEY-----\n", "-----BEGIN PRIVATE KEY----- is the PEM header", "-----BEGIN PRIVATE KEY-----\n-----END PRIVATE KEY-----\n"},
 		},
 		{
@@ -216,7 +216,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "slack-bot-token",
 			match:   []string{"xoxb-0265423511615-5940781618495-KmTecQoXsf2o3gyrDO1xkxwnQrS7RP"},
-			nomatch: []string{"xoxb-123-456-abcdefgh", "xoxb-0265423511615-5940781618495-aaaaaaaaaaaaaaaaaaaaaaaaaaaa", "xoxb-99603082462819-48219935181-KdNnFRIBXuDL7DxtpYlSXpfKtHF4"},
+			nomatch: []string{"xoxb-123-456-abcdefgh", "xoxb-0265423511615-5940781618495-aaaaaaaaaaaaaaaaaaaaaaaaaaaa", "xoxb-99603082462819-48219935181-KdNnFRIBXuDL7DxtpYlSXpfKtHF4", "xoxb-1234567890-1234567890123-k4Jm8nR2pX6sW9vB3fH7aT1q"},
 		},
 		{
 			id:      "slack-user-token",
@@ -241,7 +241,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "url-credentials",
 			match:   []string{"DATABASE_URL=postgres://svc_user:wZ8kQ3vR7pL4mN2x@db.internal:5432/app", "redis://:q8LmPz31vTk@cache.prod.svc:6379/0", "{\"msg\":\"connecting\",\"dsn\":\"mysql://root:Vt5xK8nQ2wZ7@10.0.0.12:3306/orders\"}", "amqps://ingest:R7pL4mN2xT6b@mq.internal:5671/%2Fprod"},
-			nomatch: []string{"https://deploy@github.com/org/repo.git", "postgres://user:password@localhost:5432/db", "postgres://user:content@localhost:5432/db", "https://user:TOKEN@github.com/owner/repo.git", "postgres://user:unterminated%zz@localhost/db", "see http://user:pass@host.example.com for the URL shape", "redis://:@cache.internal:6379", "note: the \"://\" separator splits scheme from authority", "https://status.example.com/healthz"},
+			nomatch: []string{"https://deploy@github.com/org/repo.git", "postgres://user:password@localhost:5432/db", "postgres://user:content@localhost:5432/db", "https://user:TOKEN@github.com/owner/repo.git", "postgres://user:unterminated%zz@localhost/db", "see http://user:pass@host.example.com for the URL shape", "redis://:@cache.internal:6379", "note: the \"://\" separator splits scheme from authority", "https://status.example.com/healthz", "https://git:ghp_abc123@github.com/org/repo.git", "https://user:REDACTED@github.com/org/repo.git", "postgres://app:$DB_PASSWORD@db:5432/app"},
 		},
 	}
 

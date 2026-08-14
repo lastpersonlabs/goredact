@@ -4,7 +4,10 @@
       "id": "github-pat",
       "name": "GitHub personal access token",
       "triggers": [
-        {"literal": "ghp_", "caseFold": false}
+        {
+          "literal": "ghp_",
+          "caseFold": false
+        }
       ],
       "validator": "GitHubPAT",
       "minProfile": "fast",
@@ -23,7 +26,8 @@
         "nomatch": [
           "ghp_short",
           "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-          "ghp_u8jzPde0IgxLd6GncfBAepfJBd0Kh8oOOL8dA"
+          "ghp_u8jzPde0IgxLd6GncfBAepfJBd0Kh8oOOL8dA",
+          "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"
         ]
       }
     },
@@ -31,7 +35,10 @@
       "id": "slack-bot-token",
       "name": "Slack bot token",
       "triggers": [
-        {"literal": "xoxb-", "caseFold": false}
+        {
+          "literal": "xoxb-",
+          "caseFold": false
+        }
       ],
       "validator": "SlackBotToken",
       "minProfile": "fast",
@@ -49,7 +56,8 @@
         "nomatch": [
           "xoxb-123-456-abcdefgh",
           "xoxb-0265423511615-5940781618495-aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "xoxb-99603082462819-48219935181-KdNnFRIBXuDL7DxtpYlSXpfKtHF4"
+          "xoxb-99603082462819-48219935181-KdNnFRIBXuDL7DxtpYlSXpfKtHF4",
+          "xoxb-1234567890-1234567890123-k4Jm8nR2pX6sW9vB3fH7aT1q"
         ]
       }
     }

@@ -16,9 +16,9 @@ import (
 // Test fixtures: shape-valid (but fabricated) tokens for the two built-in
 // seed rules.
 const (
-	testGHToken    = "ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"            // ghp_ + 36 alnum
-	testGHToken2   = "ghp_Zz9Yy8Xx7Ww6Vv5Uu4Tt3Ss2Rr1Qq0Pp9Oo8"            // another one
-	testSlackToken = "xoxb-1234567890-0987654321-AbCdEfGhIjKlMnOpQrStUvWx" // 10-10-24
+	testGHToken    = "ghp_Kw7RmVq2TnXcP9dLbJf4HsYg6ZaEu8iMoQ3v"            // ghp_ + 36 alnum
+	testGHToken2   = "ghp_c6TgWnR9pZxKvB2mHdQ4LsJyEuA7iCfM0oXe"            // another one
+	testSlackToken = "xoxb-2653128409-7096134852-Vm9KtR4wQx7ZpLc2sHnEyBd8" // 10-10-24
 )
 
 func mustEngine(t testing.TB, cfg Config) *Engine {

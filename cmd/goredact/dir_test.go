@@ -53,6 +53,56 @@ func TestRunDirJSONReport(t *testing.T) {
 	}
 }
 
+func TestRunDirSkipsBinaryFiles(t *testing.T) {
+	dir := t.TempDir()
+	secret := "AKIAUJZDEGXDNCF32EPF"
+	binary := append([]byte("key="+secret+"\x00"), make([]byte, 64)...)
+	if err := os.WriteFile(filepath.Join(dir, "compiled.bin"), binary, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "clean.txt"), []byte("ordinary text"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	if err := run(context.Background(), []string{"dir", dir}, nil, &output, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	var report scanReport
+	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 || len(report.Findings) != 0 {
+		t.Fatalf("report = %+v, want the binary file skipped and no findings", report)
+	}
+}
+
+func TestRunDirSkipsUnreadableFiles(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root can read mode-0 files")
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "locked.txt"), []byte("key=AKIAUJZDEGXDNCF32EPF"), 0o000); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "clean.txt"), []byte("ordinary text"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var output, diagnostics bytes.Buffer
+	if err := run(context.Background(), []string{"dir", dir}, nil, &output, &diagnostics); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(diagnostics.String(), "skipped 1 unreadable file(s)") {
+		t.Fatalf("diagnostics = %q, want unreadable-skip notice", diagnostics.String())
+	}
+	var report scanReport
+	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 || len(report.Findings) != 0 {
+		t.Fatalf("report = %+v, want the unreadable file skipped", report)
+	}
+}
+
 func TestRunDirReportsZeroSecretsToStderr(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "clean.txt"), []byte("ordinary text"), 0o600); err != nil {

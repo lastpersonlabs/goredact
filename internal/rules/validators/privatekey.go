@@ -196,11 +196,18 @@ scan:
 			// (Proc-Type: 4,ENCRYPTED / DEK-Info: ...).
 			i++
 		case '\\':
-			// JSON-style two-byte escapes inside string-embedded keys.
-			if i+1 < len(window) {
-				switch window[i+1] {
+			// JSON-style escapes inside string-embedded keys. A run of
+			// backslashes is consumed as one unit so that multiply-escaped
+			// keys (JSON inside JSON, e.g. `\\n` or `\\\\n` in nested tool
+			// output) are covered as well as singly-escaped `\n`.
+			j := i
+			for j < len(window) && window[j] == '\\' {
+				j++
+			}
+			if j < len(window) {
+				switch window[j] {
 				case 'n', 'r', 't', '"':
-					i += 2
+					i = j + 1
 					continue scan
 				}
 			}

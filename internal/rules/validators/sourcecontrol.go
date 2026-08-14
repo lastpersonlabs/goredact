@@ -18,7 +18,11 @@
 // directly.
 package validators
 
-import "bytes"
+import (
+	"bytes"
+
+	"github.com/lastpersonlabs/goredact/internal/entropy"
+)
 
 // isTokenChar reports whether c is a valid character in the URL-safe
 // token alphabets used by GitLab, PyPI, and Docker Hub credentials: ASCII
@@ -106,21 +110,17 @@ func containsFold(b []byte, sub string) bool {
 // isPlaceholder reports whether b looks like a documentation/example
 // placeholder rather than a real credential: every byte identical
 // (allSame), an x/X run possibly broken up by separators (isXRun), a
-// literal ellipsis ("..." or "…"), or the word "example".
+// literal ellipsis ("..." or "…"), or one of the entropy package's
+// well-known stand-in shapes (keyword placeholders, ascending alphabet
+// runs such as "ABCDEFGH...", keyboard runs).
 func isPlaceholder(b []byte) bool {
-	if allSame(b) {
-		return true
-	}
 	if isXRun(b) {
-		return true
-	}
-	if containsFold(b, "example") {
 		return true
 	}
 	if bytes.Contains(b, []byte("...")) || bytes.Contains(b, []byte("…")) {
 		return true
 	}
-	return false
+	return entropy.IsPlaceholder(b)
 }
 
 // fixedAlnumToken confirms that window[trigEnd:] begins with exactly

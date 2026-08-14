@@ -4,7 +4,10 @@
       "id": "pem-private-key",
       "name": "PEM private key block",
       "triggers": [
-        {"literal": "-----BEGIN ", "caseFold": false}
+        {
+          "literal": "-----BEGIN ",
+          "caseFold": false
+        }
       ],
       "validator": "PEMPrivateKey",
       "minProfile": "fast",
@@ -21,7 +24,8 @@
           "-----BEGIN RSA PRIVATE KEY-----\n+d8lz6RCC7suHWdngVelufP37AbgZFNOdJDmYi8VNuz6KOrxYDc15SKUJi+H3/sV\nJNHCUb7b3BpnOGRLa+2yMuias21KPFR8Axm4JzRUdrDSzQz+J0dAs2b7Dic7gm2O\nHwdixVZHihKkCBzhlDoM4CMLCKwn83R/n895ffXcXqy9pHuEd0qu9765175ufW5h\n-----END RSA PRIVATE KEY-----\n",
           "{\"event\":\"agent_exec\",\"secret\":\"-----BEGIN OPENSSH PRIVATE KEY-----\\nMPjfSFCnwhGTQ+Nb7jYRFRuaHWmQZy/qYe4benpW2R0Ipl3erdPWAsL8ju10Qwgr\\nFBwciFpPb32JqfTqqxEhjtg47xRCoOfQbEJfUzmdn52uzmNOJqnmNKCyiLf9QWsq\\n-----END OPENSSH PRIVATE KEY-----\\n\"}",
           "-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,A1B2C3D4E5F60718293A4B5C6D7E8F90\n\ntLQfbEBiLk97Gc+CQPmipyAB7Ve5n/Vw+LWbnt0ao6mWMkOGu4gFlxRMIzmEBqeo\n6jNqZ5NfymdkR6RBmPsCQ9qLSdrpmeeEsJS0XG6On2Vu+B2s17OWsV0yKXc0ubiG\n-----END RSA PRIVATE KEY-----\n",
-          "-----BEGIN PRIVATE KEY-----\npXIKj1muE8wjxUB4P1NbhSPqyP1epR04JEmb6DTk/MjMhfvfk9bIc/z+mHPIuvz/\n2xmt9Ru7t5EBG+JmdLz4/hKQL6tv1KsQb7VSpSIMeFwomJ620IQMBajXgnRC8f0w\nYmicg//E+BFDyb76VongDyy7sllrDOdbcTeMkg5yJvwRQXxIaYNi0BhkMfrL08Lz"
+          "-----BEGIN PRIVATE KEY-----\npXIKj1muE8wjxUB4P1NbhSPqyP1epR04JEmb6DTk/MjMhfvfk9bIc/z+mHPIuvz/\n2xmt9Ru7t5EBG+JmdLz4/hKQL6tv1KsQb7VSpSIMeFwomJ620IQMBajXgnRC8f0w\nYmicg//E+BFDyb76VongDyy7sllrDOdbcTeMkg5yJvwRQXxIaYNi0BhkMfrL08Lz",
+          "{\"tool_result\": \"{\\\"output\\\": \\\"-----BEGIN RSA PRIVATE KEY-----\\\\nrpvGMXOAKGX6B+kpekdCsOtzCoV+ZuCNdBcPTT9hA6rOjKjGc6MefdDU8p5oXcY7\\\\n2uCmH6CHd67YEB0uS5MMuWrzaXnJ0gfBwd91bSrUJj9LZRsK1PbRQUyZJjzlxYuw\\\\n-----END RSA PRIVATE KEY-----\\\\n\\\"}\"}"
         ],
         "nomatch": [
           "-----BEGIN CERTIFICATE-----\nFc6xc4/fGGyOOMLU524WciLQYdWNI1g0r0yU5Zt2vWuLiLGoL4my/oP7adWIj2Rk\n-----END CERTIFICATE-----\n",
@@ -35,7 +39,10 @@
       "id": "putty-private-key",
       "name": "PuTTY private key file (PPK) private section",
       "triggers": [
-        {"literal": "PuTTY-User-Key-File-", "caseFold": false}
+        {
+          "literal": "PuTTY-User-Key-File-",
+          "caseFold": false
+        }
       ],
       "validator": "PuTTYPrivateKey",
       "minProfile": "fast",

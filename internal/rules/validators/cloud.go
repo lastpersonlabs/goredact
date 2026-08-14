@@ -62,6 +62,9 @@ func AWSAccessKeyID(window []byte, trigStart, trigEnd int) (start, end int, ok b
 	if bytes.HasSuffix(body, awsKeyIDExampleSuffix) {
 		return 0, 0, false
 	}
+	if isPlaceholder(body) {
+		return 0, 0, false
+	}
 	return trigStart, bodyEnd, true
 }
 
@@ -138,7 +141,7 @@ func AWSSecretAccessKey(window []byte, trigStart, trigEnd int) (start, end int, 
 		return 0, 0, false
 	}
 
-	if allSame(value) {
+	if isPlaceholder(value) {
 		return 0, 0, false
 	}
 	if bytes.Equal(value, awsDocsExampleSecret) {
@@ -181,7 +184,7 @@ func GCPAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) 
 	if bodyEnd < len(window) && isGCPKeyChar(window[bodyEnd]) {
 		return 0, 0, false
 	}
-	if allSame(body) {
+	if isPlaceholder(body) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true

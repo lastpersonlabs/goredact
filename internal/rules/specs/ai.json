@@ -28,7 +28,8 @@
           "sk-ant-api03-short",
           "ANTHROPIC_API_KEY=sk-ant-xxxxxxxx…",
           "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "The zoo increased its risk-ant-eater enclosure budget this year."
+          "The zoo increased its risk-ant-eater enclosure budget this year.",
+          "ANTHROPIC_API_KEY=sk-ant-api03-jQrK7vN2mPxY8zT5aB6cD9eF1gH4iJ"
         ]
       }
     },

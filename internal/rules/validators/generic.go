@@ -106,6 +106,11 @@ func consumeSeparator(window []byte, pos int) (next int, ok bool) {
 	if pos+1 < len(window) && window[pos] == '=' && window[pos+1] == '>' {
 		return pos + 2, true
 	}
+	if pos+1 < len(window) && window[pos] == ':' && window[pos+1] == ':' {
+		// A "::" after the trigger is a Rust/C++ path segment
+		// ("token::instruction::..."), not an assignment.
+		return pos, false
+	}
 	if pos < len(window) && (window[pos] == '=' || window[pos] == ':') {
 		return pos + 1, true
 	}
@@ -257,6 +262,9 @@ func GenericAPIKeyAssignment(window []byte, trigStart, trigEnd int) (start, end 
 	if !isMachineTokenValue(window[valStart:valEnd]) {
 		return 0, 0, false
 	}
+	if isAlphaSpaceOnly(window[valStart:valEnd]) {
+		return 0, 0, false
+	}
 	if !entropy.Secretlike(window[valStart:valEnd], entropy.PresetAssignmentValue) {
 		return 0, 0, false
 	}
@@ -302,10 +310,10 @@ func isIndirectAssignmentValue(value []byte) bool {
 	if len(value) == 0 {
 		return true
 	}
-	if value[0] == '$' || value[0] == '/' || value[0] == '~' || value[0] == '-' {
+	if value[0] == '$' || value[0] == '/' || value[0] == '~' || value[0] == '-' || value[0] == '.' || value[0] == ':' {
 		return true
 	}
-	for _, marker := range []string{"\\n", "\\r", "...", "://", "&amp", "process.env", "os.environ", "os.getenv", "secretparam(", "secrets.string(", "data.get("} {
+	for _, marker := range []string{"\\n", "\\r", "...", "://", "::", "?.", "&amp", "process.env", "os.environ", "os.getenv", "secretparam(", "secrets.string(", "data.get("} {
 		if containsFold(value, marker) {
 			return true
 		}
@@ -316,7 +324,7 @@ func isIndirectAssignmentValue(value []byte) bool {
 			return true
 		}
 	}
-	for _, prefix := range []string{"env.", "cfg.", "config.", "var.", "excluded."} {
+	for _, prefix := range []string{"env.", "cfg.", "config.", "var.", "excluded.", "this.", "self."} {
 		if startsFold(value, prefix) {
 			return true
 		}
@@ -335,7 +343,55 @@ func isIndirectAssignmentValue(value []byte) bool {
 	if isUpperCredentialIdentifier(value) || isHexAddress(value) {
 		return true
 	}
+	if isIdentifierChain(value) {
+		return true
+	}
 	return false
+}
+
+// isIdentifierChain reports whether value is a dot-separated chain of two
+// or more source-code identifiers ("this.apiToken", "SyntaxKind.WithKeyword",
+// "k.cfg.DataStreamsKey"): a member expression that names a value rather
+// than containing one. JWTs are also dot-separated and must stay matchable,
+// but their first segment is always base64 of `{"` ("eyJ"), so they are
+// exempted before the shape check.
+func isIdentifierChain(value []byte) bool {
+	if len(value) >= 3 && value[0] == 'e' && value[1] == 'y' && value[2] == 'J' {
+		return false
+	}
+	segments := 0
+	segStart := 0
+	for i := 0; i <= len(value); i++ {
+		if i < len(value) && value[i] != '.' {
+			continue
+		}
+		seg := value[segStart:i]
+		if !isIdentifierSegment(seg) {
+			return false
+		}
+		segments++
+		segStart = i + 1
+	}
+	return segments >= 2
+}
+
+// isIdentifierSegment reports whether seg is a plausible source-code
+// identifier: a leading ASCII letter, '_', or '$', followed by letters,
+// digits, '_', or '$'.
+func isIdentifierSegment(seg []byte) bool {
+	if len(seg) == 0 {
+		return false
+	}
+	c := seg[0]
+	if c != '_' && c != '$' && (c < 'A' || c > 'Z') && (c < 'a' || c > 'z') {
+		return false
+	}
+	for _, c := range seg[1:] {
+		if c != '_' && c != '$' && !isAlnum(c) {
+			return false
+		}
+	}
+	return true
 }
 
 func isUpperCredentialIdentifier(value []byte) bool {
@@ -381,6 +437,41 @@ func hasInteriorEqual(value []byte) bool {
 	return false
 }
 
+// isAlphaSpaceOnly reports whether value contains nothing but ASCII
+// letters and spaces. Such a value is dictionary-word material (a phrase,
+// an identifier, a camelCase name like "URLPatternComponentResult" or
+// "originalReviewGithubToken"), never a credential worth reporting: real
+// secrets that survive the other checks always carry at least one digit
+// or symbol. All three generic assignment validators use this.
+func isAlphaSpaceOnly(value []byte) bool {
+	for _, c := range value {
+		if c != ' ' && (c < 'A' || c > 'Z') && (c < 'a' || c > 'z') {
+			return false
+		}
+	}
+	return true
+}
+
+// isProseValue recognizes captured quoted values that are sentence
+// fragments rather than passwords: a leading or trailing space, or
+// punctuation-then-space sequences (", ", "; ", ". ") that essentially
+// never appear in a real password but always appear in prose that
+// happened to sit inside quotes after a "password"-like keyword.
+func isProseValue(value []byte) bool {
+	if len(value) > 0 && (value[0] == ' ' || value[len(value)-1] == ' ') {
+		return true
+	}
+	for i := 0; i+1 < len(value); i++ {
+		if value[i+1] != ' ' {
+			continue
+		}
+		if c := value[i]; c == ',' || c == ';' || c == '.' {
+			return true
+		}
+	}
+	return false
+}
+
 func startsFold(value []byte, prefix string) bool {
 	return len(value) >= len(prefix) && asciiEqualFold(value[:len(prefix)], prefix)
 }
@@ -419,6 +510,9 @@ func GenericPasswordAssignment(window []byte, trigStart, trigEnd int) (start, en
 	if entropy.Classify(value) == entropy.ClassWordlike {
 		return 0, 0, false
 	}
+	if isAlphaSpaceOnly(value) || isProseValue(value) {
+		return 0, 0, false
+	}
 	opts := entropy.PresetAssignmentValue
 	opts.MinLen = 8
 	if !entropy.Secretlike(value, opts) {
@@ -452,6 +546,9 @@ func GenericBearerLikeTokenAssignment(window []byte, trigStart, trigEnd int) (st
 		return 0, 0, false
 	}
 	if !isMachineTokenValue(value) {
+		return 0, 0, false
+	}
+	if isAlphaSpaceOnly(value) {
 		return 0, 0, false
 	}
 	if len(value) < bearerLikeTokenMinLen {

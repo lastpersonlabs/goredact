@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -48,11 +49,13 @@ type findingsError struct{ code int }
 func (e findingsError) Error() string { return "goredact: findings detected" }
 
 type fileScanResult struct {
-	index     int
-	bytesRead int64
-	findings  []reportFinding
-	err       error
-	canceled  bool
+	index      int
+	bytesRead  int64
+	findings   []reportFinding
+	err        error
+	canceled   bool
+	skipped    bool // not scanned: binary content or unreadable
+	unreadable bool
 }
 
 func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error {
@@ -102,7 +105,14 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 	if err != nil {
 		return err
 	}
+	unreadable := 0
 	for _, result := range results {
+		if result.skipped {
+			if result.unreadable {
+				unreadable++
+			}
+			continue
+		}
 		report.FilesScanned++
 		report.BytesRead += result.bytesRead
 		report.Findings = append(report.Findings, result.findings...)
@@ -110,6 +120,9 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 
 	if err := writeReport(o.reportPath, format, report, stdout); err != nil {
 		return err
+	}
+	if unreadable > 0 {
+		fmt.Fprintf(stderr, "goredact: skipped %d unreadable file(s)\n", unreadable)
 	}
 	fmt.Fprintf(stderr, "goredact: secrets_found=%d\n", len(report.Findings))
 	if len(report.Findings) > 0 && o.exitCode != 0 {
@@ -213,7 +226,26 @@ func scanFile(ctx context.Context, engine *goredact.Engine, path string, index i
 	result := fileScanResult{index: index}
 	file, err := os.Open(path)
 	if err != nil {
-		result.err = errors.New("goredact dir: cannot open input file")
+		// Unreadable files (permissions, deletion races) are skipped and
+		// counted rather than failing the whole scan, matching the
+		// behavior of other directory scanners.
+		result.skipped = true
+		result.unreadable = true
+		return result
+	}
+	binary, err := isBinaryFile(file)
+	if err != nil {
+		_ = file.Close()
+		result.skipped = true
+		result.unreadable = true
+		return result
+	}
+	if binary {
+		*findings = (*findings)[:0]
+		result.skipped = true
+		if err := file.Close(); err != nil {
+			result.err = errors.New("goredact dir: cannot close input file")
+		}
 		return result
 	}
 	stats, err := engine.Redact(ctx, io.Discard, file)
@@ -235,6 +267,23 @@ func scanFile(ctx context.Context, engine *goredact.Engine, path string, index i
 		result.err = errors.New("goredact dir: cannot close input file")
 	}
 	return result
+}
+
+// isBinaryFile reports whether file starts with content that cannot be
+// text: a NUL byte anywhere in the first 8 KiB (the same sniff git and
+// grep use). Compiled binaries produce garbage matches from their string
+// tables, not credentials in any recoverable form, so dir mode skips them.
+// The read offset is rewound so a non-binary file scans from the start.
+func isBinaryFile(file *os.File) (bool, error) {
+	buf := make([]byte, 8192)
+	n, err := file.Read(buf)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return false, err
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return false, err
+	}
+	return bytes.IndexByte(buf[:n], 0) >= 0, nil
 }
 
 func loadSecrets(file *os.File, findings []reportFinding) error {
@@ -309,11 +358,14 @@ func regularFiles(root string) ([]string, error) {
 	return paths, err
 }
 
-// These are Gitleaks' default dependency and repository metadata exclusions.
+// These are Gitleaks' default dependency and repository metadata exclusions,
+// plus .pnpm-store (pnpm's content-addressable package cache, third-party
+// package content exactly like node_modules).
 // Keep them narrow: directories such as dist, target, and vendor in general may
 // contain first-party source or credentials and are intentionally scanned.
 var defaultExcludedDirectoryPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?:^|/)node_modules(?:/.*)?$`),
+	regexp.MustCompile(`(?:^|/)\.pnpm-store(?:/.*)?$`),
 	regexp.MustCompile(`(?:^|/)bower_components(?:/.*)?$`),
 	regexp.MustCompile(`(?:^|/)\.git$`),
 	regexp.MustCompile(`(?:^|/)vendor/(?:github\.com|golang\.org/x|google\.golang\.org|gopkg\.in|istio\.io|k8s\.io|sigs\.k8s\.io)(?:/.*)?$`),

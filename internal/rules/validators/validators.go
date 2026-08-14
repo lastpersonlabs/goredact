@@ -19,6 +19,8 @@
 // Additional files in this package provide the full validator catalog.
 package validators
 
+import "github.com/lastpersonlabs/goredact/internal/entropy"
+
 // isDigit reports whether c is an ASCII decimal digit.
 func isDigit(c byte) bool {
 	return c >= '0' && c <= '9'
@@ -73,10 +75,10 @@ func boundaryOK(window []byte, pos int) bool {
 
 // GitHubPAT confirms the classic GitHub personal access token shape:
 // trigger "ghp_" followed by exactly 36 ASCII alphanumeric characters and a
-// non-alphanumeric byte (or end of window). It rejects the placeholder
-// heuristic of 36 identical characters, e.g. "XXXX...X", which real tokens
-// never are but naive test fixtures and documentation examples sometimes
-// use to mean "redacted" rather than "here is a value".
+// non-alphanumeric byte (or end of window). It rejects placeholder bodies
+// (entropy.IsPlaceholder): repeated characters ("XXXX...X"), ascending
+// alphabet runs ("ABCDEFGH..."), and keyword stand-ins, which real tokens
+// never are but test fixtures and documentation examples routinely use.
 func GitHubPAT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 	const tokenLen = 36
 
@@ -91,7 +93,7 @@ func GitHubPAT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) 
 	if !boundaryOK(window, bodyEnd) {
 		return 0, 0, false
 	}
-	if allSame(body) {
+	if entropy.IsPlaceholder(body) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -99,21 +101,24 @@ func GitHubPAT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) 
 
 // SlackBotToken confirms the Slack bot token shape: trigger "xoxb-"
 // followed by <10-13 digits>-<10-13 digits>-<24-34 alphanumeric characters>
-// and a non-alphanumeric byte (or end of window). It rejects the
-// placeholder heuristic of an all-identical trailing segment.
+// and a non-alphanumeric byte (or end of window). Every segment is checked
+// against entropy.IsPlaceholder, so fixture shapes like
+// "xoxb-1234567890-..." are rejected along with all-identical segments.
 func SlackBotToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 	pos := trigEnd
 
+	seg1Start := pos
 	pos, ok = consumeDigitRun(window, pos, 10, 13)
-	if !ok {
+	if !ok || entropy.IsPlaceholder(window[seg1Start:pos]) {
 		return 0, 0, false
 	}
 	pos, ok = consumeByte(window, pos, '-')
 	if !ok {
 		return 0, 0, false
 	}
+	seg2Start := pos
 	pos, ok = consumeDigitRun(window, pos, 10, 13)
-	if !ok {
+	if !ok || entropy.IsPlaceholder(window[seg2Start:pos]) {
 		return 0, 0, false
 	}
 	pos, ok = consumeByte(window, pos, '-')
@@ -129,7 +134,7 @@ func SlackBotToken(window []byte, trigStart, trigEnd int) (start, end int, ok bo
 	if !boundaryOK(window, segEnd) {
 		return 0, 0, false
 	}
-	if allSame(window[segStart:segEnd]) {
+	if entropy.IsPlaceholder(window[segStart:segEnd]) {
 		return 0, 0, false
 	}
 	return trigStart, segEnd, true

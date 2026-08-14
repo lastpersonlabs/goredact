@@ -6,7 +6,7 @@ import "bytes"
 // Anthropic, OpenAI (project-scoped and legacy),
 // Hugging Face, and Groq API keys. See validators.go for the shared
 // ValidateFunc contract and low-level byte helpers (isAlnum, allAlnum,
-// allSame, boundaryOK, consumeByte, consumeDigitRun, consumeAlnumRun) that
+// isPlaceholder, boundaryOK, consumeByte, consumeDigitRun, consumeAlnumRun) that
 // these validators build on.
 //
 // Google's "AIza..." API key shape is intentionally NOT implemented here;
@@ -62,7 +62,7 @@ func precedingBoundaryExtOK(window []byte, pos int) bool {
 // hasRepeatRun reports whether b contains a run of n or more consecutive
 // identical bytes. Real high-entropy secrets essentially never contain
 // such runs; placeholder/redacted fixtures ("xxxxxxxxxxxx...") commonly
-// do, so this is used alongside allSame to catch placeholders that are
+// do, so this is used alongside isPlaceholder to catch placeholders that are
 // only partially repeated (e.g. a real-looking prefix/suffix wrapped
 // around a long run of 'x').
 func hasRepeatRun(b []byte, n int) bool {
@@ -84,18 +84,21 @@ func hasRepeatRun(b []byte, n int) bool {
 }
 
 // AnthropicAPIKey confirms the Anthropic API key shape: trigger "sk-ant-"
-// followed by 24-130 bytes of [A-Za-z0-9_-] (this covers both the common
+// followed by 80-130 bytes of [A-Za-z0-9_-] (this covers both the common
 // "api03-"/"admin01-"-style sub-segment plus the ~80-120 character body,
 // since that sub-segment's own alphabet is a subset of the body's, and the
 // literal "sk-ant-" prefix's total post-prefix length is what's actually
-// bounded). It rejects placeholder bodies (all one character, or any long
-// repeated run) and requires a non-alphanumeric byte (or end of window) on
-// both sides.
+// bounded). Real Anthropic keys are never shorter than ~100 characters
+// after the prefix; the 80 floor rejects the short fabricated
+// "sk-ant-api03-<32-40 chars>" keys that dominate documentation and test
+// fixtures. It also rejects placeholder bodies (all one character, or any
+// long repeated run) and requires a non-alphanumeric byte (or end of
+// window) on both sides.
 func AnthropicAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 	if !precedingBoundaryOK(window, trigStart) {
 		return 0, 0, false
 	}
-	bodyEnd, ok2 := consumeExtRun(window, trigEnd, 24, 130)
+	bodyEnd, ok2 := consumeExtRun(window, trigEnd, 80, 130)
 	if !ok2 {
 		return 0, 0, false
 	}
@@ -103,7 +106,7 @@ func AnthropicAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok 
 		return 0, 0, false
 	}
 	body := window[trigEnd:bodyEnd]
-	if allSame(body) || hasRepeatRun(body, 5) {
+	if isPlaceholder(body) || hasRepeatRun(body, 5) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -150,7 +153,7 @@ func OpenAIProjectKey(window []byte, trigStart, trigEnd int) (start, end int, ok
 	if len(body) < 48 {
 		return 0, 0, false
 	}
-	if allSame(body) || hasRepeatRun(body, 5) {
+	if isPlaceholder(body) || hasRepeatRun(body, 5) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -201,7 +204,7 @@ func OpenAILegacyKey(window []byte, trigStart, trigEnd int) (start, end int, ok 
 	if !boundaryOK(window, bodyEnd) {
 		return 0, 0, false
 	}
-	if allSame(first) || allSame(last) {
+	if isPlaceholder(first) || isPlaceholder(last) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -224,7 +227,7 @@ func HuggingFaceToken(window []byte, trigStart, trigEnd int) (start, end int, ok
 		return 0, 0, false
 	}
 	body := window[trigEnd:bodyEnd]
-	if allSame(body) || hasRepeatRun(body, 8) {
+	if isPlaceholder(body) || hasRepeatRun(body, 8) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -245,7 +248,7 @@ func GroqAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool)
 		return 0, 0, false
 	}
 	body := window[trigEnd:bodyEnd]
-	if allSame(body) || hasRepeatRun(body, 8) {
+	if isPlaceholder(body) || hasRepeatRun(body, 8) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true

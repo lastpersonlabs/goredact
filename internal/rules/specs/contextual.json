@@ -4,8 +4,14 @@
       "id": "authorization-bearer",
       "name": "Authorization header credential",
       "triggers": [
-        {"literal": "authorization:", "caseFold": true},
-        {"literal": "proxy-authorization:", "caseFold": true}
+        {
+          "literal": "authorization:",
+          "caseFold": true
+        },
+        {
+          "literal": "proxy-authorization:",
+          "caseFold": true
+        }
       ],
       "validator": "AuthorizationHeader",
       "minProfile": "fast",
@@ -39,13 +45,34 @@
       "id": "cookie-session-token",
       "name": "Session/token cookie value",
       "triggers": [
-        {"literal": "cookie:", "caseFold": true},
-        {"literal": "set-cookie:", "caseFold": true},
-        {"literal": "session=", "caseFold": true},
-        {"literal": "sid=", "caseFold": true},
-        {"literal": "token=", "caseFold": true},
-        {"literal": "jwt=", "caseFold": true},
-        {"literal": "auth=", "caseFold": true}
+        {
+          "literal": "cookie:",
+          "caseFold": true
+        },
+        {
+          "literal": "set-cookie:",
+          "caseFold": true
+        },
+        {
+          "literal": "session=",
+          "caseFold": true
+        },
+        {
+          "literal": "sid=",
+          "caseFold": true
+        },
+        {
+          "literal": "token=",
+          "caseFold": true
+        },
+        {
+          "literal": "jwt=",
+          "caseFold": true
+        },
+        {
+          "literal": "auth=",
+          "caseFold": true
+        }
       ],
       "validator": "CookieSessionToken",
       "minProfile": "balanced",
@@ -78,7 +105,10 @@
       "id": "url-credentials",
       "name": "URL userinfo password",
       "triggers": [
-        {"literal": "://", "caseFold": false}
+        {
+          "literal": "://",
+          "caseFold": false
+        }
       ],
       "validator": "URLCredentials",
       "minProfile": "fast",
@@ -105,7 +135,10 @@
           "see http://user:pass@host.example.com for the URL shape",
           "redis://:@cache.internal:6379",
           "note: the \"://\" separator splits scheme from authority",
-          "https://status.example.com/healthz"
+          "https://status.example.com/healthz",
+          "https://git:ghp_abc123@github.com/org/repo.git",
+          "https://user:REDACTED@github.com/org/repo.git",
+          "postgres://app:$DB_PASSWORD@db:5432/app"
         ]
       }
     },
@@ -113,11 +146,26 @@
       "id": "command-line-password-flag",
       "name": "Command-line password/token flag",
       "triggers": [
-        {"literal": "--password", "caseFold": true},
-        {"literal": "--passwd", "caseFold": true},
-        {"literal": "--token", "caseFold": true},
-        {"literal": "--api-key", "caseFold": true},
-        {"literal": "--secret", "caseFold": true}
+        {
+          "literal": "--password",
+          "caseFold": true
+        },
+        {
+          "literal": "--passwd",
+          "caseFold": true
+        },
+        {
+          "literal": "--token",
+          "caseFold": true
+        },
+        {
+          "literal": "--api-key",
+          "caseFold": true
+        },
+        {
+          "literal": "--secret",
+          "caseFold": true
+        }
       ],
       "validator": "CommandLinePasswordFlag",
       "minProfile": "balanced",
@@ -142,7 +190,8 @@
           "run.sh --password ${DB_PASSWORD}",
           "docs: use --api-key <your-key> to authenticate",
           "login --secret changeme --user svc",
-          "deploy --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set token}"
+          "deploy --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set token}",
+          "mysql -u root --password=hunter2 mydb"
         ]
       }
     }

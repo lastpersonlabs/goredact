@@ -18,6 +18,11 @@ var substringPlaceholders = []string{
 	"0000",
 	"1234",
 	"abcd",
+	"redact",
+	"hunter2",
+	"abc123",
+	"a1b2c3",
+	"_here",
 }
 
 // wholeValuePlaceholders are lowercase keywords that mark b as a
@@ -41,9 +46,10 @@ var keyboardRuns = []string{
 // IsPlaceholder reports whether b is a well-known non-secret stand-in
 // value rather than real secret material: common keyword placeholders
 // ("example", "changeme", "password", ...), angle-bracket tokens
-// ("<REDACTED>"), template references ("${VAR}", "{{ var }}"), a single
-// byte repeated for the whole value, and ascending or keyboard-row runs
-// ("abcdef...", "123456...", "qwerty...").
+// ("<REDACTED>"), template and variable references ("${VAR}", "$VAR",
+// "{token}", "{{ var }}"), a single byte repeated for the whole value,
+// and ascending or keyboard-row runs ("abcdef...", "123456...",
+// "qwerty...").
 //
 // IsPlaceholder is deliberately permissive about what counts as a
 // placeholder — false positives here (a real secret misclassified as a
@@ -108,14 +114,16 @@ func isAngleBracketToken(b []byte) bool {
 	return len(b) >= 2 && b[0] == '<' && b[len(b)-1] == '>'
 }
 
-// isTemplateRef reports whether b is a single ${...} or {{...}} template
-// reference, e.g. "${API_KEY}" or "{{ secrets.token }}": these are
-// unresolved template placeholders, not literal secret values.
+// isTemplateRef reports whether b is a template or shell-variable
+// reference rather than a literal secret value: any value starting with
+// '$' ("$GITHUB_TOKEN", "${API_KEY}" — no real secret alphabet includes
+// a leading dollar sign), or a value wrapped in braces ("{token}",
+// "{{ secrets.token }}").
 func isTemplateRef(b []byte) bool {
-	if len(b) >= 3 && b[0] == '$' && b[1] == '{' && b[len(b)-1] == '}' {
+	if len(b) >= 1 && b[0] == '$' {
 		return true
 	}
-	if len(b) >= 4 && b[0] == '{' && b[1] == '{' && b[len(b)-1] == '}' && b[len(b)-2] == '}' {
+	if len(b) >= 3 && b[0] == '{' && b[len(b)-1] == '}' {
 		return true
 	}
 	return false

@@ -89,7 +89,7 @@ func StripeSecretKey(window []byte, trigStart, trigEnd int) (start, end int, ok 
 	if !boundaryOK(window, bodyEnd) {
 		return 0, 0, false
 	}
-	if allSame(window[trigEnd:bodyEnd]) {
+	if isPlaceholder(window[trigEnd:bodyEnd]) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -106,7 +106,7 @@ func StripeWebhookSecret(window []byte, trigStart, trigEnd int) (start, end int,
 	if !boundaryOK(window, bodyEnd) {
 		return 0, 0, false
 	}
-	if allSame(window[trigEnd:bodyEnd]) {
+	if isPlaceholder(window[trigEnd:bodyEnd]) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -145,7 +145,7 @@ func SlackUserToken(window []byte, trigStart, trigEnd int) (start, end int, ok b
 	if p, ok3 := consumeDigitRun(window, pos, 10, 13); ok3 {
 		if p, ok3 = consumeByte(window, p, '-'); ok3 {
 			if segEnd, okSeg := consumeAlnumRun(window, p, 24, 34); okSeg {
-				if boundaryOK(window, segEnd) && !allSame(window[p:segEnd]) {
+				if boundaryOK(window, segEnd) && !isPlaceholder(window[p:segEnd]) {
 					return trigStart, segEnd, true
 				}
 			}
@@ -155,7 +155,7 @@ func SlackUserToken(window []byte, trigStart, trigEnd int) (start, end int, ok b
 	// Two-group shape: the final segment starts right after the second
 	// dash.
 	if segEnd, okSeg := consumeAlnumRun(window, pos, 24, 34); okSeg {
-		if boundaryOK(window, segEnd) && !allSame(window[pos:segEnd]) {
+		if boundaryOK(window, segEnd) && !isPlaceholder(window[pos:segEnd]) {
 			return trigStart, segEnd, true
 		}
 	}
@@ -189,7 +189,7 @@ func SlackAppToken(window []byte, trigStart, trigEnd int) (start, end int, ok bo
 	if !boundaryOK(window, pos) {
 		return 0, 0, false
 	}
-	if allSame(window[trigEnd:pos]) {
+	if isPlaceholder(window[trigEnd:pos]) {
 		return 0, 0, false
 	}
 	return trigStart, pos, true
@@ -237,7 +237,7 @@ func SendGridAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok b
 	if !urlSafeBoundaryOK(window, seg2End) {
 		return 0, 0, false
 	}
-	if allSame(seg2) {
+	if isPlaceholder(seg2) {
 		return 0, 0, false
 	}
 	return trigStart, seg2End, true
@@ -265,7 +265,7 @@ func TwilioAPIKeySID(window []byte, trigStart, trigEnd int) (start, end int, ok 
 	if !boundaryOK(window, bodyEnd) {
 		return 0, 0, false
 	}
-	if allSame(body) {
+	if isPlaceholder(body) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -282,7 +282,7 @@ func LinearAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok boo
 	if !boundaryOK(window, bodyEnd) {
 		return 0, 0, false
 	}
-	if allSame(window[trigEnd:bodyEnd]) {
+	if isPlaceholder(window[trigEnd:bodyEnd]) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -321,7 +321,7 @@ func NotionInternalToken(window []byte, trigStart, trigEnd int) (start, end int,
 		if !boundaryOK(window, bodyEnd) {
 			return 0, 0, false
 		}
-		if allSame(body) {
+		if isPlaceholder(body) {
 			return 0, 0, false
 		}
 		return trigStart, bodyEnd, true
@@ -334,7 +334,7 @@ func NotionInternalToken(window []byte, trigStart, trigEnd int) (start, end int,
 		if !boundaryOK(window, bodyEnd) {
 			return 0, 0, false
 		}
-		if allSame(window[trigEnd:bodyEnd]) {
+		if isPlaceholder(window[trigEnd:bodyEnd]) {
 			return 0, 0, false
 		}
 		return trigStart, bodyEnd, true

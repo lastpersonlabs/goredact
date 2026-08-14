@@ -32,13 +32,23 @@ failure, so callers must not publish it as a completed object.
 links. It prunes the same common dependency trees as Gitleaks' default path
 allowlist: `node_modules`, `bower_components`, `.git`, installed Python
 environment libraries, Ruby bundle/vendor dependencies, and the standard
-third-party Go vendor namespaces. It deliberately still scans hidden files,
-`dist`, `target`, first-party `vendor` trees, and explicit file paths. It does
-not read `.gitignore` because ignored local configuration is often exactly
-where credentials are found. Gitleaks' default generated/dependency file
-exclusions are also applied, including common package-manager lockfiles,
-language wrappers, generated library bundles, media, fonts, and document or
-binary extensions. Supplying one of those files explicitly still scans it.
+third-party Go vendor namespaces, plus pnpm's `.pnpm-store` package cache. It
+deliberately still scans hidden files, `dist`, `target`, first-party `vendor`
+trees, and explicit file paths. It does not read `.gitignore` because ignored
+local configuration is often exactly where credentials are found. Gitleaks'
+default generated/dependency file exclusions are also applied, including
+common package-manager lockfiles, language wrappers, generated library
+bundles, media, fonts, and document or binary extensions. Supplying one of
+those files explicitly still scans it.
+
+Two per-file skips apply during the scan itself. Files whose first 8 KiB
+contains a NUL byte are treated as binary and skipped: compiled binaries
+produce string-table garbage matches, not credentials in any recoverable
+form, and they dominate scan time in build trees. Files that cannot be
+opened or read (permissions, deletion races) are skipped rather than
+failing the scan; `dir` reports `goredact: skipped N unreadable file(s)`
+on standard error when this happens. Neither kind of skipped file counts
+toward the report's scanned-file total.
 
 Directory work is processed by a bounded worker pool and reports remain sorted
 by path regardless of completion order. The command does not write redacted
