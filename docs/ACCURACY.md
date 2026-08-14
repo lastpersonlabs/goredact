@@ -17,7 +17,7 @@ The optional Gitleaks differential is offline: install or provide a pinned
 
 ```sh
 GITLEAKS_BIN=/path/to/gitleaks \
-GOREDACT_GITLEAKS_RULES=github-pat,gitlab-pat \
+GOREDACT_GITLEAKS_RULES=gitlab-pat \
 go test ./internal/accuracy -run TestGitleaksDifferential -v
 ```
 
@@ -34,7 +34,10 @@ for conservative or boundary-sensitive shapes instead of turning the corpus
 into a claim of perfect detection; see the threat model before treating output
 as a completeness guarantee.
 
-The Gitleaks comparison is environment-gated and was not executed on the local
-release host because no pinned offline binary was installed. The harness itself
-is covered by the Go suite and is ready for a release/CI host that supplies the
-binary and explicit supported subset.
+The Gitleaks comparison passed on the local release host for the exact-overlap
+`gitlab-pat` subset: recall was 2/2 with 0/3 false positives. `github-pat` is
+not in the exact subset because goredact deliberately rejects repeated-character
+placeholder tokens while Gitleaks reports that shape; an exploratory run still
+found both real-shape GitHub fixtures but also reported one such placeholder.
+Keeping the subset explicit prevents a difference in documented placeholder
+policy from being misreported as a detector regression.
