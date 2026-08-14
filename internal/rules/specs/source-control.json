@@ -1,0 +1,309 @@
+{
+  "rules": [
+    {
+      "id": "github-oauth-token",
+      "name": "GitHub OAuth access token",
+      "triggers": [
+        {
+          "literal": "gho_",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitHubOAuthToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 48,
+      "provenance": {
+        "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "GITHUB_OAUTH_TOKEN=gho_L2m69I7wDdQGnMo6sFSYnvCeqmkfCXIxmEYu",
+          "{\"access_token\": \"gho_jRNwkJTQMlysNBKLcUHINVH44lVYyCoGifZd\", \"token_type\": \"bearer\"}"
+        ],
+        "nomatch": [
+          "GITHUB_OAUTH_TOKEN=gho_tooShort123",
+          "GITHUB_OAUTH_TOKEN=gho_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          "GITHUB_OAUTH_TOKEN=gho_L2m69I7wDdQGnMo6sFSY nvCeqmkfCXIxmEYu"
+        ]
+      }
+    },
+    {
+      "id": "github-app-token",
+      "name": "GitHub App installation/user-to-server token",
+      "triggers": [
+        {
+          "literal": "ghu_",
+          "caseFold": false
+        },
+        {
+          "literal": "ghs_",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitHubAppToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 48,
+      "provenance": {
+        "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "GITHUB_APP_USER_TOKEN=ghu_TD7USV0nSe6MVhPyD4v3RhFfioL0bco9gSiM",
+          "installation_token: ghs_9b3mUXozvaTiZ0b6kg5jhePWvxPd3mLqzu8N"
+        ],
+        "nomatch": [
+          "ghu_tooShort",
+          "ghs_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          "ghu_TD7USV0nSe6MVhPyD4v3RhFfioL0bco9gSiM1"
+        ]
+      }
+    },
+    {
+      "id": "github-refresh-token",
+      "name": "GitHub OAuth refresh token",
+      "triggers": [
+        {
+          "literal": "ghr_",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitHubRefreshToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 48,
+      "provenance": {
+        "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "GITHUB_REFRESH_TOKEN=ghr_4LwLYg8atHXKvsk2wkW4jgQzw7k2BNy1DF43",
+          "{\"refresh_token\":\"ghr_T5EbJ8H0Ed9ZqZemZFxBCVPsSoVDrTEPilrx\"}"
+        ],
+        "nomatch": [
+          "GITHUB_REFRESH_TOKEN=ghr_short",
+          "GITHUB_REFRESH_TOKEN=ghr_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          "GITHUB_REFRESH_TOKEN=ghr_4LwLYg8atHXKvsk2wk W4jgQzw7k2BNy1DF43"
+        ]
+      }
+    },
+    {
+      "id": "github-fine-grained-pat",
+      "name": "GitHub fine-grained personal access token",
+      "triggers": [
+        {
+          "literal": "github_pat_",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitHubFineGrainedPAT",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 96,
+      "provenance": {
+        "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "GITHUB_FINE_GRAINED_PAT=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",
+          "export TOKEN=\"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\""
+        ],
+        "nomatch": [
+          "github_pat_pNLXUQBEWt9iBIWhqsMcTQ_short",
+          "github_pat_pNLXUQBEWt9iBIWhqsMcTQ-iT0f4QyUrymftnlmT2umhmf7J6BgIuQ3ynO4SNP6dVUK0CcwZUvP8pmGW9F",
+          "github_pat_xxxxxxxxxxxxxxxxxxxxxx_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
+      "id": "gitlab-pat",
+      "name": "GitLab personal access token",
+      "triggers": [
+        {
+          "literal": "glpat-",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitLabPAT",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 64,
+      "provenance": {
+        "source": "https://docs.gitlab.com/user/profile/personal_access_tokens/#create-a-personal-access-token",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "GITLAB_PAT=glpat-BO_yY1vy1Dx71XJWCS_eOE50i2nLmR",
+          "Authorization: Bearer glpat-9M71uUC6dXE67HSyDv5S0ZGci"
+        ],
+        "nomatch": [
+          "glpat-abc123",
+          "glpat-abcDE12345 BO_yY1vy1Dx71XJWCS_eOE50i2nLmR",
+          "glpat-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
+      "id": "gitlab-runner-token",
+      "name": "GitLab runner authentication token",
+      "triggers": [
+        {
+          "literal": "glrt-",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitLabRunnerToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 64,
+      "provenance": {
+        "source": "https://docs.gitlab.com/ci/runners/new_creation_workflow/#glrt-authentication-tokens",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "CI_RUNNER_TOKEN=glrt-dJc9SE3diMqM_KM3RYy7XNeTwCI_",
+          "{\"token\": \"glrt-EmRFgtLiVRnl7YoMV36D9C\"}"
+        ],
+        "nomatch": [
+          "glrt-short1",
+          "glrt-abcDE12345 dJc9SE3diMqM_KM3RYy7XNeTwCI_",
+          "glrt-XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
+      "id": "gitlab-deploy-token",
+      "name": "GitLab deploy token",
+      "triggers": [
+        {
+          "literal": "gldt-",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitLabDeployToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 64,
+      "provenance": {
+        "source": "https://docs.gitlab.com/user/project/deploy_tokens/",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "DEPLOY_TOKEN=gldt-KzooQLKR9hstfKw-FvxsBs2bzQFJDG0Vy9R",
+          "docker login registry.example.com -u deploy -p gldt-Mbpq99FJ02j5iOP_hnZ4"
+        ],
+        "nomatch": [
+          "gldt-tiny1",
+          "gldt-abcDE12345 KzooQLKR9hstfKw-FvxsBs2bzQFJDG0Vy9R",
+          "gldt-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
+      "id": "npm-access-token",
+      "name": "npm access token",
+      "triggers": [
+        {
+          "literal": "npm_",
+          "caseFold": false
+        }
+      ],
+      "validator": "NpmAccessToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 48,
+      "provenance": {
+        "source": "https://docs.npmjs.com/about-access-tokens",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "NPM_TOKEN=npm_plknz1kJAShTH8KvwDZPcixBekByPBAakTBO",
+          "//registry.npmjs.org/:_authToken=npm_TOltgSxsXbtv4bMFG9MvKZHj0LRUG1a6nKiZ"
+        ],
+        "nomatch": [
+          "npm_config_registry=https://registry.npmjs.org/",
+          "npm_config_yes=true",
+          "NPM_TOKEN=npm_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          "NPM_TOKEN=npm_short"
+        ]
+      }
+    },
+    {
+      "id": "pypi-api-token",
+      "name": "PyPI API token",
+      "triggers": [
+        {
+          "literal": "pypi-",
+          "caseFold": false
+        }
+      ],
+      "validator": "PyPIAPIToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 320,
+      "provenance": {
+        "source": "https://docs.pypi.org/api/token/",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "PYPI_API_TOKEN=pypi-AgEIcHlwaS5vcmciP1aKP8I598r9hDBybMnEIx9dj0L-mNSWyd04f1Ibz0rFbGOnIRyMex-3LajVwjAeU-5aeC_7TS",
+          "twine upload --repository pypi --password pypi-Kx3nk2FwGJA8cZG3hRAq7b_1nfEB9W8xiavowuP8SWVADE1tXNac50deIoGvPKXvSt3lTrHxfFid0utBAisqoF_I6b6SFx4fDBmH dist/*"
+        ],
+        "nomatch": [
+          "pypi-tooShortToken1234567890",
+          "pypi-abcDE12345 Fy7lOBCGPVunOMqKKLByo2Azdma5XY3XWladYTLBrX1P9HS2JJWJTgPCEQQLtkaREmFr1hs7k7dnztUQC9AsSxYc1x",
+          "pypi-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
+      "id": "dockerhub-pat",
+      "name": "Docker Hub personal access token",
+      "triggers": [
+        {
+          "literal": "dckr_pat_",
+          "caseFold": false
+        }
+      ],
+      "validator": "DockerHubPAT",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 128,
+      "provenance": {
+        "source": "https://docs.docker.com/security/for-developers/access-tokens/",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "DOCKERHUB_PAT=dckr_pat_lBYwwQKx2h3qd82R5DtSx3oPE2-xPo0csQ6U",
+          "{\"password\": \"dckr_pat_BMjUC6unM5EYWsQJ8jXp5k_KVfOY\"}"
+        ],
+        "nomatch": [
+          "dckr_pat_short12345",
+          "dckr_pat_abcDE12345 lBYwwQKx2h3qd82R5DtSx3oPE2-xPo0csQ6U",
+          "dckr_pat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    }
+  ]
+}
