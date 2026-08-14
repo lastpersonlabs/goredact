@@ -2,10 +2,11 @@ package goredact
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
+	"sync"
 
+	"github.com/lastpersonlabs/goredact/internal/ahocorasick"
 	"github.com/lastpersonlabs/goredact/internal/rules"
 )
 
@@ -90,6 +91,39 @@ type Engine struct {
 	cfg    Config
 	rules  *rules.Set
 	marker []byte
+
+	// matcher is the trigger automaton compiled from the unique
+	// (Literal, CaseFold) trigger pairs of the active rule set. It is nil
+	// when the active rule set is empty, in which case Redact degenerates
+	// to a plain (stats-counting) copy.
+	matcher *ahocorasick.Automaton
+
+	// dispatch maps a matcher pattern index to the indexes (into
+	// rules.Rules) of every rule sharing that trigger; patLen holds each
+	// pattern's literal length in bytes.
+	dispatch [][]int
+	patLen   []int
+
+	// window is rules.Set.MaxWindow(): the number of trailing bytes the
+	// streaming engine must retain across reads so that every trigger's
+	// full validation window (lookbehind + trigger + lookahead) stays
+	// addressable.
+	window int
+
+	// recordAligned makes the engine prefer aligning emission boundaries
+	// down to the last '\n' at or before the safe emission limit, so
+	// downstream consumers observe whole records. It never violates
+	// safety limits and falls back to the raw limit when no newline is
+	// buffered. Unexported: it lands in the public Config with the
+	// record-aware work (ENG-99/ENG-101); ENG-99's escaped-JSON record
+	// detection builds on this hook. See (*scanRun).alignToRecord.
+	recordAligned bool
+
+	// states pools per-Redact scan buffers so a reused Engine does not
+	// reallocate its chunk buffer on every call. It never holds input
+	// bytes beyond a call's lifetime semantics: pooled buffers are reused
+	// memory, reset (length zero) before each use.
+	states sync.Pool
 }
 
 // New compiles the active rule set for the configuration and returns a
@@ -119,7 +153,15 @@ func New(cfg Config) (*Engine, error) {
 	if min := set.MinChunkSize(); cfg.ChunkSize < min {
 		return nil, fmt.Errorf("%w: chunk size %d below minimum %d required by rule set", ErrInvalidConfig, cfg.ChunkSize, min)
 	}
-	return &Engine{cfg: cfg, rules: set, marker: []byte(cfg.Marker)}, nil
+	e := &Engine{cfg: cfg, rules: set, marker: []byte(cfg.Marker), window: set.MaxWindow()}
+	if err := e.compileTriggers(); err != nil {
+		return nil, err
+	}
+	chunkSize := cfg.ChunkSize
+	e.states.New = func() any {
+		return &scanState{buf: make([]byte, 0, chunkSize)}
+	}
+	return e, nil
 }
 
 // Redact copies src to dst, replacing every confirmed secret with the
@@ -159,18 +201,4 @@ func customToInternal(in []CustomRule) []rules.Rule {
 		out = append(out, r)
 	}
 	return out
-}
-
-// errNotImplemented is returned until the streaming engine lands (ENG-96).
-var errNotImplemented = errors.New("goredact: streaming engine not implemented yet")
-
-// redact is implemented in engine.go once the streaming engine exists.
-// Until then it fails without consuming input.
-var redactImpl func(e *Engine, ctx context.Context, dst io.Writer, src io.Reader) (Stats, error)
-
-func (e *Engine) redact(ctx context.Context, dst io.Writer, src io.Reader) (Stats, error) {
-	if redactImpl == nil {
-		return Stats{}, errNotImplemented
-	}
-	return redactImpl(e, ctx, dst, src)
 }

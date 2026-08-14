@@ -1,0 +1,555 @@
+package goredact
+
+// This file implements the bounded-memory streaming engine behind
+// Engine.Redact (ENG-96).
+//
+// The engine keeps a single fixed buffer of cfg.ChunkSize bytes holding a
+// sliding window [bufBase, bufEnd) of the input. Each loop iteration
+// reads into the buffer's free tail, scans only the newly read bytes with
+// the resumable Aho–Corasick state, validates trigger candidates whose
+// full lookahead window is buffered (queueing the rest), releases
+// finalized spans from the collector, and emits the safe prefix of the
+// buffer through span.Writer. The engine never creates temporary files:
+// input flows exclusively reader -> fixed buffer -> writer.
+//
+// Safety invariants, with window = rules.Set.MaxWindow():
+//
+//   - Release limit: pre-EOF, spans are released at bufEnd-window (any
+//     future trigger match ends past bufEnd, so any future span starts
+//     after bufEnd-window; queued candidates likewise have their window
+//     start beyond bufEnd-window, and the limit is defensively capped to
+//     the earliest queued candidate's window start anyway). At EOF the
+//     limit is the total input length.
+//   - Emission frontier: plain bytes are emitted up to
+//     min(releaseLimit, earliest held collector span Start) — a held
+//     span may still grow, so nothing at or past its Start may be
+//     emitted yet.
+//   - Buffer retention: everything from min(emitted, earliest relevant
+//     window start) is retained; because emitted never passes
+//     bufEnd-window pre-EOF, compacting the buffer down to the emission
+//     frontier always retains at least the last window bytes.
+//
+// A chain of overlapping/adjacent confirmed spans can merge into a span
+// longer than the buffer. Its interior bytes can never reach the output
+// (the whole merged span becomes one marker) and are never needed for a
+// validation window (windows only reach back `window` bytes), so under
+// buffer pressure the engine discards them, tracking a "gap"
+// (bufBase > emitted) that is later emitted as zero-filled scratch which
+// the Writer skips entirely while replaying the released covering span.
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+
+	"github.com/lastpersonlabs/goredact/internal/ahocorasick"
+	"github.com/lastpersonlabs/goredact/internal/span"
+)
+
+// maxConsecutiveZeroReads bounds how many times in a row a misbehaving
+// io.Reader may return (0, nil) before the engine gives up with
+// io.ErrNoProgress instead of spinning forever (same policy as bufio).
+const maxConsecutiveZeroReads = 100
+
+// errBadReadCount reports a reader that returned an out-of-range byte
+// count. It never contains input bytes.
+var errBadReadCount = errors.New("reader returned an invalid byte count")
+
+// compileTriggers collects the unique (Literal, CaseFold) trigger pairs
+// across the active rule set into one Aho–Corasick automaton and builds
+// the pattern->rules dispatch table. Case-folded literals are deduplicated
+// case-insensitively, since the automaton matches them identically.
+func (e *Engine) compileTriggers() error {
+	type trigKey struct {
+		lit  string
+		fold bool
+	}
+	var patterns []ahocorasick.Pattern
+	index := make(map[trigKey]int)
+	for ri, r := range e.rules.Rules {
+		for _, t := range r.Triggers {
+			k := trigKey{lit: t.Literal, fold: t.CaseFold}
+			if t.CaseFold {
+				k.lit = asciiLower(t.Literal)
+			}
+			pi, ok := index[k]
+			if !ok {
+				pi = len(patterns)
+				index[k] = pi
+				patterns = append(patterns, ahocorasick.Pattern{Literal: t.Literal, CaseFold: t.CaseFold})
+				e.patLen = append(e.patLen, len(t.Literal))
+				e.dispatch = append(e.dispatch, nil)
+			}
+			if rs := e.dispatch[pi]; len(rs) > 0 && rs[len(rs)-1] == ri {
+				continue // the same rule listed this trigger twice
+			}
+			e.dispatch[pi] = append(e.dispatch[pi], ri)
+		}
+	}
+	if len(patterns) == 0 {
+		// No active rules: Redact degenerates to a plain copy.
+		return nil
+	}
+	ac, err := ahocorasick.Compile(patterns)
+	if err != nil {
+		return fmt.Errorf("%w: compiling trigger automaton: %v", ErrInvalidConfig, err)
+	}
+	e.matcher = ac
+	return nil
+}
+
+// asciiLower folds 'A'..'Z' to lowercase, matching the automaton's ASCII
+// case-folding semantics exactly (unlike strings.ToLower, which is
+// Unicode-aware).
+func asciiLower(s string) string {
+	lowered := []byte(s)
+	changed := false
+	for i, c := range lowered {
+		if c >= 'A' && c <= 'Z' {
+			lowered[i] = c + ('a' - 'A')
+			changed = true
+		}
+	}
+	if !changed {
+		return s
+	}
+	return string(lowered)
+}
+
+// candidate is a trigger occurrence for one rule, in absolute input
+// offsets. Candidates whose lookahead window is not yet fully buffered
+// wait in the pending queue until enough input arrives or EOF.
+type candidate struct {
+	rule               int
+	trigStart, trigEnd int64
+}
+
+// scanState holds the pooled, reusable per-Redact allocations. All fields
+// are reset (length zero) before reuse; capacities are retained across
+// calls on the same Engine.
+type scanState struct {
+	// buf is the fixed input buffer (capacity cfg.ChunkSize). It holds
+	// the input range [bufBase, bufBase+len(buf)).
+	buf []byte
+
+	// pending queues candidates awaiting lookahead. Structurally bounded:
+	// a candidate only waits while its trigger lies within the last
+	// `window` buffered bytes, so the queue holds at most
+	// O(window * len(patterns)) entries.
+	pending []candidate
+
+	// released receives spans from Collector.Release and carries the few
+	// spans (if any) whose Start lies at or beyond the emission limit
+	// over to the next emission.
+	released []span.Span
+
+	// scratch is zero-filled backing data fed to span.Writer for
+	// discarded span-interior bytes ("gap" emission). Allocated lazily on
+	// first use and never written to, so it stays zero: even if an
+	// invariant were violated, discarded input bytes could not leak.
+	scratch []byte
+
+	coll span.Collector
+}
+
+func (s *scanState) reset() {
+	s.buf = s.buf[:0]
+	s.pending = s.pending[:0]
+	s.released = s.released[:0]
+	s.coll.Reset()
+}
+
+// scanRun is the per-Redact state that is not worth pooling.
+type scanRun struct {
+	e   *Engine
+	st  *scanState
+	w   *span.Writer
+	src io.Reader
+
+	stats Stats
+
+	// bufBase is the absolute input offset of st.buf[0]. emitted is the
+	// absolute offset up to which output has been produced; it is always
+	// <= bufBase+len(buf), and normally >= bufBase, except while a "gap"
+	// of discarded span-interior bytes is outstanding (emitted < bufBase).
+	bufBase int64
+	emitted int64
+
+	// acState resumes the trigger automaton across reads; scanBase is the
+	// absolute offset of the region handed to the current Scan call.
+	acState  ahocorasick.State
+	scanBase int64
+	scanFn   func(pattern, end int) bool
+}
+
+// redact implements Engine.Redact. See the file comment for the
+// algorithm and its invariants.
+func (e *Engine) redact(ctx context.Context, dst io.Writer, src io.Reader) (Stats, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	st := e.states.Get().(*scanState)
+	st.reset()
+	defer e.states.Put(st)
+
+	r := &scanRun{e: e, st: st, w: span.NewWriter(dst, e.marker), src: src}
+	r.scanFn = r.onTrigger
+	err := r.run(ctx)
+	r.stats.BytesWritten = r.w.BytesWritten()
+	r.stats.RedactedBytes = r.w.RedactedBytes()
+	return r.stats, err
+}
+
+// bufEnd returns the absolute offset one past the last buffered byte.
+func (r *scanRun) bufEnd() int64 { return r.bufBase + int64(len(r.st.buf)) }
+
+// run is the streaming loop: read, scan, validate, release, emit.
+func (r *scanRun) run(ctx context.Context) error {
+	zeroReads := 0
+	for {
+		// Context is checked once per read iteration, between chunks.
+		// It is returned unwrapped, per the Redact contract.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := r.makeRoom(); err != nil {
+			return err
+		}
+		buf := r.st.buf
+		free := buf[len(buf):cap(buf)]
+		n, rerr := r.src.Read(free)
+		if n < 0 || n > len(free) {
+			return &ReadError{Err: errBadReadCount}
+		}
+		if n > 0 {
+			zeroReads = 0
+			r.scanBase = r.bufEnd()
+			r.st.buf = buf[:len(buf)+n]
+			r.stats.BytesRead += int64(n)
+			r.scanNew()
+			r.validatePending(false)
+		}
+		switch {
+		case rerr == io.EOF:
+			// Validate the remaining queue against truncated windows
+			// (validators handle short windows safely), then release and
+			// emit everything.
+			r.validatePending(true)
+			return r.flush(true)
+		case rerr != nil:
+			// Emit whatever is already safe (best effort — a write
+			// failure here cannot make the output unsafe, only shorter),
+			// then surface the read failure.
+			_ = r.flush(false)
+			return &ReadError{Err: rerr}
+		case n == 0:
+			zeroReads++
+			if zeroReads >= maxConsecutiveZeroReads {
+				return &ReadError{Err: io.ErrNoProgress}
+			}
+			continue
+		}
+		if err := r.flush(false); err != nil {
+			return err
+		}
+	}
+}
+
+// scanNew runs the trigger automaton over the newly read bytes only,
+// resuming from the persistent state.
+func (r *scanRun) scanNew() {
+	if r.e.matcher == nil {
+		return
+	}
+	chunk := r.st.buf[r.scanBase-r.bufBase:]
+	r.acState = r.e.matcher.Scan(r.acState, chunk, r.scanFn)
+}
+
+// onTrigger dispatches one automaton match to every rule sharing the
+// trigger, validating immediately when the rule's full lookahead window is
+// buffered and queueing the candidate otherwise.
+func (r *scanRun) onTrigger(pattern, end int) bool {
+	trigEnd := r.scanBase + int64(end)
+	trigStart := trigEnd - int64(r.e.patLen[pattern])
+	if trigStart < r.bufBase {
+		// Unreachable: MaxWindow includes the trigger length, so the
+		// retained overlap always covers a boundary-spanning trigger.
+		// Guarded so a violated assumption drops the candidate instead of
+		// slicing out of range.
+		return true
+	}
+	be := r.bufEnd()
+	for _, ri := range r.e.dispatch[pattern] {
+		c := candidate{rule: ri, trigStart: trigStart, trigEnd: trigEnd}
+		if trigEnd+int64(r.e.rules.Rules[ri].MaxLookahead) <= be {
+			r.validate(c)
+		} else {
+			r.st.pending = append(r.st.pending, c)
+		}
+	}
+	return true
+}
+
+// validatePending validates every queued candidate whose lookahead window
+// is now fully buffered (or all of them, with truncated windows, at EOF)
+// and compacts the queue in place.
+func (r *scanRun) validatePending(eof bool) {
+	if len(r.st.pending) == 0 {
+		return
+	}
+	be := r.bufEnd()
+	kept := r.st.pending[:0]
+	for _, c := range r.st.pending {
+		if eof || c.trigEnd+int64(r.e.rules.Rules[c.rule].MaxLookahead) <= be {
+			r.validate(c)
+		} else {
+			kept = append(kept, c)
+		}
+	}
+	r.st.pending = kept
+}
+
+// validate runs one rule's validator over the candidate's bounded window
+// and adds a confirmed span to the collector. Validators are pure and
+// bounded, so they run synchronously on the scan path.
+func (r *scanRun) validate(c candidate) {
+	rule := &r.e.rules.Rules[c.rule]
+	wStart := c.trigStart - int64(rule.MaxLookbehind)
+	if wStart < r.bufBase {
+		wStart = r.bufBase
+	}
+	wEnd := c.trigEnd + int64(rule.MaxLookahead)
+	if be := r.bufEnd(); wEnd > be {
+		wEnd = be
+	}
+	window := r.st.buf[wStart-r.bufBase : wEnd-r.bufBase]
+	s, en, ok := rule.Validate(window, int(c.trigStart-wStart), int(c.trigEnd-wStart))
+	if !ok {
+		return
+	}
+	// Clamp defensively: a validator must report a range within its
+	// window, but a buggy custom validator must not crash the engine or
+	// leak bytes outside the window.
+	if s < 0 {
+		s = 0
+	}
+	if en > len(window) {
+		en = len(window)
+	}
+	if s >= en {
+		return
+	}
+	r.st.coll.Add(span.Span{
+		Start:      wStart + int64(s),
+		End:        wStart + int64(en),
+		Rule:       c.rule,
+		Confidence: uint8(rule.Confidence),
+	})
+}
+
+// flush releases every span that can no longer grow, records findings,
+// and emits the safe prefix of the buffer.
+func (r *scanRun) flush(eof bool) error {
+	be := r.bufEnd()
+	releaseLimit := be
+	if !eof {
+		releaseLimit = be - int64(r.e.window)
+		// Defensive: never release past a queued candidate's window
+		// start. Structurally this never binds — a candidate only queues
+		// while its lookahead extends past bufEnd, which places its
+		// window start beyond bufEnd-window — but the Release contract
+		// (no later Add with Start < limit) depends on it, so enforce it.
+		for i := range r.st.pending {
+			c := &r.st.pending[i]
+			if ws := c.trigStart - int64(r.e.rules.Rules[c.rule].MaxLookbehind); ws < releaseLimit {
+				releaseLimit = ws
+			}
+		}
+	}
+
+	prev := len(r.st.released)
+	r.st.released = r.st.coll.Release(r.st.released, releaseLimit)
+	r.recordFindings(r.st.released[prev:])
+
+	emitLimit := releaseLimit
+	if held, ok := r.st.coll.Earliest(); ok && held.Start < emitLimit {
+		emitLimit = held.Start
+	}
+	if r.e.recordAligned && !eof {
+		emitLimit = r.alignToRecord(emitLimit)
+	}
+	if emitLimit <= r.emitted {
+		return nil
+	}
+	if err := r.emitTo(emitLimit); err != nil {
+		return &WriteError{Err: err}
+	}
+	// Compact lazily: dropping the emitted prefix costs a copy of the
+	// retained tail, so only do it once at least half the buffer is
+	// reclaimable (makeRoom forces it when the buffer is full).
+	if drop := r.emitted - r.bufBase; drop > 0 && drop >= int64(cap(r.st.buf))/2 {
+		r.compact()
+	}
+	return nil
+}
+
+// recordFindings updates Stats and invokes the OnFinding callback for
+// newly released (merged, input-ordered) spans. Attribution comes from the
+// collector's winning rule.
+func (r *scanRun) recordFindings(released []span.Span) {
+	for _, s := range released {
+		r.stats.Findings++
+		id := r.e.rules.Rules[s.Rule].ID
+		if r.stats.ByRule == nil {
+			r.stats.ByRule = make(map[string]int)
+		}
+		r.stats.ByRule[id]++
+		if r.e.cfg.OnFinding != nil {
+			r.e.cfg.OnFinding(Finding{
+				RuleID:     id,
+				Confidence: Confidence(s.Confidence),
+				Start:      s.Start,
+				End:        s.End,
+			})
+		}
+	}
+}
+
+// emitTo feeds the input range [emitted, limit) to the span.Writer,
+// passing each released span exactly once — in the Emit call whose region
+// contains the span's Start (the Writer handles straddling internally).
+// Spans starting at or past limit are carried to a later emission.
+func (r *scanRun) emitTo(limit int64) error {
+	spans := r.st.released
+	used := 0
+
+	// Gap emission: bytes in [emitted, bufBase) were discarded under
+	// buffer pressure (see makeRoom). They are interior bytes of the
+	// released span that starts exactly at the emission frontier, so the
+	// Writer replaces them with the marker and never reads the data;
+	// zero-filled scratch stands in for them.
+	for r.emitted < r.bufBase && r.emitted < limit {
+		if r.st.scratch == nil {
+			r.st.scratch = make([]byte, 32*1024)
+		}
+		segEnd := r.bufBase
+		if limit < segEnd {
+			segEnd = limit
+		}
+		n := segEnd - r.emitted
+		if max := int64(len(r.st.scratch)); n > max {
+			n = max
+		}
+		end := r.emitted + n
+		k := used
+		for k < len(spans) && spans[k].Start < end {
+			k++
+		}
+		if err := r.w.Emit(r.emitted, r.st.scratch[:n], spans[used:k]); err != nil {
+			return err
+		}
+		used = k
+		r.emitted = end
+	}
+
+	if r.emitted < limit {
+		data := r.st.buf[r.emitted-r.bufBase : limit-r.bufBase]
+		k := used
+		for k < len(spans) && spans[k].Start < limit {
+			k++
+		}
+		if err := r.w.Emit(r.emitted, data, spans[used:k]); err != nil {
+			return err
+		}
+		used = k
+		r.emitted = limit
+	}
+
+	// Carry not-yet-emittable spans (Start >= limit) to the next call,
+	// reusing the slice's capacity.
+	n := copy(spans, spans[used:])
+	r.st.released = spans[:n]
+	return nil
+}
+
+// compact drops the emitted prefix of the buffer by copying the retained
+// tail to the front. The copy is bounded by the buffer capacity and
+// amortised by only compacting when at least half the buffer (or, in
+// makeRoom, anything at all) is reclaimable.
+func (r *scanRun) compact() {
+	drop := r.emitted - r.bufBase
+	if drop <= 0 {
+		return
+	}
+	n := copy(r.st.buf, r.st.buf[drop:])
+	r.st.buf = r.st.buf[:n]
+	r.bufBase += drop
+}
+
+// makeRoom guarantees free buffer space before a read. Normally emitted
+// bytes are reclaimed by compaction. When the buffer is full and nothing
+// has been emitted, emission is pinned by a held span starting at the
+// emission frontier that is still growing (a merged chain longer than the
+// buffer): its interior bytes — provably covered by the span and useless
+// for future validation windows — are discarded, keeping the last
+// `window` bytes and leaving a gap for emitTo to fill with scratch.
+func (r *scanRun) makeRoom() error {
+	if len(r.st.buf) < cap(r.st.buf) {
+		return nil
+	}
+	r.compact()
+	if len(r.st.buf) < cap(r.st.buf) {
+		return nil
+	}
+	// Nothing reclaimable: flush once more in case spans became
+	// releasable, then re-check.
+	if err := r.flush(false); err != nil {
+		return err
+	}
+	r.compact()
+	if len(r.st.buf) < cap(r.st.buf) {
+		return nil
+	}
+
+	keepFrom := r.bufEnd() - int64(r.e.window)
+	if held, ok := r.st.coll.Earliest(); ok &&
+		held.Start <= r.emitted && held.End >= keepFrom && keepFrom > r.bufBase {
+		drop := keepFrom - r.bufBase
+		n := copy(r.st.buf, r.st.buf[drop:])
+		r.st.buf = r.st.buf[:n]
+		r.bufBase = keepFrom
+		return nil
+	}
+
+	// Structurally unreachable: ChunkSize >= 2*window guarantees the
+	// emission frontier can otherwise advance. Grow rather than deadlock
+	// on a violated invariant.
+	grown := make([]byte, len(r.st.buf), 2*cap(r.st.buf))
+	copy(grown, r.st.buf)
+	r.st.buf = grown
+	return nil
+}
+
+// alignToRecord lowers limit to one past the last '\n' at or before it
+// within the retained buffer, so downstream consumers observe whole
+// records. A found newline always yields a limit strictly past the
+// emission frontier (progress is preserved), and when no newline is
+// buffered the raw limit is returned, so alignment can never deadlock the
+// stream. Enabled by the unexported Engine.recordAligned hook; ENG-99's
+// escaped-JSON record detection builds on this.
+func (r *scanRun) alignToRecord(limit int64) int64 {
+	lo := r.emitted
+	if r.bufBase > lo {
+		lo = r.bufBase
+	}
+	if limit <= lo {
+		return limit
+	}
+	seg := r.st.buf[lo-r.bufBase : limit-r.bufBase]
+	if i := bytes.LastIndexByte(seg, '\n'); i >= 0 {
+		return lo + int64(i) + 1
+	}
+	return limit
+}

@@ -199,6 +199,23 @@ func (c *Collector) Release(dst []Span, limit int64) []Span {
 	return dst
 }
 
+// Earliest returns a snapshot of the earliest held merged span — the one
+// with the smallest Start — and true, or the zero Span and false when the
+// collector holds nothing.
+//
+// The streaming engine uses the snapshot's Start to cap its emission
+// frontier (plain bytes at or past a held span's Start cannot be emitted
+// yet) and its End to prove that a straddling span covers buffer bytes it
+// wants to discard under buffer pressure. The snapshot reflects the merge
+// state at call time; a held span may still grow through later Adds.
+func (c *Collector) Earliest() (Span, bool) {
+	if len(c.entries) == 0 {
+		return Span{}, false
+	}
+	e := c.entries[0]
+	return Span{Start: e.start, End: e.end, Rule: e.rule, Confidence: e.confidence}, true
+}
+
 // Pending reports whether any span is still held by the collector (i.e.
 // has not yet been released).
 func (c *Collector) Pending() bool {
