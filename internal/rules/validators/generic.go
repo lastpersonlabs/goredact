@@ -238,10 +238,80 @@ func GenericAPIKeyAssignment(window []byte, trigStart, trigEnd int) (start, end 
 	if !ok {
 		return 0, 0, false
 	}
+	if isIndirectAssignmentValue(window[valStart:valEnd]) {
+		return 0, 0, false
+	}
 	if !entropy.Secretlike(window[valStart:valEnd], entropy.PresetAssignmentValue) {
 		return 0, 0, false
 	}
 	return valStart, valEnd, true
+}
+
+// isIndirectAssignmentValue rejects values that name or retrieve a secret
+// rather than containing one. These shapes are common in source code,
+// configuration templates, secret-manager references, and source embedded in
+// JSON logs. Entropy is not useful for them: punctuation and mixed-case
+// identifiers can make a URL or expression look more random than a real key.
+func isIndirectAssignmentValue(value []byte) bool {
+	if len(value) == 0 {
+		return true
+	}
+	if value[0] == '$' || value[0] == '/' || value[0] == '~' || value[0] == '-' {
+		return true
+	}
+	for _, marker := range []string{"\\n", "\\r", "://", "&amp", "process.env", "os.environ", "os.getenv", "secretparam(", "secrets.string(", "data.get("} {
+		if containsFold(value, marker) {
+			return true
+		}
+	}
+	for _, c := range value {
+		switch c {
+		case '(', ')', '[', ']', '{', '}', '<', '>', '|', '^':
+			return true
+		}
+	}
+	for _, prefix := range []string{"env.", "cfg.", "config."} {
+		if startsFold(value, prefix) {
+			return true
+		}
+	}
+	if startsFold(value, "dev-") || startsFold(value, "dev_") {
+		return true
+	}
+	for _, suffix := range []string{".value", ".api_key", "_api_key", "apikey", ".apikey", ".access_token", ".auth_token", ".client_secret", ".secret_key", ".private_token"} {
+		if endsFold(value, suffix) {
+			return true
+		}
+	}
+	if hasInteriorEqual(value) {
+		return true
+	}
+	return false
+}
+
+// hasInteriorEqual permits ordinary base64 padding but rejects structured
+// expressions such as "vault=Name" and concatenated assignments.
+func hasInteriorEqual(value []byte) bool {
+	for i, c := range value {
+		if c != '=' {
+			continue
+		}
+		for _, rest := range value[i:] {
+			if rest != '=' {
+				return true
+			}
+		}
+		return false
+	}
+	return false
+}
+
+func startsFold(value []byte, prefix string) bool {
+	return len(value) >= len(prefix) && asciiEqualFold(value[:len(prefix)], prefix)
+}
+
+func endsFold(value []byte, suffix string) bool {
+	return len(value) >= len(suffix) && asciiEqualFold(value[len(value)-len(suffix):], suffix)
 }
 
 // GenericPasswordAssignment confirms a password-shaped assignment: one of

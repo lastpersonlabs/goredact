@@ -117,6 +117,22 @@ func TestGenericAPIKeyAssignment(t *testing.T) {
 			trigger: "api_key",
 			wantOK:  false,
 		},
+		{name: "Python type annotation", window: `api_key: Optional[str]`, trigger: "api_key", wantOK: false},
+		{name: "Rust type annotation", window: `api_key: Option<String>`, trigger: "api_key", wantOK: false},
+		{name: "environment lookup", window: `api_key=os.environ.get("GROQ_API_KEY")`, trigger: "api_key", wantOK: false},
+		{name: "JavaScript environment reference", window: `api_key=process.env.GROQ_API_KEY`, trigger: "api_key", wantOK: false},
+		{name: "shell variable reference", window: `api_key=${ANTHROPIC_API_KEY:-fallback}`, trigger: "api_key", wantOK: false},
+		{name: "secret manager reference", window: `api_key=op://RecountableDev/Anthropic/key`, trigger: "api_key", wantOK: false},
+		{name: "documentation URL", window: `api-key: https://developers.example.invalid/docs/api-keys`, trigger: "api-key", wantOK: false},
+		{name: "member reference", window: `api_key=cfg.typesense_api_key`, trigger: "api_key", wantOK: false},
+		{name: "escaped logical newline", window: `api_key=dev_resend_api_key\\nnext_field`, trigger: "api_key", wantOK: false},
+		{name: "development placeholder", window: `client_secret=dev-client-secret`, trigger: "client_secret", wantOK: false},
+		{name: "configuration member", window: `api_key=config.search.exaApiKey`, trigger: "api_key", wantOK: false},
+		{name: "environment member", window: `secret_key=env.STRIPE_SECRET_KEY`, trigger: "secret_key", wantOK: false},
+		{name: "vault descriptor", window: `api_key=vault=ExampleVault`, trigger: "api_key", wantOK: false},
+		{name: "HTML encoded source", window: `api_key=pk_live_ckPnmJJZTFKgKGv6RihxsV8g&amp`, trigger: "api_key", wantOK: false},
+		{name: "regex expression", window: `api_key=|^CODEX|^CHATGPT`, trigger: "api_key", wantOK: false},
+		{name: "base64 padding remains valid", window: `api_key=QWxhZGRpbjpvcGVuIHNlc2FtZQ==`, trigger: "api_key", wantOK: true, wantVal: "QWxhZGRpbjpvcGVuIHNlc2FtZQ=="},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

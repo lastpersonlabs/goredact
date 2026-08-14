@@ -101,7 +101,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "generic-api-key-assignment",
 			match:   []string{"export API_KEY=sk_live_9fQ2vR7wL4mN8pX1sT6bF3jH0cD5yUaZ9k", "api_key: \"aZ9kQ2vR7wL4mN8pX1sT6bF3jH0cD5yU\"", "{\"access_token\": \"Xk9mP2vQ7Rt4Ws8LbN3jF6hZ1cYdA0eB5g\"}"},
-			nomatch: []string{"api_key = \"your-api-key-here-1234567890\"", "client_secret: \"550e8400-e29b-41d4-a716-446655440000\"", "secret_key = \"hello_world_this_is_config\"", "capi_key = \"randomsecretvalueXk9mP2vQ7Rt4Ws8\""},
+			nomatch: []string{"api_key = \"your-api-key-here-1234567890\"", "client_secret: \"550e8400-e29b-41d4-a716-446655440000\"", "secret_key = \"hello_world_this_is_config\"", "capi_key = \"randomsecretvalueXk9mP2vQ7Rt4Ws8\"", "api_key: Optional[str]", "api_key: Option<String>", "api_key=os.environ.get(\"GROQ_API_KEY\")", "api_key=process.env.GROQ_API_KEY", "api_key=${ANTHROPIC_API_KEY:-fallback}", "api_key=op://ExampleVault/Anthropic/key", "api-key: https://developers.example.invalid/docs/api-keys", "api_key=cfg.typesense_api_key", "api_key=dev_resend_api_key\\nnext_field", "client_secret=dev-client-secret"},
 		},
 		{
 			id:      "generic-bearer-like-token-assignment",
