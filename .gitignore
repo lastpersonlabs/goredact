@@ -1,0 +1,10 @@
+# Editors/tools
+.claude/
+.codex/
+.entire/
+.serena/
+
+# Build artifacts
+*.test
+/dist/
+/bench/results/
