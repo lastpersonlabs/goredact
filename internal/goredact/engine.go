@@ -315,6 +315,7 @@ func (r *scanRun) validatePending(eof bool) {
 // and adds a confirmed span to the collector. Validators are pure and
 // bounded, so they run synchronously on the scan path.
 func (r *scanRun) validate(c candidate) {
+	r.stats.Candidates++
 	rule := &r.e.rules.Rules[c.rule]
 	wStart := c.trigStart - int64(rule.MaxLookbehind)
 	if wStart < r.bufBase {

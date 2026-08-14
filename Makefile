@@ -1,4 +1,4 @@
-.PHONY: build test lint fuzz-smoke bench cover
+.PHONY: build test lint fuzz-smoke bench bench-large bench-ci cover
 
 FUZZTIME ?= 10s
 
@@ -48,6 +48,17 @@ fuzz-smoke:
 # Run every benchmark once (no meaningful timing).
 bench:
 	go test -run '^$$' -bench . -benchtime 1x ./...
+
+# Full generated 100 MiB/500 MiB/1 GiB benchmark matrix. Override ARGS to
+# select a subset, for example ARGS='-profiles fast -output fast.json'.
+bench-large:
+	go run ./tools/benchreport $(ARGS)
+
+# Small, stable performance budget suitable for shared CI runners.
+bench-ci:
+	go run ./tools/benchreport -sizes 16MiB -scenarios adversarial,confirmed-secret \
+		-profiles balanced -modes raw -min-throughput 5 -max-alloc-per-byte 0.25 \
+		-output benchmark-ci.json
 
 # Generate and summarize test coverage.
 cover:

@@ -107,6 +107,9 @@ func TestRedactBuiltinsEndToEnd(t *testing.T) {
 	if stats.Findings != 2 {
 		t.Errorf("Findings = %d, want 2", stats.Findings)
 	}
+	if stats.Candidates < int64(stats.Findings) {
+		t.Errorf("Candidates = %d, want at least Findings (%d)", stats.Candidates, stats.Findings)
+	}
 	if stats.ByRule["github-pat"] != 1 || stats.ByRule["slack-bot-token"] != 1 || len(stats.ByRule) != 2 {
 		t.Errorf("ByRule = %v", stats.ByRule)
 	}

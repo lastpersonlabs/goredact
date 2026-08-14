@@ -51,6 +51,11 @@ type Stats struct {
 	// BytesWritten is the total number of output bytes produced.
 	BytesWritten int64
 
+	// Candidates is the number of trigger/rule pairs submitted to a
+	// validator. It is useful for operational and benchmark telemetry and
+	// never exposes input contents.
+	Candidates int64
+
 	// Findings is the number of confirmed, redacted secret spans.
 	Findings int
 
