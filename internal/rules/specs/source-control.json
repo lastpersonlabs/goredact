@@ -260,7 +260,7 @@
       "maxLookbehind": 0,
       "maxLookahead": 320,
       "provenance": {
-        "source": "https://docs.pypi.org/api/token/",
+        "source": "https://docs.pypi.org/api/secrets/",
         "license": "original"
       },
       "fixtures": {

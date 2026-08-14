@@ -61,29 +61,22 @@ Reports from a different OS/architecture are rejected rather than compared.
 
 ## v0.1.0 release smoke result
 
-On 2026-08-14, commit `d3fce9f` processed the reproducible 100 MiB quiet corpus
-in balanced/raw `validate+redact` mode at **723.38 MiB/s** wall throughput on a
-24-vCPU linux/amd64 host running Go 1.26.6. The matcher-only row measured
-689.41 MiB/s. The full row allocated 265,720 bytes in 8 allocations and the
-process high-water RSS was 29,179,904 bytes. This exceeds the 250 MiB/s/core
-release target for the representative quiet-agent-log case. Results are host
-specific; use the full dedicated-host matrix below for cross-release claims.
+On 2026-08-14, the v0.1.0 release candidate processed the reproducible 100 MiB
+quiet corpus in balanced/raw `validate+redact` mode at **723.38 MiB/s** wall
+throughput on a 24-vCPU linux/amd64 host running Go 1.26.6. The scanning path
+uses one goroutine, so this row measures one-core throughput. The matcher-only
+row measured 689.41 MiB/s. The full row allocated 265,720 bytes in 8
+allocations and the process high-water RSS was 29,179,904 bytes. This exceeds
+the 250 MiB/s/core target for the representative quiet-agent-log case. Results
+are host specific; use the full dedicated-host matrix below for cross-release
+claims.
 
-## Release report scaffold
+## Producing release reports
 
 Run the full matrix independently on dedicated `linux/amd64` and `linux/arm64`
-hosts. Do not emulate arm64 for headline numbers. Record the following beside
-the two JSON artifacts:
-
-| Field | linux/amd64 | linux/arm64 |
-|---|---:|---:|
-| CPU model / vCPU count | TODO | TODO |
-| RAM | TODO | TODO |
-| OS/kernel | TODO | TODO |
-| Go version | TODO | TODO |
-| Commit | TODO | TODO |
-| Governor / host class | TODO | TODO |
-| Median of runs | TODO | TODO |
+hosts. Do not emulate arm64 for headline numbers. Record the CPU model and
+count, RAM, OS and kernel, Go version, commit, CPU governor or host class, and
+the median of the measured runs beside each JSON artifact.
 
 Use at least three runs after one warm-up. Summarise median throughput per
 scenario/profile/phase, maximum allocation ratio and RSS, candidate density,

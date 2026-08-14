@@ -312,9 +312,8 @@ func TestPrivateKeyRandomBytesNeverPanic(t *testing.T) {
 }
 
 // TestPrivateKeySpecFixtures cross-checks the fixtures declared in
-// ../specs/private-keys.json against the validators before the orchestrator
-// regenerates the builtin tables, replicating the generated fixture test's
-// confirm semantics (any trigger occurrence confirming counts as a match).
+// ../specs/private-keys.json directly against the validators, replicating the
+// generated fixture test's confirm semantics (any confirming trigger counts).
 func TestPrivateKeySpecFixtures(t *testing.T) {
 	data, err := os.ReadFile("../specs/private-keys.json")
 	if err != nil {

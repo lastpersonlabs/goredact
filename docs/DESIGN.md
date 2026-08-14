@@ -1,7 +1,8 @@
-# Internal design — goredact
+# Architecture — goredact
 
-This document freezes the internal contracts between packages so components
-can be developed independently. Public API: see `goredact.go`, `doc.go`.
+This document describes the package architecture and the invariants that
+contributors must preserve. Public API documentation lives in `api.go` and
+`doc.go`.
 
 ## Data flow
 
@@ -13,7 +14,7 @@ io.Reader → [chunked buffer] → Aho–Corasick matcher → trigger hits
 
 ## Packages
 
-### `internal/rules` (exists — the shared vocabulary)
+### `internal/rules`
 
 `Rule`, `Trigger`, `ValidateFunc`, `Set`, `Build`. Generated built-in
 tables call `RegisterBuiltins` from an `init` in a generated file inside
@@ -82,12 +83,10 @@ Merge/precedence rules (deterministic):
    tie → lower Rule index.
 3. Released output is sorted by Start; no two released spans overlap.
 
-### `internal/engine` or engine methods in root package
+### `internal/goredact`
 
-Implements the streaming loop and installs itself as `redactImpl` in the
-root package (see goredact.go) via an init or direct call — final wiring
-may replace the function variable with a regular method once the engine
-lands; keep the public behaviour identical.
+Implements the streaming loop and the engine exposed through aliases and
+constructors in the module-root package.
 
 Requirements:
 - Fixed ring/sliding buffer of ChunkSize + MaxWindow overlap.

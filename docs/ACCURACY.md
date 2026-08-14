@@ -34,10 +34,10 @@ for conservative or boundary-sensitive shapes instead of turning the corpus
 into a claim of perfect detection; see the threat model before treating output
 as a completeness guarantee.
 
-The Gitleaks comparison passed on the local release host for the exact-overlap
+The Gitleaks comparison passed during v0.1.0 release verification for the exact-overlap
 `gitlab-pat` subset: recall was 2/2 with 0/3 false positives. `github-pat` is
 not in the exact subset because goredact deliberately rejects repeated-character
-placeholder tokens while Gitleaks reports that shape; an exploratory run still
-found both real-shape GitHub fixtures but also reported one such placeholder.
+placeholder tokens while Gitleaks reports that shape. A compatibility run found
+both real-shape GitHub fixtures and also reported one such placeholder.
 Keeping the subset explicit prevents a difference in documented placeholder
 policy from being misreported as a detector regression.

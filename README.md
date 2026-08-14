@@ -29,8 +29,9 @@ whole input.
 
 ```sh
 go get github.com/lastpersonlabs/goredact@v0.1.0
-go run ./cmd/goredact -profile balanced < session.jsonl > session.redacted.jsonl
-go run ./cmd/goredact -zstd -stats < session.jsonl > session.redacted.jsonl.zst
+go install github.com/lastpersonlabs/goredact/cmd/goredact@v0.1.0
+goredact -profile balanced < session.jsonl > session.redacted.jsonl
+goredact -zstd -stats < session.jsonl > session.redacted.jsonl.zst
 ```
 
 The reference command also accepts `-input` and `-output`. It creates file

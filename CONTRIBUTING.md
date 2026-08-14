@@ -9,8 +9,9 @@ and the security guarantees this library makes.
 
 ## Building and testing
 
-The module has zero external dependencies and requires no cgo. Standard Go
-tooling is all you need:
+The core library is stdlib-only and requires no cgo. The reference CLI has the
+reviewed pure-Go dependency documented in `THIRD_PARTY.md`. Standard Go tooling
+is all you need:
 
 ```sh
 go build ./...
@@ -91,8 +92,7 @@ that package. If you're adding or updating a built-in rule:
   fixtures covering true positives/negatives and chunk-boundary splits, and
   (if the rule is highly variable in structure) fuzz coverage.
 - Custom, non-built-in rules supplied by API callers follow the public
-  `Rule`/`ValidateFunc` contract in `goredact.go`/`internal/rules` and don't
-  need to go through generation.
+  `CustomRule` contract in `api.go` and do not need to go through generation.
 
 ## Vendored or adapted code
 

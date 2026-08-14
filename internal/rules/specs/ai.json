@@ -152,7 +152,7 @@
       "maxLookbehind": 1,
       "maxLookahead": 56,
       "provenance": {
-        "source": "https://console.groq.com/docs/api-keys",
+        "source": "https://console.groq.com/docs/quickstart",
         "license": "original"
       },
       "fixtures": {

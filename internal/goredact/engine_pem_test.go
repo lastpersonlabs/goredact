@@ -17,9 +17,8 @@ import (
 )
 
 // pemTestConfig wires validators.PEMPrivateKey as a custom rule. Builtins
-// are restricted to a stable seed rule so the byte-exact output assertions
-// keep holding after builtin private-key rules land in a regeneration
-// (otherwise the builtin twin would double-confirm the same spans).
+// are restricted to a stable rule so the byte-exact output assertions do not
+// receive duplicate findings from an equivalent built-in validator.
 func pemTestConfig() Config {
 	return Config{
 		EnableRules: []string{"github-pat"},

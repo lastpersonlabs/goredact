@@ -125,53 +125,18 @@ Per-profile counts: `fast` = 31 rules, `balanced` = 38 rules (adds 7),
 `(*Engine).ActiveRules()` (what a specific configured `Engine` actually
 runs).
 
-## Profile-assignment audit
+## Assignment rationale
 
-Every built-in rule's `minProfile` was checked against the tier intent
-above. Findings:
+All fast rules are high-confidence and use an exact provider-token prefix,
+known header, private-key marker, or URL credential structure. Medium- and
+low-confidence contextual rules are excluded from fast.
 
-- All 31 `fast` rules are `confidence: high` and are triggered by an exact
-  provider-token prefix, a known header name, a private-key marker, or the
-  `://` URL-credential structure — matching the "deterministic
-  prefixes/headers/URLs/private keys" intent for `fast`. No low- or
-  medium-confidence rule is in `fast`.
-- `twilio-api-key-sid` and `notion-internal-token` are `confidence: medium`
-  in `balanced`: their triggers (`SK`, `secret_`/`ntn_`) are short/generic
-  enough that a bare trigger match isn't proof on its own, so they need the
-  validator's extra structural check and land one tier above the
-  deterministic-prefix rules — consistent with "balanced adds
-  medium-confidence provider rules whose trigger is more generic."
-- `generic-bearer-like-token-assignment` is the sole `confidence: low`
-  rule, and it is correctly **not** in `fast`. It is deliberately in
-  `balanced` rather than `deep`: it is one of the three
-  generic contextual rules in
-  `internal/rules/validators/generic.go`, whose file-level doc comment
-  states they are "the balanced-profile generic contextual rules" tuned
-  against a documented, harness-verified false-positive budget
-  (`FalsePositiveBudgetPerTenMiB`). Its lower confidence reflects that its
-  trigger (`token`) is much weaker evidence than `api_key` or `password`
-  (see `bearerLikeTokenMinLen` in that file), not that it's untested or
-  unsafe for the default profile.
-- No spec's `minProfile` was found to violate the tier intent.
+`twilio-api-key-sid` and `notion-internal-token` are balanced rules because
+their short or generic triggers require additional structural validation.
+`generic-bearer-like-token-assignment` is also balanced: its `token` trigger
+is weaker than `api_key` or `password`, and its validator is tuned against the
+documented `FalsePositiveBudgetPerTenMiB` budget.
 
-**Conclusion: no `minProfile` changes were made.** `go generate
-./internal/rules` was run and produced no diff, confirming the specs and
-generated table already agree and no rule needed to move tiers. No
-`confidence` values were changed.
-
-### A related default-safety issue that *was* fixed (not a `minProfile` change)
-
-While adding the default-config safety test used during this audit, the
-audit found that `New(Config{})` was **not** actually selecting
-`ProfileBalanced` as `goredact.go`'s doc comment claimed: `Profile`'s zero
-value was `ProfileFast` (`iota` started at `ProfileFast`), so an
-unconfigured `Config{}` silently compiled the `fast`-only rule set — a
-real default-safety gap for the "balanced is the safe default for session
-uploads" claim this document makes above. This was fixed by reserving the
-zero value of `Profile` (and the internal `rules.Profile` it is cast to)
-as `profileUnspecified`, and having `New` substitute `ProfileBalanced`
-for it. `ProfileFast`/`ProfileBalanced`/`ProfileDeep` keep their relative
-order and symbolic use everywhere else in the codebase; only their integer
-values shifted by one. See `TestDefaultConfigSafety` in
-`rules_info_test.go` for the regression test, and the profile-audit
-summary above for the rule-tier findings this document primarily covers.
+`New(Config{})` selects `ProfileBalanced`. The zero `Profile` value is
+reserved as unspecified so callers receive the documented default;
+`TestDefaultConfigSafety` guards this behaviour.
