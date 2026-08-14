@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test (race detector)
+        run: go test -race ./...
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: gofmt check
+        run: |
+          fmt_out="$(gofmt -l .)"
+          if [ -n "$fmt_out" ]; then
+            echo "The following files are not gofmt-formatted:" >&2
+            echo "$fmt_out" >&2
+            echo "Run 'gofmt -w .' locally and commit the result." >&2
+            exit 1
+          fi
+
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+  fuzz-smoke:
+    name: fuzz-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Discover and run fuzz targets (10s each)
+        run: |
+          set -euo pipefail
+          found_any=0
+          for pkg in $(go list ./...); do
+            targets="$(go test -list '^Fuzz[A-Za-z0-9_]*$' "$pkg" 2>/dev/null | grep -E '^Fuzz[A-Za-z0-9_]*$' || true)"
+            if [ -z "$targets" ]; then
+              continue
+            fi
+            while IFS= read -r target; do
+              [ -z "$target" ] && continue
+              found_any=1
+              echo "::group::Fuzz $target ($pkg)"
+              go test -run '^$' -fuzz "^${target}$" -fuzztime 10s "$pkg"
+              echo "::endgroup::"
+            done <<< "$targets"
+          done
+          if [ "$found_any" -eq 0 ]; then
+            echo "No fuzz targets found in any package; nothing to run."
+          fi
+
+  bench-compile:
+    name: bench-compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Compile and run benchmarks once
+        run: go test -run '^$' -bench . -benchtime 1x ./...
+
+  licence-check:
+    name: licence-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Verify THIRD_PARTY.md and scan for unrecorded third-party headers
+        run: |
+          set -euo pipefail
+
+          if [ ! -f THIRD_PARTY.md ]; then
+            echo "THIRD_PARTY.md is missing. Every repository must carry a" >&2
+            echo "third-party provenance register, even when empty." >&2
+            exit 1
+          fi
+
+          # Look for copyright headers that are not attributed to Last Person
+          # Labs, outside of LICENSE/THIRD_PARTY.md and CI config itself
+          # (this check documents the pattern it looks for, which would
+          # otherwise self-match).
+          matches="$(grep -rIn \
+            --exclude-dir=.git \
+            --exclude-dir=.github \
+            --exclude=LICENSE \
+            --exclude=THIRD_PARTY.md \
+            "Copyright" . | grep -v "Last Person Labs" || true)"
+
+          if [ -n "$matches" ]; then
+            echo "Found copyright headers not attributed to Last Person Labs:" >&2
+            echo "$matches" >&2
+            echo >&2
+            echo "If this is vendored or adapted third-party code, record its" >&2
+            echo "provenance (source URL, commit, licence, local path) in" >&2
+            echo "THIRD_PARTY.md before merging." >&2
+            exit 1
+          fi
+
+          echo "No unrecorded third-party copyright headers found."
