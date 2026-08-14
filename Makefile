@@ -1,10 +1,13 @@
-.PHONY: build test lint fuzz-smoke bench bench-large bench-ci cover
+.PHONY: bin build test lint fuzz-smoke bench bench-large bench-ci cover
 
 FUZZTIME ?= 10s
 
 # Compile all packages.
 build:
 	go build ./...
+
+bin:
+	go build -o ./bin ./... 
 
 # Run the full test suite with the race detector enabled.
 test:
