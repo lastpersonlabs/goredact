@@ -1,0 +1,230 @@
+{
+  "rules": [
+    {
+      "id": "stripe-secret-key",
+      "name": "Stripe secret API key",
+      "triggers": [
+        {"literal": "sk_live_", "caseFold": false},
+        {"literal": "sk_test_", "caseFold": false},
+        {"literal": "rk_live_", "caseFold": false},
+        {"literal": "rk_test_", "caseFold": false}
+      ],
+      "validator": "StripeSecretKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 110,
+      "provenance": {
+        "source": "https://docs.stripe.com/keys",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "curl https://api.stripe.com/v1/charges -u sk_live_oHBvRPOIvGrv5iFlbCBFNOgmBjMtpsia:",
+          "STRIPE_SECRET_KEY=sk_test_OclRz3AwzKsbVRJN9wVGFYGW"
+        ],
+        "nomatch": [
+          "sk_live_2WmQzCudiH",
+          "sk_live_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          "sk_live_oHBvRPOIvGrv5iFlbCBF-NOgmBjMtpsia"
+        ]
+      }
+    },
+    {
+      "id": "stripe-webhook-secret",
+      "name": "Stripe webhook signing secret",
+      "triggers": [
+        {"literal": "whsec_", "caseFold": false}
+      ],
+      "validator": "StripeWebhookSecret",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 80,
+      "provenance": {
+        "source": "https://docs.stripe.com/webhooks#verify-official-libraries",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "STRIPE_WEBHOOK_SECRET=whsec_7YFjS1on43XkMtECqOxSF2O3GYRdo1XKXWNqRs7r",
+          "{\"stripe_webhook_secret\": \"whsec_pEmoKiuPKdYR7osjOrU1xxDO0CzUZREN68k4tUNpfZ46pdJQIPvjiQvlb5lZXOIg\"}"
+        ],
+        "nomatch": [
+          "whsec_fFwD3HJoKyrbmEYYmdhQ",
+          "whsec_ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+          "whsec_7YFjS1on43XkMtECqOx_SF2O3GYRdo1XKXWNqRs7r"
+        ]
+      }
+    },
+    {
+      "id": "slack-user-token",
+      "name": "Slack user token",
+      "triggers": [
+        {"literal": "xoxp-", "caseFold": false},
+        {"literal": "xoxa-", "caseFold": false},
+        {"literal": "xoxr-", "caseFold": false},
+        {"literal": "xoxs-", "caseFold": false}
+      ],
+      "validator": "SlackUserToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 100,
+      "provenance": {
+        "source": "https://api.slack.com/authentication/token-types#user",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export SLACK_USER_TOKEN=xoxa-80184514627-048281489325-wKi9x7h6AmUfBH7X41zTPDP4k8FFuf",
+          "{\"token\": \"xoxp-1822782489-63834657871-331509839301-1721a278f64f7fd633dbdde1\"}"
+        ],
+        "nomatch": [
+          "xoxa-123-456-abcdefgh0123456789abcd",
+          "xoxa-80184514627-048281489325-rppGDZuVz3",
+          "xoxa-80184514627-048281489325-aaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ]
+      }
+    },
+    {
+      "id": "slack-app-token",
+      "name": "Slack app-level token",
+      "triggers": [
+        {"literal": "xapp-", "caseFold": false}
+      ],
+      "validator": "SlackAppToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 120,
+      "provenance": {
+        "source": "https://api.slack.com/authentication/token-types#app-level",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export SLACK_APP_TOKEN=xapp-1-GPMM82I1LR3-3178108013267-f6c15c0c8e9df469611a11f5125227c3712da86a78c49ea20e32684b27b95e90",
+          "{\"app_token\": \"xapp-2-9TGIQHG9JR-4935348740-2d810a485ed03241b4d419b1b673bd4755d05ad7853c1f76eb97706ca828bca0\"}"
+        ],
+        "nomatch": [
+          "xapp-1-ABC-123",
+          "xapp-AAAAAAAAAAAAAAAAAAAA-BBBBBBBBBBBBBBBBBBBBBB",
+          "xapp------------------------------------------"
+        ]
+      }
+    },
+    {
+      "id": "sendgrid-api-key",
+      "name": "SendGrid API key",
+      "triggers": [
+        {"literal": "SG.", "caseFold": false}
+      ],
+      "validator": "SendGridAPIKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 1,
+      "maxLookahead": 80,
+      "provenance": {
+        "source": "https://docs.sendgrid.com/ui/account-and-settings/api-keys",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "curl -H \"Authorization: Bearer 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\" https://api.sendgrid.com/v3/mail/send",
+          "SENDGRID_API_KEY=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"
+        ],
+        "nomatch": [
+          "SG.ci3_DxrzV7QDyDK2R7XGh.wpb6prwj1gK8CGscIFDfZCTeQ8Ob7gvVOUnNDnwyZJf",
+          "SG.OhWhEN3so3OxYgF3AZu3Iq.oPmn0pzlQY1wWmzAmka p744b8VKkqLencZSDFf8J61",
+          "the MSG.OhWhEN3so3OxYgF3AZu3Iq.oPmn0pzlQY1wWmzAmka3p744b8VKkqLencZSDFf8J61 was logged"
+        ]
+      }
+    },
+    {
+      "id": "twilio-api-key-sid",
+      "name": "Twilio API key SID",
+      "triggers": [
+        {"literal": "SK", "caseFold": false}
+      ],
+      "validator": "TwilioAPIKeySID",
+      "minProfile": "balanced",
+      "confidence": "medium",
+      "maxLookbehind": 1,
+      "maxLookahead": 48,
+      "provenance": {
+        "source": "https://www.twilio.com/docs/iam/api-keys",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export TWILIO_API_KEY_SID=SK3931bdb2a0df3dbe4d58fed8a728e7ec",
+          "{\"api_key_sid\": \"SKa0fa5f6b8a880627df7ffe0297c79bfb\"}"
+        ],
+        "nomatch": [
+          "SKDABE898736A3566F893697B590481194",
+          "SKf309ffea518f32cf21449273d7cee9",
+          "the TASKd9136682575250def91799e2786d3748 list",
+          "clean the DESK421599e3e9c8fe21da80270815fe85df now"
+        ]
+      }
+    },
+    {
+      "id": "linear-api-key",
+      "name": "Linear personal API key",
+      "triggers": [
+        {"literal": "lin_api_", "caseFold": false}
+      ],
+      "validator": "LinearAPIKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 80,
+      "provenance": {
+        "source": "https://developers.linear.app/docs/graphql/working-with-the-graphql-api#personal-api-keys",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export LINEAR_API_KEY=lin_api_FeWaVUqG2KVasfSq8Z0wjCdFUQUHxZ3g0Aq3idaD",
+          "{\"linear_api_key\": \"lin_api_MhXnwfocwDNRjI7Sc4sfHBomzPtKTjAjaFO16Hd8Hp1Jf7tSgtRa1eePdjJY\"}"
+        ],
+        "nomatch": [
+          "lin_api_M6mgv4I3ERxy2aV7ygR0ASuT1llqf3",
+          "lin_api_FeWaVUqG2KVasfSq8Z0wjCdF-UQUHxZ3g0Aq3idaD",
+          "lin_api_QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+        ]
+      }
+    },
+    {
+      "id": "notion-internal-token",
+      "name": "Notion internal integration token",
+      "triggers": [
+        {"literal": "secret_", "caseFold": false},
+        {"literal": "ntn_", "caseFold": false}
+      ],
+      "validator": "NotionInternalToken",
+      "minProfile": "balanced",
+      "confidence": "medium",
+      "maxLookbehind": 1,
+      "maxLookahead": 80,
+      "provenance": {
+        "source": "https://developers.notion.com/docs/authorization",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export NOTION_TOKEN=secret_JcieWVjwiYd7U3MsPkYO2xaCUvet6zYYqy0pJf9CIg9",
+          "{\"notion_secret\": \"secret_lV3G32cGh6dAuJa3pJEeyQVnsZpF2V2r2iY9Uot4wf3\"}",
+          "export NOTION_TOKEN=ntn_LFn3YnrPf6lJOdoQdQqA5zd5SriKEc8WlTo9bsQd2TMY2e",
+          "{\"notion_token\": \"ntn_GPYkWkSsSB1qZRAk3rxvD6mvf155SxzOmzWOoMnQrwuxqr1IoG5opCTycClX\"}"
+        ],
+        "nomatch": [
+          "the client_secret_JcieWVjwiYd7U3MsPkYO2xaCUvet6zYYqy0pJf9CIg9 field",
+          "token=secret_iCnEPor6SOvFbGwot3GcKsT5BCUyDSWXbJPhakryLK",
+          "token=ntn_uIF6SUvaLMIyi4Xhg6R1KQ608e9zSv3VzHd9EJw9O3rur"
+        ]
+      }
+    }
+  ]
+}
