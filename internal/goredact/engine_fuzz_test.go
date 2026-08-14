@@ -77,3 +77,51 @@ func FuzzRedactChunkingEquivalence(f *testing.F) {
 		}
 	})
 }
+
+// FuzzRedactAllRulesSecurity runs arbitrary bytes through the complete built-in
+// catalog, including contextual and multi-line parsers. The smaller seed-rule
+// target above is intentionally retained because it reaches more mutations per
+// second; this target trades speed for breadth.
+func FuzzRedactAllRulesSecurity(f *testing.F) {
+	f.Add([]byte(nil), uint64(0))
+	f.Add([]byte(`{"headers":"Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.abc_DEF-1234567890\\n"}`), uint64(1))
+	f.Add([]byte(`postgres://user:p%40ssword-with-entropy@example.invalid/db`), uint64(2))
+	f.Add([]byte("postgres://user:unterminated%zz@/ bad://:@ -----BEGIN PRIVATE KEY-----\nQUJDREVGR0hJSktMTU5PUFFS"), uint64(3))
+	f.Add([]byte("\xff\xfe\x00Cookie: session=AbCdEfGhIjKlMnOpQrStUvWxYz012345; x=1\r\n"), uint64(4))
+	f.Add(bytes.Repeat([]byte("A=\\\"%zz://:@\x00\xff\n"), 512), uint64(5))
+
+	f.Fuzz(func(t *testing.T, data []byte, seed uint64) {
+		const maxInput = 32 << 10
+		if len(data) > maxInput {
+			data = data[:maxInput]
+		}
+
+		run := func(src *chunkedReader) ([]byte, []Finding) {
+			var findings []Finding
+			e, err := New(Config{Profile: ProfileDeep, OnFinding: func(fd Finding) { findings = append(findings, fd) }})
+			if err != nil {
+				t.Fatalf("New: %v", err)
+			}
+			var out bytes.Buffer
+			stats, err := e.Redact(context.Background(), &out, src)
+			if err != nil {
+				t.Fatalf("Redact: %v", err)
+			}
+			if stats.BytesRead != int64(len(data)) || stats.Findings != len(findings) {
+				t.Fatalf("stats=%+v input=%d callbacks=%d", stats, len(data), len(findings))
+			}
+			if want := spliceExpected(data, findings, DefaultMarker); !bytes.Equal(out.Bytes(), []byte(want)) {
+				t.Fatal("output differs from confirmed-span splice reconstruction")
+			}
+			return append([]byte(nil), out.Bytes()...), findings
+		}
+
+		one, _ := run(&chunkedReader{data: data, sizes: func(int) int { return len(data) + 1 }})
+		rng := rand.New(rand.NewSource(int64(seed)))
+		limit := 1 + int(seed%127)
+		chunked, _ := run(&chunkedReader{data: data, sizes: func(int) int { return 1 + rng.Intn(limit) }})
+		if !bytes.Equal(one, chunked) {
+			t.Fatal("chunked and non-chunked outputs differ")
+		}
+	})
+}
