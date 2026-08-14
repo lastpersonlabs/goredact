@@ -146,6 +146,79 @@ RUNS=3 zsh ./scripts/benchmark-betterleaks.zsh \
   /tmp/goredact-corpus/corpus-000.log /tmp/goredact "$(command -v betterleaks)"
 ```
 
+## Local Codex and Claude session comparison
+
+On 2026-08-14, a local supporting benchmark scanned every JSONL session under
+`~/.codex/sessions` and `~/.claude/projects`. The private corpus contained 976
+files and 658,454,891 bytes (627.95 MiB): 626 Codex files and 350 Claude files.
+Caches, plugins, databases, generated images, file history, and other
+non-session state were excluded. The session contents and reports were not
+retained.
+
+The same temporary copy of the corpus was scanned by the current GoRedact
+working tree with the balanced profile, Betterleaks 1.7.4, and Gitleaks
+8.30.1-1. Each process was pinned to logical CPU 0 with `taskset -c 0`, and
+`GOMAXPROCS=1` limited the Go scheduler to one OS thread. All three used their
+directory-scanning mode. Git history, archive extraction, and recursive
+decoding were disabled; Betterleaks network validation was left disabled.
+Reports used JSON with matched secrets fully redacted. GoRedact wrote its
+report to `/dev/null`; the other scanners wrote temporary redacted reports,
+which were deleted with the corpus after the run. Standard output and scanner
+logs were suppressed so session contents and findings were not printed.
+
+One warm-up preceded three measured GoRedact and Betterleaks runs. Gitleaks
+did not complete a clean measured pass within three minutes and was stopped,
+so its row is a conservative bound rather than a median:
+
+| Tool | Measured wall times | Median wall time | Throughput | Median peak RSS | Relative wall time |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| GoRedact, balanced profile | 0.99, 0.98, 0.99 s | **0.99 s** | **634.29 MiB/s** | 12,580 KiB | 1x |
+| Betterleaks 1.7.4, default rules | 27.61, 26.51, 27.47 s | **27.47 s** | **22.86 MiB/s** | 181,852 KiB | **27.8x slower** |
+| Gitleaks 8.30.1-1, default rules | >180 s, stopped | >180 s | <3.49 MiB/s | not recorded | **>181x slower** |
+
+The corresponding user CPU times were 0.93, 0.92, and 0.93 seconds for
+GoRedact and 13.56, 13.02, and 13.48 seconds for Betterleaks. By median user
+CPU time, GoRedact was **14.5x faster** (675.22 versus 46.58 MiB/s). GoRedact
+reported 1,845 findings, but only the count was observed; this benchmark did
+not compare finding counts because the scanners have different rules and
+semantics.
+
+The commands had the following shape, with a fresh report path for each
+measured run:
+
+```sh
+mkdir -p /tmp/session-corpus
+find ~/.codex/sessions ~/.claude/projects -type f -name '*.jsonl' \
+  -exec cp --parents -t /tmp/session-corpus {} +
+
+taskset -c 0 env GOMAXPROCS=1 /tmp/goredact dir \
+  -profile balanced -report-format json -report-path /dev/null -exit-code 0 \
+  /tmp/session-corpus
+
+taskset -c 0 env GOMAXPROCS=1 betterleaks dir /tmp/session-corpus \
+  --max-decode-depth 0 --max-archive-depth 0 --redact=100 \
+  --no-banner --no-color --log-level error --report-format json \
+  --report-path /tmp/betterleaks-report.json --exit-code 0
+
+taskset -c 0 env GOMAXPROCS=1 gitleaks detect --no-git \
+  --source /tmp/session-corpus --max-decode-depth 0 --max-archive-depth 0 \
+  --redact=100 --no-banner --no-color --log-level error \
+  --report-format json --report-path /tmp/gitleaks-report.json --exit-code 0
+```
+
+This local run was performed on the AMD Ryzen 9 9900X host described above,
+but inside a sandbox that appeared to throttle sustained CPU use: Betterleaks'
+median wall time was about twice its user CPU time, while GoRedact's short run
+could use the available burst capacity. Wall time describes the observed local
+experience, but the wall-time ratios should not be treated as dedicated-host
+release claims. The CPU-time ratio is less sensitive to that quota. The corpus
+is also private and candidate-heavy, so its exact result cannot be reproduced
+elsewhere; the procedure can be repeated on another session collection.
+
+As in the synthetic comparisons, these figures measure throughput, not recall
+or precision. Different finding counts must not be interpreted as an accuracy
+ranking without a labeled ground-truth corpus.
+
 ## Producing release reports
 
 Run the full matrix independently on dedicated `linux/amd64` and `linux/arm64`

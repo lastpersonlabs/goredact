@@ -5,6 +5,36 @@ secrets in large byte streams. It is designed for agent sessions, logs,
 environment dumps, and upload pipelines where plaintext temporary files are
 not acceptable.
 
+## Motivation
+
+Secret detection often sits directly in the path of high-volume agent output,
+logs, and uploads. A scanner that cannot keep up either becomes a bottleneck or
+forces applications to buffer sensitive data. GoRedact is built to make that
+trade-off unnecessary: it scans and redacts in one pass with bounded memory.
+
+On a reproducible, one-core scan of the same deterministic 512 MiB quiet-log
+corpus, GoRedact's balanced profile delivered:
+
+| Compared with | Speed gain | GoRedact throughput | Other-tool throughput |
+| --- | ---: | ---: | ---: |
+| Gitleaks 8.30.1-1 | **97.6x faster** | 701.37 MiB/s | 7.19 MiB/s |
+| Betterleaks 1.7.4 | **6.2x faster** | 701.37 MiB/s | 113.27 MiB/s |
+
+The advantage also held on a private, candidate-heavy corpus of 976 real
+Codex and Claude session files (627.95 MiB). In a local single-core run,
+GoRedact completed in 0.99 seconds (634.29 MiB/s), versus 27.47 seconds for
+Betterleaks (22.86 MiB/s), making GoRedact **27.8x faster** by median wall
+time. Gitleaks did not complete one pass within three minutes, so GoRedact was
+at least **181x faster** at that cutoff. This local run was subject to sandbox
+CPU throttling and is supporting evidence rather than a dedicated-host release
+benchmark.
+
+These results measure baseline scanning throughput on that workload, not
+relative recall or precision; the tools use different rule sets and behavior.
+See the full [benchmark protocol and results](docs/BENCHMARKS.md), including
+versions, raw wall and CPU times, memory use, host details, session-corpus
+selection, scanner flags, limitations, and reproduction commands.
+
 ```go
 engine, err := goredact.New(goredact.Config{
 	Profile: goredact.ProfileBalanced,
