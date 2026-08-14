@@ -2,8 +2,8 @@ package validators
 
 import "bytes"
 
-// This file holds the validators for the AI-platform provider secrets
-// covered by ENG-110: Anthropic, OpenAI (project-scoped and legacy),
+// This file holds validators for AI-platform provider secrets from
+// Anthropic, OpenAI (project-scoped and legacy),
 // Hugging Face, and Groq API keys. See validators.go for the shared
 // ValidateFunc contract and low-level byte helpers (isAlnum, allAlnum,
 // allSame, boundaryOK, consumeByte, consumeDigitRun, consumeAlnumRun) that

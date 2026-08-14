@@ -1,7 +1,7 @@
 package goredact
 
 // This file implements the bounded-memory streaming engine behind
-// Engine.Redact (ENG-96).
+// Engine.Redact.
 //
 // The engine keeps a single fixed buffer of cfg.ChunkSize bytes holding a
 // sliding window [bufBase, bufEnd) of the input. Each loop iteration
@@ -538,7 +538,7 @@ func (r *scanRun) makeRoom() error {
 // records. A found newline always yields a limit strictly past the
 // emission frontier (progress is preserved), and when no newline is
 // buffered the raw limit is returned, so alignment can never deadlock the
-// stream. Enabled by Config.RecordAligned (Engine.recordAligned); ENG-99's
+// stream. Enabled by Config.RecordAligned (Engine.recordAligned);
 // escaped-JSON record detection builds on this.
 func (r *scanRun) alignToRecord(limit int64) int64 {
 	lo := r.emitted

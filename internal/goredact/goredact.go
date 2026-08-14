@@ -128,8 +128,8 @@ type Engine struct {
 	// down to the last '\n' at or before the safe emission limit, so
 	// downstream consumers observe whole records. It never violates
 	// safety limits and falls back to the raw limit when no newline is
-	// buffered. Set from the public Config.RecordAligned (ENG-101);
-	// ENG-99's escaped-JSON record detection builds on this hook. See
+	// buffered. Set from the public Config.RecordAligned;
+	// escaped-JSON record detection builds on this hook. See
 	// (*scanRun).alignToRecord.
 	recordAligned bool
 

@@ -1,10 +1,8 @@
 package goredact
 
-// Engine-level tests for the ENG-99 private-key validators, wired through
-// Config.CustomRules (the identical engine path the generated builtin rules
-// take). The spec rules land in Builtins() when the orchestrator
-// regenerates after all ENG-99..102 agents finish, so these tests import
-// the validators directly.
+// Engine-level tests for the private-key validators, wired through
+// Config.CustomRules (the identical engine path the generated built-in rules
+// take). These tests import the validators directly to exercise that path.
 
 import (
 	"context"

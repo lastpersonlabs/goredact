@@ -1,9 +1,9 @@
-// This file implements the ENG-100 contextual detectors: credentials that
+// This file implements the contextual detectors: credentials that
 // are identified by WHERE they appear (an HTTP Authorization header, a
 // Cookie/Set-Cookie header, the userinfo component of a URL, a CLI
 // password/token flag) rather than by a provider-specific token shape
-// (validators.go et al.) or a bare key=value assignment (generic.go,
-// ENG-98 — assignments are deliberately NOT duplicated here).
+// (validators.go et al.) or a bare key=value assignment (generic.go);
+// assignments are deliberately not duplicated here.
 //
 // All four validators redact ONLY the credential value: header names, URL
 // scheme/host/path structure, cookie names, and flag names are always
@@ -33,7 +33,7 @@
 // occurrence of every literal, so a header with three token-bearing pairs
 // gets three pair-trigger hits even though `cookie:` hits once. To keep
 // those weak pair literals from firing on arbitrary key=value text (which
-// the ENG-98 generic assignment rules already cover), the pair-trigger
+// the generic assignment rules already cover), the pair-trigger
 // path demands cookie context: the literal "ookie" (Cookie:/Set-Cookie:,
 // however cased) somewhere in the lookbehind, or an immediately preceding
 // `;`-separated pair boundary. When that context is absent the pair path
@@ -294,7 +294,7 @@ func cookieValueQualifies(val []byte) bool {
 //     prefix), cookie context is required (see cookiePairContextOK), and
 //     the following value must qualify. Without cookie context the pair
 //     path never matches: bare key=value assignments belong to the
-//     ENG-98 generic rules, not this one.
+//     generic rules, not this one.
 //
 // Only the cookie VALUE is redacted, never the name or header structure.
 func CookieSessionToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
@@ -403,7 +403,7 @@ func cookiePairCheck(window []byte, trigStart, trigEnd int) (start, end int, ok 
 // available lookbehind, or the name is immediately preceded by a ';' pair
 // separator (with at most one space). This is the guard that keeps the
 // weak pair triggers from firing on arbitrary assignments and URL query
-// strings — those are ENG-98 generic-rule territory.
+// strings — those are generic-rule territory.
 func cookiePairContextOK(window []byte, nameStart int) bool {
 	if nameStart >= 1 && window[nameStart-1] == ';' {
 		return true

@@ -6,7 +6,7 @@ import (
 )
 
 // TestBuiltinsSortedAndNonEmpty guards the ordering contract rulegen
-// promises (ENG-97): built-in rules are registered in ID-sorted order, so
+// promises: built-in rules are registered in ID-sorted order, so
 // adding an unrelated rule to the specs cannot reorder existing entries in
 // Builtins() or in a compiled Set. This test exercises the real generated
 // table (zz_generated_rules.go), produced by `go generate ./internal/rules`.

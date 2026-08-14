@@ -1,5 +1,5 @@
 // Validators for payments, messaging, and project-management provider
-// credentials (ENG-111): Stripe, Slack (user/app tokens — bot tokens are
+// credentials: Stripe, Slack (user/app tokens — bot tokens are
 // the pre-existing SlackBotToken in validators.go), SendGrid, Twilio,
 // Linear, and Notion.
 //

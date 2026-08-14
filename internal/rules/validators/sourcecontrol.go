@@ -1,4 +1,4 @@
-// Source-control and package-registry credential validators (ENG-108):
+// Source-control and package-registry credential validators:
 // GitHub (OAuth, App, refresh, and fine-grained PAT), GitLab (PAT, runner,
 // and deploy tokens), npm, PyPI, and Docker Hub. The classic GitHub PAT
 // validator (GitHubPAT, trigger "ghp_") already lives in validators.go and

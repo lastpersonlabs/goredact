@@ -2,7 +2,7 @@ package validators
 
 import "testing"
 
-// contextualCase is the table-row shape for the ENG-100 contextual
+// contextualCase is the table-row shape for the contextual
 // validator tests: the trigger is located by literal (first occurrence,
 // ASCII case-insensitive, via findTrigger), and on a match the redacted
 // span is compared as the substring it covers rather than raw offsets, so
@@ -577,7 +577,7 @@ func TestCommandLinePasswordFlag(t *testing.T) {
 
 // TestContextualValidatorsNeverPanic brute-forces every (trigStart,
 // trigEnd) pair over a set of nasty windows — truncations, escapes,
-// multi-byte structure — for all four ENG-100 validators.
+// multi-byte structure — for all four validators.
 func TestContextualValidatorsNeverPanic(t *testing.T) {
 	windows := []string{
 		"",

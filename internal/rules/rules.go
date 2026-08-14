@@ -8,7 +8,7 @@ import (
 )
 
 // Version identifies the built-in rule-set revision. It is defined in the
-// generated zz_generated_rules.go (ENG-97): it is derived from the
+// generated zz_generated_rules.go: it is derived from the
 // canonical serialization of the generated rule table, so it changes
 // exactly when generated rules change.
 
@@ -98,7 +98,7 @@ type BuildOptions struct {
 	CustomRules  []Rule
 }
 
-// builtins is populated by the generated rule tables (ENG-97). Kept as a
+// builtins is populated by the generated rule tables. Kept as a
 // function variable so the generated file lives in this package without an
 // import cycle.
 var builtins []Rule

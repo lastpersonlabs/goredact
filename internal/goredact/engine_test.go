@@ -462,7 +462,7 @@ func (w *recordingWriter) Write(p []byte) (int, error) {
 // TestRecordAlignedEmission exercises the public Config.RecordAligned
 // knob: mid-stream emission boundaries must land just past a '\n' whenever
 // one is buffered, and it must fall back to raw limits (no deadlock,
-// identical output) when the input has no newlines. ENG-99's escaped-JSON
+// identical output) when the input has no newlines. escaped-JSON
 // record detection builds on the underlying hook.
 func TestRecordAlignedEmission(t *testing.T) {
 	line := strings.Repeat("x", 39) + "\n"

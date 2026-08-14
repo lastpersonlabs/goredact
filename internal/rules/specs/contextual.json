@@ -13,7 +13,7 @@
       "maxLookbehind": 2,
       "maxLookahead": 512,
       "provenance": {
-        "source": "ENG-100 contextual header detection; scheme grammar per RFC 6750 (Bearer), RFC 7617 (Basic), AWS SigV4 Authorization header",
+        "source": "contextual header detection; scheme grammar per RFC 6750 (Bearer), RFC 7617 (Basic), AWS SigV4 Authorization header",
         "license": "original"
       },
       "fixtures": {
@@ -52,7 +52,7 @@
       "maxLookbehind": 60,
       "maxLookahead": 400,
       "provenance": {
-        "source": "ENG-100 contextual cookie detection; pair grammar per RFC 6265 (HTTP State Management Mechanism)",
+        "source": "contextual cookie detection; pair grammar per RFC 6265 (HTTP State Management Mechanism)",
         "license": "original"
       },
       "fixtures": {
@@ -84,7 +84,7 @@
       "maxLookbehind": 16,
       "maxLookahead": 200,
       "provenance": {
-        "source": "ENG-100 contextual URL detection; userinfo grammar per RFC 3986 section 3.2.1",
+        "source": "contextual URL detection; userinfo grammar per RFC 3986 section 3.2.1",
         "license": "original"
       },
       "fixtures": {
@@ -120,7 +120,7 @@
       "maxLookbehind": 2,
       "maxLookahead": 200,
       "provenance": {
-        "source": "ENG-100 contextual CLI flag detection (internal design, no single external spec)",
+        "source": "contextual CLI flag detection (internal design, no single external spec)",
         "license": "original"
       },
       "fixtures": {

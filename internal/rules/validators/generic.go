@@ -1,9 +1,9 @@
-// This file implements the ENG-98 generic contextual credential rules:
+// This file implements the generic contextual credential rules:
 // heuristic ValidateFuncs that fire on assignment-style context around
 // keyword triggers like "api_key", "password", or "token" (as opposed to
 // the deterministic provider-specific validators in validators.go, which
 // confirm exact known token shapes). Header/URL/cookie contexts are
-// intentionally out of scope here (see ENG-100).
+// intentionally out of scope here and handled by contextual validators.
 //
 // # Parsing model
 //
@@ -42,7 +42,7 @@
 //
 // FalsePositiveBudgetPerTenMiB documents the accuracy target these
 // balanced-profile rules are tuned against. It is enforced empirically by
-// the ENG-103 accuracy corpus harness, not by any check in this package;
+// the accuracy corpus harness, not by any check in this package;
 // the constant exists so that harness (and this file's authors) have one
 // canonical number to reference and keep in sync.
 package validators
@@ -53,7 +53,7 @@ import "github.com/lastpersonlabs/goredact/internal/entropy"
 // profile generic contextual rules in this file: fewer than this many
 // false-positive redactions per 10 MiB of ordinary keyword-dense log and
 // config data (the kind of text where "password", "token", "api_key" etc.
-// appear constantly without carrying an actual secret value). The ENG-103
+// appear constantly without carrying an actual secret value). The
 // accuracy corpus harness measures against this number; it is not
 // self-enforcing at build or test time.
 const FalsePositiveBudgetPerTenMiB = 1

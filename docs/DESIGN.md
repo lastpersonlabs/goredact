@@ -19,7 +19,7 @@ io.Reader → [chunked buffer] → Aho–Corasick matcher → trigger hits
 tables call `RegisterBuiltins` from an `init` in a generated file inside
 this package. `Set.MaxWindow()` is the overlap the engine must retain.
 
-### `internal/ahocorasick` (ENG-95)
+### `internal/ahocorasick`
 
 Pure-Go Aho–Corasick over bytes. Contract:
 
@@ -51,7 +51,7 @@ func (a *Automaton) Scan(s State, chunk []byte, fn func(pattern int, end int) bo
   goto — implementation's choice, as long as both semantics hold).
 - Overlapping matches via output links (dictionary suffix links).
 
-### `internal/span` (ENG-92)
+### `internal/span`
 
 Confirmed-span collection, merge, precedence, ordered release.
 
@@ -82,7 +82,7 @@ Merge/precedence rules (deterministic):
    tie → lower Rule index.
 3. Released output is sorted by Start; no two released spans overlap.
 
-### `internal/engine` (ENG-96) or engine methods in root package
+### `internal/engine` or engine methods in root package
 
 Implements the streaming loop and installs itself as `redactImpl` in the
 root package (see goredact.go) via an init or direct call — final wiring

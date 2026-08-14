@@ -15,8 +15,8 @@
 // truncated at a chunk or input boundary.
 //
 // This package currently holds two seed validators (GitHubPAT,
-// SlackBotToken) that exist to prove the ENG-97 spec-to-generated-code
-// pipeline end to end. The full validator catalog lands in ENG-102.
+// SlackBotToken) that prove the spec-to-generated-code pipeline end to end.
+// Additional files in this package provide the full validator catalog.
 package validators
 
 // isDigit reports whether c is an ASCII decimal digit.

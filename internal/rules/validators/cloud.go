@@ -2,8 +2,8 @@ package validators
 
 import "bytes"
 
-// This file implements the cloud-platform credential validators for
-// ENG-109: AWS access key IDs, AWS secret access keys, GCP API keys, and
+// This file implements cloud-platform credential validators for AWS access
+// key IDs, AWS secret access keys, GCP API keys, and
 // Azure storage account keys. Each function follows the same contract as
 // the seed validators in validators.go: pure, panic-free functions of
 // window that report a window-relative half-open span to redact.

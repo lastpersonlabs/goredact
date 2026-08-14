@@ -2,17 +2,17 @@
 //
 // Provenance:
 //   anthropic-api-key: https://docs.anthropic.com/en/api/getting-started (original)
-//   authorization-bearer: ENG-100 contextual header detection; scheme grammar per RFC 6750 (Bearer), RFC 7617 (Basic), AWS SigV4 Authorization header (original)
+//   authorization-bearer: contextual header detection; scheme grammar per RFC 6750 (Bearer), RFC 7617 (Basic), AWS SigV4 Authorization header (original)
 //   aws-access-key-id: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids (original)
 //   aws-secret-access-key: https://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html (original)
 //   azure-storage-account-key: https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage (original)
-//   command-line-password-flag: ENG-100 contextual CLI flag detection (internal design, no single external spec) (original)
-//   cookie-session-token: ENG-100 contextual cookie detection; pair grammar per RFC 6265 (HTTP State Management Mechanism) (original)
+//   command-line-password-flag: contextual CLI flag detection (internal design, no single external spec) (original)
+//   cookie-session-token: contextual cookie detection; pair grammar per RFC 6265 (HTTP State Management Mechanism) (original)
 //   dockerhub-pat: https://docs.docker.com/security/for-developers/access-tokens/ (original)
 //   gcp-api-key: https://cloud.google.com/docs/authentication/api-keys (original)
-//   generic-api-key-assignment: ENG-98 contextual entropy detection: assignment-style generic credential heuristic (internal design, no single external spec) (original)
-//   generic-bearer-like-token-assignment: ENG-98 contextual entropy detection: assignment-style generic credential heuristic (internal design, no single external spec) (original)
-//   generic-password-assignment: ENG-98 contextual entropy detection: assignment-style generic credential heuristic (internal design, no single external spec) (original)
+//   generic-api-key-assignment: contextual entropy detection: assignment-style generic credential heuristic (internal design, no single external spec) (original)
+//   generic-bearer-like-token-assignment: contextual entropy detection: assignment-style generic credential heuristic (internal design, no single external spec) (original)
+//   generic-password-assignment: contextual entropy detection: assignment-style generic credential heuristic (internal design, no single external spec) (original)
 //   github-app-token: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats (original)
 //   github-fine-grained-pat: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats (original)
 //   github-oauth-token: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats (original)
@@ -38,7 +38,7 @@
 //   stripe-secret-key: https://docs.stripe.com/keys (original)
 //   stripe-webhook-secret: https://docs.stripe.com/webhooks#verify-official-libraries (original)
 //   twilio-api-key-sid: https://www.twilio.com/docs/iam/api-keys (original)
-//   url-credentials: ENG-100 contextual URL detection; userinfo grammar per RFC 3986 section 3.2.1 (original)
+//   url-credentials: contextual URL detection; userinfo grammar per RFC 3986 section 3.2.1 (original)
 
 package rules
 

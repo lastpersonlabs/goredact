@@ -110,7 +110,6 @@ headers as a backstop.
 - Write commit subject lines in the imperative mood ("Add X", "Fix Y", not
   "Added"/"Fixes"), under ~70 characters, with a body explaining *why* when
   the change isn't self-evident.
-- Reference the relevant issue (e.g. `ENG-123`) in the PR description.
 - PRs should describe: what changed, why, and how it was tested (which of
   the commands above were run). If a package contract from
   `docs/DESIGN.md` changed, say so explicitly.

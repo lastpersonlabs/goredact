@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Synthetic credential values for the ENG-100 contextual rules. Entirely
+// Synthetic credential values for the contextual rules. Entirely
 // fabricated; shaped to pass the entropy/placeholder gates.
 const (
 	ctxBearerVal  = "mZ7xW4pL9sN3tYbF6hR0cD5gU1aEkJ8v" // Authorization: Bearer value

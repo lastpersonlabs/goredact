@@ -1,5 +1,5 @@
 // Package ahocorasick implements an allocation-free, resumable
-// Aho–Corasick multi-pattern matcher over bytes (ENG-95).
+// Aho–Corasick multi-pattern matcher over bytes.
 //
 // # Design
 //

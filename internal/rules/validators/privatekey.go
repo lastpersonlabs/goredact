@@ -1,6 +1,6 @@
 package validators
 
-// Private-key material validators (ENG-99): PEM-encapsulated private keys
+// Private-key material validators: PEM-encapsulated private keys
 // (raw multi-line and JSON-escaped single-line forms) and PuTTY PPK
 // private-key sections. Both are window-based validators: the engine hands
 // them a bounded window (trigger + up to the rule's MaxLookahead), which

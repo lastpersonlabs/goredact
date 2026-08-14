@@ -40,7 +40,7 @@ below.
   keeping the false-positive rate low enough to be safe as a default (the
   generic contextual rules in `internal/rules/validators/generic.go` are
   explicitly tuned against a documented false-positive budget,
-  `FalsePositiveBudgetPerTenMiB`, verified by the ENG-103 accuracy corpus).
+  `FalsePositiveBudgetPerTenMiB`, verified by the accuracy corpus).
 - **`deep`** — reserved for more expensive or lower-confidence detectors
   and selected decoding (e.g. base64-unwrapping a candidate before
   validating it, or heavier entropy-only heuristics with no keyword
@@ -125,7 +125,7 @@ Per-profile counts: `fast` = 31 rules, `balanced` = 38 rules (adds 7),
 `(*Engine).ActiveRules()` (what a specific configured `Engine` actually
 runs).
 
-## Profile-assignment audit (ENG-101)
+## Profile-assignment audit
 
 Every built-in rule's `minProfile` was checked against the tier intent
 above. Findings:
@@ -144,7 +144,7 @@ above. Findings:
 - `generic-bearer-like-token-assignment` is the sole `confidence: low`
   rule, and it is correctly **not** in `fast`. It is deliberately in
   `balanced` rather than `deep`: it is one of the three
-  ENG-98/ENG-103 generic contextual rules in
+  generic contextual rules in
   `internal/rules/validators/generic.go`, whose file-level doc comment
   states they are "the balanced-profile generic contextual rules" tuned
   against a documented, harness-verified false-positive budget
@@ -161,7 +161,7 @@ generated table already agree and no rule needed to move tiers. No
 
 ### A related default-safety issue that *was* fixed (not a `minProfile` change)
 
-While adding the default-config safety test required by ENG-101, this
+While adding the default-config safety test used during this audit, the
 audit found that `New(Config{})` was **not** actually selecting
 `ProfileBalanced` as `goredact.go`'s doc comment claimed: `Profile`'s zero
 value was `ProfileFast` (`iota` started at `ProfileFast`), so an
