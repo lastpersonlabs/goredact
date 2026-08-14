@@ -52,6 +52,17 @@ audit (note the reset in the PR description).
 
 - Source URL: https://github.com/klauspost/compress
 - Release: v1.18.0
-- Licence: BSD-3-Clause, compatible with this project's MIT licence
+- Licence file: https://github.com/klauspost/compress/blob/v1.18.0/LICENSE
+- Licence: mixed by file. The module's primary terms are BSD-3-Clause;
+  `gzhttp/*` is Apache-2.0; `s2/cmd/internal/readahead/*` and
+  `s2/cmd/internal/filepathx/*` are MIT; and `snappy/*` plus
+  `internal/snapref/*` carry BSD-3-Clause terms. This project directly imports
+  `github.com/klauspost/compress/zstd`; its linked transitive packages from
+  the module (`fse`, `huff0`, `internal/cpuinfo`, `internal/le`,
+  `internal/snapref`, and `zstd/internal/xxhash`) are also covered by
+  BSD-3-Clause terms. Those applicable terms are compatible with this
+  project's MIT licence.
 - Local use: `cmd/goredact` and `examples/multipartupload`
-- Notes: pure-Go streaming Zstandard encoder; consumed as a Go module and not vendored or adapted
+- Notes: pure-Go streaming Zstandard encoder; consumed as a Go module and not
+  vendored or adapted. Binary redistributors must preserve the applicable
+  copyright notice, conditions, and disclaimer as required by BSD-3-Clause.
