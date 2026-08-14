@@ -11,7 +11,7 @@ func validateRules(rules []specRule) []string {
 	var problems []string
 
 	report := func(r specRule, format string, args ...any) {
-		loc := r.sourceFile
+		var loc string
 		if r.ID != "" {
 			loc = fmt.Sprintf("%s: rule %q", r.sourceFile, r.ID)
 		} else {

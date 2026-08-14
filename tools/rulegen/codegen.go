@@ -97,7 +97,7 @@ func computeVersion(rules []genRule) (string, error) {
 	for i, r := range rules {
 		trigs := make([]canonicalTrigger, len(r.Triggers))
 		for j, t := range r.Triggers {
-			trigs[j] = canonicalTrigger{Literal: t.Literal, CaseFold: t.CaseFold}
+			trigs[j] = canonicalTrigger(t)
 		}
 		canon[i] = canonicalRule{
 			ID:            r.ID,
