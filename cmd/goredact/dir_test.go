@@ -26,14 +26,17 @@ func TestRunDirJSONReport(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "clean.txt"), []byte("ordinary text"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	var output bytes.Buffer
-	err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=7", dir}, nil, &output, io.Discard)
+	var output, diagnostics bytes.Buffer
+	err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=7", dir}, nil, &output, &diagnostics)
 	var found findingsError
 	if !errors.As(err, &found) || found.code != 7 {
 		t.Fatalf("error = %v, want findings exit 7", err)
 	}
 	if strings.Contains(output.String(), secret) {
 		t.Fatal("report contains secret material")
+	}
+	if diagnostics.String() != "goredact: secrets_found=1\n" {
+		t.Fatalf("diagnostics = %q", diagnostics.String())
 	}
 	var report scanReport
 	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
@@ -45,6 +48,20 @@ func TestRunDirJSONReport(t *testing.T) {
 	finding := report.Findings[0]
 	if finding.File != "nested/leak.txt" || finding.RuleID != "aws-access-key-id" || finding.EndByte <= finding.StartByte {
 		t.Fatalf("finding = %+v", finding)
+	}
+}
+
+func TestRunDirReportsZeroSecretsToStderr(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "clean.txt"), []byte("ordinary text"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var diagnostics bytes.Buffer
+	if err := run(context.Background(), []string{"dir", dir}, nil, io.Discard, &diagnostics); err != nil {
+		t.Fatal(err)
+	}
+	if diagnostics.String() != "goredact: secrets_found=0\n" {
+		t.Fatalf("diagnostics = %q", diagnostics.String())
 	}
 }
 

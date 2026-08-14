@@ -48,7 +48,9 @@ also contain the schema identifier, selected profile, file count, and total
 bytes scanned. `-exit-code N` selects the finding exit code from 1 through 125;
 `-exit-code 0` makes findings a successful result. Operational failures still
 exit with status 1. If the report already exists inside the scan root, it is
-excluded from the input set.
+excluded from the input set. After writing the report, `dir` writes
+`goredact: secrets_found=N` to standard error, including when the count is
+zero; report data on standard output therefore remains machine-readable.
 
 By default, reports deliberately omit matched values. Pass `-show-secrets` to
 include the exact secret in every finding:

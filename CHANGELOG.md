@@ -18,7 +18,8 @@ Initial release.
   property tests, and reproducible large-corpus benchmark tooling.
 - Reference CLI with stream and recursive directory commands, optional secret
   display in JSON/CSV/JUnit/SARIF reports, streaming zstd, and a bounded
-  multipart-upload example.
+  multipart-upload example. Directory scans emit a count-only findings summary
+  on standard error.
 
 Release evidence and known detection limits are documented in `docs/ACCURACY.md`,
 `docs/BENCHMARKS.md`, and `docs/THREAT_MODEL.md`.

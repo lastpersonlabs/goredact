@@ -133,6 +133,7 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 	if err := writeReport(o.reportPath, format, report, stdout); err != nil {
 		return err
 	}
+	fmt.Fprintf(stderr, "goredact: secrets_found=%d\n", len(report.Findings))
 	if len(report.Findings) > 0 && o.exitCode != 0 {
 		return findingsError{code: o.exitCode}
 	}
