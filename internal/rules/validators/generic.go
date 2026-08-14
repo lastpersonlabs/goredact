@@ -243,6 +243,9 @@ func GenericAPIKeyAssignment(window []byte, trigStart, trigEnd int) (start, end 
 	if !isTriggerBoundaryOK(window, trigStart) {
 		return 0, 0, false
 	}
+	if isEmptyInlineAssignment(window, trigStart, trigEnd) {
+		return 0, 0, false
+	}
 	valStart, valEnd, ok := parseAssignmentValue(window, trigEnd)
 	if !ok {
 		return 0, 0, false
@@ -250,10 +253,43 @@ func GenericAPIKeyAssignment(window []byte, trigStart, trigEnd int) (start, end 
 	if isIndirectAssignmentValue(window[valStart:valEnd]) {
 		return 0, 0, false
 	}
+	if !isMachineTokenValue(window[valStart:valEnd]) {
+		return 0, 0, false
+	}
 	if !entropy.Secretlike(window[valStart:valEnd], entropy.PresetAssignmentValue) {
 		return 0, 0, false
 	}
 	return valStart, valEnd, true
+}
+
+// isEmptyInlineAssignment recognizes quoted documentation fragments such as
+// `token=` and `x_api_key=`. Without this check, the closing quote after '='
+// is mistaken for an opening value quote and prose is captured up to the next
+// quote in the document.
+func isEmptyInlineAssignment(window []byte, trigStart, trigEnd int) bool {
+	if trigStart <= 0 || !isQuoteByte(window[trigStart-1]) {
+		return false
+	}
+	quote := window[trigStart-1]
+	pos := skipHSpace(window, trigEnd)
+	next, ok := consumeSeparator(window, pos)
+	if !ok {
+		return false
+	}
+	next = skipHSpace(window, next)
+	return next < len(window) && window[next] == quote
+}
+
+// isMachineTokenValue enforces the basic shape implied by API-key and bearer
+// token assignments. These values may contain punctuation, but not whitespace,
+// non-ASCII prose, or backticks from source-code concatenation.
+func isMachineTokenValue(value []byte) bool {
+	for _, c := range value {
+		if c <= ' ' || c >= 0x7f || c == '`' {
+			return false
+		}
+	}
+	return true
 }
 
 // isIndirectAssignmentValue rejects values that name or retrieve a secret
@@ -268,7 +304,7 @@ func isIndirectAssignmentValue(value []byte) bool {
 	if value[0] == '$' || value[0] == '/' || value[0] == '~' || value[0] == '-' {
 		return true
 	}
-	for _, marker := range []string{"\\n", "\\r", "://", "&amp", "process.env", "os.environ", "os.getenv", "secretparam(", "secrets.string(", "data.get("} {
+	for _, marker := range []string{"\\n", "\\r", "...", "://", "&amp", "process.env", "os.environ", "os.getenv", "secretparam(", "secrets.string(", "data.get("} {
 		if containsFold(value, marker) {
 			return true
 		}
@@ -403,12 +439,18 @@ func GenericBearerLikeTokenAssignment(window []byte, trigStart, trigEnd int) (st
 	if !isTriggerBoundaryOK(window, trigStart) {
 		return 0, 0, false
 	}
+	if isEmptyInlineAssignment(window, trigStart, trigEnd) {
+		return 0, 0, false
+	}
 	valStart, valEnd, ok := parseAssignmentValue(window, trigEnd)
 	if !ok {
 		return 0, 0, false
 	}
 	value := window[valStart:valEnd]
 	if isIndirectAssignmentValue(value) {
+		return 0, 0, false
+	}
+	if !isMachineTokenValue(value) {
 		return 0, 0, false
 	}
 	if len(value) < bearerLikeTokenMinLen {

@@ -133,6 +133,9 @@ func TestGenericAPIKeyAssignment(t *testing.T) {
 		{name: "HTML encoded source", window: `api_key=pk_live_ckPnmJJZTFKgKGv6RihxsV8g&amp`, trigger: "api_key", wantOK: false},
 		{name: "regex expression", window: `api_key=|^CODEX|^CHATGPT`, trigger: "api_key", wantOK: false},
 		{name: "base64 padding remains valid", window: `api_key=QWxhZGRpbjpvcGVuIHNlc2FtZQ==`, trigger: "api_key", wantOK: true, wantVal: "QWxhZGRpbjpvcGVuIHNlc2FtZQ=="},
+		{name: "inline code empty assignment", window: "`x_api_key=` still fires — preceding `_`", trigger: "api_key", wantOK: false},
+		{name: "quoted prose", window: "api_key=`still fires — preceding`", trigger: "api_key", wantOK: false},
+		{name: "truncated documentation value", window: `api_key=SG.Yx-zfSAN2cW7GfP6R7o425.U85hfj...`, trigger: "api_key", wantOK: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -336,6 +339,9 @@ func TestGenericBearerLikeTokenAssignment(t *testing.T) {
 		{name: "blockchain address", window: `token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, wantOK: false},
 		{name: "escaped constant identifier", window: `token=BASE_WATCHER_INTERNAL_API_TOKEN\\\"`, wantOK: false},
 		{name: "escaped framing excluded from token", window: `token=aZ9kQ2vR7wL4mN8pX1sT6bF3jH0cD5yUaZ9k\\\"`, wantOK: true, wantVal: "aZ9kQ2vR7wL4mN8pX1sT6bF3jH0cD5yUaZ9k"},
+		{name: "inline code empty assignment", window: "`token=` pairs fire once", wantOK: false},
+		{name: "source concatenation", window: "token=`github_pat_` + fgpatP1b + `", wantOK: false},
+		{name: "truncated documentation value", window: `token=ntn_LFn3YnrPf6lJOdoQdQqA5zd5SriKEc8WlTo9...`, wantOK: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
