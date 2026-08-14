@@ -71,7 +71,7 @@ much memory/disk do I use" or "is the output reproducible."
 
 ## Rule table
 
-38 built-in rules as of this writing. Columns: rule ID, name, minimum
+39 built-in rules as of this writing. Columns: rule ID, name, minimum
 profile that includes the rule (`fast` rules also run in `balanced` and
 `deep`; `balanced` rules also run in `deep`), confidence, and trigger
 literals (the Aho–Corasick literals that must appear before the rule's
@@ -102,6 +102,7 @@ finding).
 | `gitlab-runner-token` | GitLab runner authentication token | fast | high | `glrt-` |
 | `groq-api-key` | Groq API key | fast | high | `gsk_` |
 | `huggingface-token` | Hugging Face access token | fast | high | `hf_` |
+| `jwt` | JSON Web Token (standalone) | balanced | medium | `eyJ` |
 | `linear-api-key` | Linear personal API key | fast | high | `lin_api_` |
 | `notion-internal-token` | Notion internal integration token | balanced | medium | `secret_`, `ntn_` |
 | `npm-access-token` | npm access token | fast | high | `npm_` |
@@ -119,8 +120,8 @@ finding).
 | `twilio-api-key-sid` | Twilio API key SID | balanced | medium | `SK` |
 | `url-credentials` | URL userinfo password | fast | high | `://` |
 
-Per-profile counts: `fast` = 31 rules, `balanced` = 38 rules (adds 7),
-`deep` = 38 rules (adds 0, see above). Query these programmatically with
+Per-profile counts: `fast` = 31 rules, `balanced` = 39 rules (adds 8),
+`deep` = 39 rules (adds 0, see above). Query these programmatically with
 `goredact.BuiltinRules()` (every built-in, any profile) and
 `(*Engine).ActiveRules()` (what a specific configured `Engine` actually
 runs).
@@ -136,6 +137,12 @@ their short or generic triggers require additional structural validation.
 `generic-bearer-like-token-assignment` is also balanced: its `token` trigger
 is weaker than `api_key` or `password`, and its validator is tuned against the
 documented `FalsePositiveBudgetPerTenMiB` budget.
+
+`jwt` is a balanced rule even though its shape (three dot-separated
+base64url segments, header and payload both starting with `ey`) is
+structural: agent transcripts from auth-debugging sessions are dense with
+`eyJ`-prefixed strings that are base64 JSON but not tokens, so the rule
+stays out of the noise-averse fast tier.
 
 `New(Config{})` selects `ProfileBalanced`. The zero `Profile` value is
 reserved as unspecified so callers receive the documented default;

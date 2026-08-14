@@ -23,6 +23,7 @@
 //   gitlab-runner-token: https://docs.gitlab.com/ci/runners/new_creation_workflow/#glrt-authentication-tokens (original)
 //   groq-api-key: https://console.groq.com/docs/quickstart (original)
 //   huggingface-token: https://huggingface.co/docs/hub/security-tokens (original)
+//   jwt: https://www.rfc-editor.org/rfc/rfc7519 (JWT); https://www.rfc-editor.org/rfc/rfc7515#section-3.1 (JWS compact serialization); shape modeled on the betterleaks standalone-JWT rule (original)
 //   linear-api-key: https://developers.linear.app/docs/graphql/working-with-the-graphql-api#personal-api-keys (original)
 //   notion-internal-token: https://developers.notion.com/docs/authorization (original)
 //   npm-access-token: https://docs.npmjs.com/about-access-tokens (original)
@@ -162,6 +163,11 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			id:      "huggingface-token",
 			match:   []string{"HUGGINGFACE_TOKEN=hf_nW2OPJ0rGsD6y4OUtEXQxmAa3BItWMoP6J", "Authorization: Bearer hf_SoSitdlyJv4jWuJOgem50hOrLw9OoFOcb4", "{\"token\": \"hf_nW2OPJ0rGsD6y4OUtEXQxmAa3BItWMoP6J\"}"},
 			nomatch: []string{"hf_short", "hf_ab-cdefghijklmnopqrstuvwxyz01234", "from transformers import hf_hub_download", "hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
+		},
+		{
+			id:      "jwt",
+			match:   []string{"{\"role\":\"tool\",\"content\":\"exchanged assertion eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdmMtcmVwb3J0aW5nIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmludGVybmFsLmV4YW1wbGUiLCJleHAiOjE3NjcyMjU2MDB9.q4TnV7bXk2LwZ9pR0sYhF6dJ1aG5uEiO8cM3rTvQ6wN\"}", "export OIDC_ID_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6InN5bnRoZXRpYy0yMDI2In0.eyJzdWIiOiJ1c2VyLTQ4MjEiLCJzY29wZSI6InRyYW5zY3JpcHRzOnJlYWQiLCJpYXQiOjE3NTUxNzI4MDB9.Zc0vW5nRq8LtK2mXp7YbD4fH9jS1gU6eA3iO0rMwT5zVxN8cP2kEyG7uJ4hB", "2026-08-14T18:02:11Z DEBUG oauth exchange returned eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXNzaW9uIjoiYjFmNiJ9.N5wKp8VzR2mT7bXq0LcY4fJ6hD1gS9uE3aI", "{\"stdout\":\"introspecting eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTQ4MjEiLCJzY29wZSI6InRyYW5zY3JpcHRzOnJlYWQiLCJpYXQiOjE3NTUxNzI4MDB9.q4TnV7bXk2LwZ9pR0sYhF6dJ1aG5uEiO8cM3rTvQ6wN\\n\"}"},
+			nomatch: []string{"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", "authorization: bearer eyJhbGciOiJIUzI1NiJ9.pZ8kQ2vR7wL4mN0pX1sT.hB3jF6hZ1cYdA0eBqG", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.xxxxxxxxxxxxxxxx", "SGVyZSBpcyBzb21l.eyJub3RlIjoibm90LWEtand0In0.c2lnbmF0dXJlLWJs", "config blob eyJrZXkiOiJ2YWx1ZSJ9 is inline base64 JSON, not a JWT", "rawblob_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXNzaW9uIjoiYjFmNiJ9.N5wKp8VzR2mT7bXq0LcY4fJ6hD1gS9uE3aI", "eyJhbGciOiJIUzI1NiJ9.eyJhIjoxfQ.q4TnV7bXk2LwZ9pR0sYhF6dJ1aG5u"},
 		},
 		{
 			id:      "linear-api-key",

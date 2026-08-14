@@ -25,6 +25,13 @@ after construction and safe for concurrent use; every call consumes an
 `io.Reader` and writes redacted bytes to an `io.Writer` without retaining the
 whole input.
 
+By default each secret is replaced with one `[REDACTED]` marker
+(`Config.Marker`). `Config.MaskStrategy` can instead select
+`MaskLengthPreserving` (`*` per redacted byte, output length equals input
+length) or `MaskFormatPreserving` (per-character-class substitution that
+also keeps separators, so token shapes and fixed-width records survive) —
+see the `MaskStrategy` docs for the disclosure trade-offs.
+
 ## Install and use
 
 ```sh

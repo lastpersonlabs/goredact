@@ -93,14 +93,20 @@ Requirements:
 - Trigger hits whose lookahead window is not yet fully buffered are
   deferred until more input arrives or EOF.
 - Emission frontier: bytes may be written once `pos + MaxWindow` has been
-  read (or EOF), after applying released spans; marker replaces each span.
+  read (or EOF), after applying released spans; each span is replaced per
+  `Config.MaskStrategy` (one fixed marker by default, or byte-for-byte
+  masked replacements under the preserving strategies).
 - Context checked between chunks. Reader errors → *ReadError, writer
   errors → *WriteError, ctx.Err() preserved.
 - No temporary files. No allocation proportional to input size.
 
 ## Cross-cutting invariants (enforced by tests/fuzz)
 
-1. Confirmed span bytes never appear in output.
+1. Confirmed span bytes never appear in output. (Exception, by explicit
+   opt-in only: `MaskFormatPreserving` passes a span's separator bytes
+   — `- _ . : / + = @` — through verbatim and preserves each byte's
+   coarse character class; `MaskLengthPreserving` discloses only the
+   span's length. The default `MaskFixedMarker` discloses nothing.)
 2. Output equals input outside redacted spans.
 3. Chunked and unchunked scans of the same input are byte-identical.
 4. Same input+config → same output (chunk-size independence).

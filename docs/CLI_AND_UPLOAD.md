@@ -18,6 +18,13 @@ go run ./cmd/goredact stream \
   -stats session.stats.json
 ```
 
+`stream -mask` selects the replacement strategy: `fixed-marker` (default,
+one `[REDACTED]` per secret), `length-preserving` (`*` per redacted byte,
+so output length equals input length), or `format-preserving`
+(per-character-class substitution that keeps separators and token shapes;
+pipelines whose archive manifests promise shape-stable records should use
+this and record `strategy: format-preserving`).
+
 `stream -input -` and `stream -output -` select standard input and output.
 `stream -stats -` writes
 JSON statistics to standard error. Progress is also written to standard error

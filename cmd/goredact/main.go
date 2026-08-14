@@ -19,9 +19,9 @@ import (
 )
 
 type options struct {
-	input, output, profile, stats string
-	zstd                          bool
-	progressEvery                 int64
+	input, output, profile, mask, stats string
+	zstd                                bool
+	progressEvery                       int64
 }
 
 func main() {
@@ -58,6 +58,7 @@ func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 	fs.StringVar(&o.input, "input", "-", "input file ('-' for stdin)")
 	fs.StringVar(&o.output, "output", "-", "output file ('-' for stdout)")
 	fs.StringVar(&o.profile, "profile", "balanced", "detection profile: fast, balanced, or deep")
+	fs.StringVar(&o.mask, "mask", "fixed-marker", "mask strategy: fixed-marker, length-preserving, or format-preserving")
 	fs.StringVar(&o.stats, "stats", "", "write JSON statistics to this file ('-' for stderr)")
 	fs.BoolVar(&o.zstd, "zstd", false, "stream output as a Zstandard frame")
 	fs.Int64Var(&o.progressEvery, "progress-bytes", 0, "report bytes read at this interval to stderr (0 disables)")
@@ -78,7 +79,11 @@ func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 	if err != nil {
 		return err
 	}
-	engine, err := goredact.New(goredact.Config{Profile: profile})
+	mask, err := parseMask(o.mask)
+	if err != nil {
+		return err
+	}
+	engine, err := goredact.New(goredact.Config{Profile: profile, MaskStrategy: mask})
 	if err != nil {
 		return fmt.Errorf("goredact: configure engine: %w", err)
 	}
@@ -139,6 +144,19 @@ func parseProfile(s string) (goredact.Profile, error) {
 		return goredact.ProfileDeep, nil
 	default:
 		return 0, errors.New("goredact: unknown profile (use fast, balanced, or deep)")
+	}
+}
+
+func parseMask(s string) (goredact.MaskStrategy, error) {
+	switch strings.ToLower(s) {
+	case "fixed-marker":
+		return goredact.MaskFixedMarker, nil
+	case "length-preserving":
+		return goredact.MaskLengthPreserving, nil
+	case "format-preserving":
+		return goredact.MaskFormatPreserving, nil
+	default:
+		return 0, errors.New("goredact: unknown mask strategy (use fixed-marker, length-preserving, or format-preserving)")
 	}
 }
 

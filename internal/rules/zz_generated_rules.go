@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-f1df68a7e990"
+const Version = "builtin-efbbe1c074e0"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -301,6 +301,18 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 1,
 			MaxLookahead:  36,
+		},
+		{
+			ID:   "jwt",
+			Name: "JSON Web Token (standalone)",
+			Triggers: []Trigger{
+				{Literal: "eyJ", CaseFold: false},
+			},
+			Validate:      validators.JWT,
+			MinProfile:    ProfileBalanced,
+			Confidence:    ConfidenceMedium,
+			MaxLookbehind: 1,
+			MaxLookahead:  8192,
 		},
 		{
 			ID:   "linear-api-key",

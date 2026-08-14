@@ -73,6 +73,33 @@ func TestRunFilesAndFailedScanRemovesOutput(t *testing.T) {
 	}
 }
 
+func TestRunMaskFlag(t *testing.T) {
+	input := "before AWS_ACCESS_KEY_ID=AKIAUJZDEGXDNCF32EPF after"
+
+	var output bytes.Buffer
+	if err := run(context.Background(), []string{"stream", "-mask=length-preserving"}, strings.NewReader(input), &output, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if output.Len() != len(input) {
+		t.Fatalf("length-preserving output length = %d, want %d", output.Len(), len(input))
+	}
+	if strings.Contains(output.String(), "AKIAUJZDEGXDNCF32EPF") || !strings.Contains(output.String(), strings.Repeat("*", 20)) {
+		t.Fatalf("unexpected output %q", output.String())
+	}
+
+	output.Reset()
+	if err := run(context.Background(), []string{"stream", "-mask=format-preserving"}, strings.NewReader(input), &output, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if output.Len() != len(input) || strings.Contains(output.String(), "AKIAUJZDEGXDNCF32EPF") {
+		t.Fatalf("unexpected output %q", output.String())
+	}
+
+	if err := run(context.Background(), []string{"stream", "-mask=nonsense"}, strings.NewReader(""), io.Discard, io.Discard); err == nil || !strings.Contains(err.Error(), "unknown mask strategy") {
+		t.Fatalf("invalid -mask error = %v", err)
+	}
+}
+
 type failingReader struct{ err error }
 
 func (r *failingReader) Read([]byte) (int, error) { return 0, r.err }

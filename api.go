@@ -6,16 +6,17 @@ import core "github.com/lastpersonlabs/goredact/internal/goredact"
 // module-root API stable while allowing the implementation to live outside the
 // repository root.
 type (
-	Config     = core.Config
-	CustomRule = core.CustomRule
-	Engine     = core.Engine
-	Profile    = core.Profile
-	Confidence = core.Confidence
-	Finding    = core.Finding
-	Stats      = core.Stats
-	RuleInfo   = core.RuleInfo
-	ReadError  = core.ReadError
-	WriteError = core.WriteError
+	Config       = core.Config
+	CustomRule   = core.CustomRule
+	Engine       = core.Engine
+	Profile      = core.Profile
+	Confidence   = core.Confidence
+	MaskStrategy = core.MaskStrategy
+	Finding      = core.Finding
+	Stats        = core.Stats
+	RuleInfo     = core.RuleInfo
+	ReadError    = core.ReadError
+	WriteError   = core.WriteError
 )
 
 const (
@@ -29,6 +30,10 @@ const (
 	ConfidenceLow    = core.ConfidenceLow
 	ConfidenceMedium = core.ConfidenceMedium
 	ConfidenceHigh   = core.ConfidenceHigh
+
+	MaskFixedMarker      = core.MaskFixedMarker
+	MaskLengthPreserving = core.MaskLengthPreserving
+	MaskFormatPreserving = core.MaskFormatPreserving
 )
 
 var ErrInvalidConfig = core.ErrInvalidConfig

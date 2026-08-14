@@ -194,7 +194,7 @@ func (e *Engine) redact(ctx context.Context, dst io.Writer, src io.Reader) (Stat
 	st.reset()
 	defer e.states.Put(st)
 
-	r := &scanRun{e: e, st: st, w: span.NewWriter(dst, e.marker), src: src}
+	r := &scanRun{e: e, st: st, w: span.NewMaskingWriter(dst, e.marker, e.cfg.MaskStrategy.internal()), src: src}
 	r.scanFn = r.onTrigger
 	err := r.run(ctx)
 	r.stats.BytesWritten = r.w.BytesWritten()

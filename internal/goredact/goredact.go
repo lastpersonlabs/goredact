@@ -29,8 +29,19 @@ type Config struct {
 	ChunkSize int
 
 	// Marker is the fixed replacement text written in place of each
-	// redacted span. Defaults to DefaultMarker.
+	// redacted span under MaskFixedMarker. Defaults to DefaultMarker.
+	// The other mask strategies ignore it.
 	Marker string
+
+	// MaskStrategy selects how confirmed spans are replaced in the
+	// output. The zero value, MaskFixedMarker, writes Marker once per
+	// span; MaskLengthPreserving and MaskFormatPreserving instead
+	// replace each redacted byte one-for-one, so output length equals
+	// input length. See the MaskStrategy constants for the disclosure
+	// trade-offs. Masking never changes what is detected or what
+	// Findings/Stats report, and every strategy stays
+	// allocation-bounded on the streaming path.
+	MaskStrategy MaskStrategy
 
 	// EnableRules, when non-empty, restricts detection to the listed rule
 	// IDs (an allowlist). Unknown IDs are rejected by New.
@@ -157,6 +168,9 @@ func New(cfg Config) (*Engine, error) {
 	}
 	if cfg.Marker == "" {
 		cfg.Marker = DefaultMarker
+	}
+	if !cfg.MaskStrategy.valid() {
+		return nil, fmt.Errorf("%w: unknown mask strategy %d", ErrInvalidConfig, int(cfg.MaskStrategy))
 	}
 	set, err := rules.Build(rules.BuildOptions{
 		Profile:      rules.Profile(cfg.Profile),
