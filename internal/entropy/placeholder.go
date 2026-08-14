@@ -56,9 +56,9 @@ var keyboardRuns = []string{
 // placeholder) are the cost of catching the extremely common
 // documentation/fixture/config-template values that would otherwise
 // dominate a naive entropy-only detector's false-positive rate. It is
-// bounded and byte-oriented: cost is O(len(b)) plus one bounded lowercase
-// copy, and it never panics regardless of b's contents, including nil or
-// empty.
+// byte-oriented and allocation-free — validators call it once per
+// candidate on the streaming hot path — and it never panics regardless
+// of b's contents, including nil or empty.
 func IsPlaceholder(b []byte) bool {
 	if len(b) == 0 {
 		return true
@@ -72,24 +72,21 @@ func IsPlaceholder(b []byte) bool {
 	if isTemplateRef(b) {
 		return true
 	}
-
-	lower := toLowerASCII(b)
-
-	if isAscendingRun(lower) {
+	if isAscendingRun(b) {
 		return true
 	}
 	for _, kw := range keyboardRuns {
-		if containsString(lower, kw) {
+		if containsFold(b, kw) {
 			return true
 		}
 	}
 	for _, kw := range substringPlaceholders {
-		if containsString(lower, kw) {
+		if containsFold(b, kw) {
 			return true
 		}
 	}
 	for _, kw := range wholeValuePlaceholders {
-		if string(lower) == kw {
+		if len(b) == len(kw) && matchFoldAt(b, 0, kw) {
 			return true
 		}
 	}
@@ -129,15 +126,15 @@ func isTemplateRef(b []byte) bool {
 	return false
 }
 
-// isAscendingRun reports whether lower (already lowercased ASCII) contains
-// a run of 4 or more consecutive bytes each one greater than the last by
-// exactly 1, e.g. "abcdef" or "34567": a keyboard/counting pattern used in
-// throwaway example values, essentially never present in a random secret
-// of any length worth flagging.
-func isAscendingRun(lower []byte) bool {
+// isAscendingRun reports whether b contains a run of 4 or more
+// case-folded consecutive bytes each one greater than the last by
+// exactly 1, e.g. "abcdef", "ABCDef", or "34567": a keyboard/counting
+// pattern used in throwaway example values, essentially never present
+// in a random secret of any length worth flagging.
+func isAscendingRun(b []byte) bool {
 	run := 1
-	for i := 1; i < len(lower); i++ {
-		if lower[i] == lower[i-1]+1 {
+	for i := 1; i < len(b); i++ {
+		if lowerASCII(b[i]) == lowerASCII(b[i-1])+1 {
 			run++
 			if run >= 4 {
 				return true
@@ -149,44 +146,37 @@ func isAscendingRun(lower []byte) bool {
 	return false
 }
 
-// toLowerASCII returns a bounded copy of b with ASCII 'A'-'Z' folded to
-// lowercase. Non-ASCII bytes pass through unchanged. The allocation is
-// exactly len(b) bytes, bounded by whatever bound the caller already
-// applied to the candidate before calling into this package.
-func toLowerASCII(b []byte) []byte {
-	out := make([]byte, len(b))
-	for i, c := range b {
-		if c >= 'A' && c <= 'Z' {
-			c = c - 'A' + 'a'
-		}
-		out[i] = c
+// lowerASCII folds ASCII 'A'-'Z' to lowercase; all other bytes pass
+// through unchanged.
+func lowerASCII(c byte) byte {
+	if c >= 'A' && c <= 'Z' {
+		c = c - 'A' + 'a'
 	}
-	return out
+	return c
 }
 
-// containsString reports whether needle occurs anywhere in haystack. It is
-// a byte-oriented equivalent of bytes.Contains(haystack, []byte(needle))
-// that avoids allocating needle as a []byte on every call.
-func containsString(haystack []byte, needle string) bool {
+// containsFold reports whether needle (which must already be lowercase
+// ASCII) occurs anywhere in haystack, ignoring ASCII case. Folding
+// during comparison keeps this allocation-free on the per-candidate
+// hot path.
+func containsFold(haystack []byte, needle string) bool {
 	n := len(needle)
 	if n == 0 {
 		return true
 	}
-	if n > len(haystack) {
-		return false
-	}
 	for i := 0; i+n <= len(haystack); i++ {
-		if matchAt(haystack, i, needle) {
+		if matchFoldAt(haystack, i, needle) {
 			return true
 		}
 	}
 	return false
 }
 
-// matchAt reports whether haystack[pos:pos+len(needle)] == needle.
-func matchAt(haystack []byte, pos int, needle string) bool {
+// matchFoldAt reports whether haystack[pos:pos+len(needle)] equals
+// needle ignoring ASCII case. needle must already be lowercase ASCII.
+func matchFoldAt(haystack []byte, pos int, needle string) bool {
 	for j := 0; j < len(needle); j++ {
-		if haystack[pos+j] != needle[j] {
+		if lowerASCII(haystack[pos+j]) != needle[j] {
 			return false
 		}
 	}
