@@ -1,0 +1,173 @@
+{
+  "rules": [
+    {
+      "id": "anthropic-api-key",
+      "name": "Anthropic API key",
+      "triggers": [
+        {
+          "literal": "sk-ant-",
+          "caseFold": false
+        }
+      ],
+      "validator": "AnthropicAPIKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 8,
+      "maxLookahead": 150,
+      "provenance": {
+        "source": "https://docs.anthropic.com/en/api/getting-started",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "Authorization: Bearer sk-ant-api03-L6VtNHDzbvOYIs52KThe1DBzYMxIsTnjxqnzKJgS1niDgzJKhy20RHoBqBbuVcPjhcUAwu89LeznSyn2bpa26sQIrfAA",
+          "ANTHROPIC_API_KEY=sk-ant-admin01-V9AoHGzkZ5UL5o2kDCaFfewEFjXIn7vunFmrPxZZ28kDnJnDY4XLZ6XJmYO2aYzQMmLdhMAA83LqYzEQa8qbJ",
+          "{\"config\": {\"anthropic_api_key\": \"sk-ant-api03-L6VtNHDzbvOYIs52KThe1DBzYMxIsTnjxqnzKJgS1niDgzJKhy20RHoBqBbuVcPjhcUAwu89LeznSyn2bpa26sQIrfAA\"}}"
+        ],
+        "nomatch": [
+          "sk-ant-api03-short",
+          "ANTHROPIC_API_KEY=sk-ant-xxxxxxxx…",
+          "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "The zoo increased its risk-ant-eater enclosure budget this year."
+        ]
+      }
+    },
+    {
+      "id": "openai-project-key",
+      "name": "OpenAI project-scoped API key",
+      "triggers": [
+        {
+          "literal": "sk-proj-",
+          "caseFold": false
+        },
+        {
+          "literal": "sk-svcacct-",
+          "caseFold": false
+        },
+        {
+          "literal": "sk-admin-",
+          "caseFold": false
+        }
+      ],
+      "validator": "OpenAIProjectKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 8,
+      "maxLookahead": 210,
+      "provenance": {
+        "source": "https://help.openai.com/en/articles/9186755-managing-your-work-in-the-api-platform-with-projects",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "OPENAI_API_KEY=sk-proj-BVNMKlvU9FzBvWdqOPDZtJVcBIS5TvkvuzSLy8asT3BlbkFJLq83zMskErFlHpuT9KMBRkPgrihZPskJwst1ctDX",
+          "Authorization: Bearer sk-svcacct-4zROgBOLNt0ZP9sqaEZXj8WJxMSWeuquxqsQX6zBjK1bJpnvzDHlclD7U6Ro",
+          "{\"config\": {\"openai_key\": \"sk-admin-4zROgBOLNt0ZP9sqaEZXj8WJxMSWeuquxqsQX6zBjK1bJpnvzDHlclD7U6Ro\"}}"
+        ],
+        "nomatch": [
+          "sk-proj-0JBJkQfgbsuTgzoeHx6jHkf5g1sKJ2",
+          "sk-svcacct-abc$%^&*()",
+          "sk-admin-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "The vendor's risk-proj-ection model still relies on legacy tools."
+        ]
+      }
+    },
+    {
+      "id": "openai-legacy-key",
+      "name": "OpenAI legacy API key",
+      "triggers": [
+        {
+          "literal": "sk-",
+          "caseFold": false
+        }
+      ],
+      "validator": "OpenAILegacyKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 1,
+      "maxLookahead": 52,
+      "provenance": {
+        "source": "https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "OPENAI_API_KEY=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",
+          "Authorization: Bearer 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",
+          "{\"key\": \"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\"}"
+        ],
+        "nomatch": [
+          "sk-abcdEFGH12",
+          "sk-70Ii88WRAFMcMAhCWPfOagj8Ggq8MY8sbFU24lQSbfFBDwJn",
+          "Authorization: Bearer sk-ant-api03-L6VtNHDzbvOYIs52KThe1DBzYMxIsTnjxqnzKJgS1niDgzJKhy20RHoBqBbuVcPjhcUAwu89LeznSyn2bpa26sQIrfAA",
+          "OPENAI_API_KEY=sk-proj-BVNMKlvU9FzBvWdqOPDZtJVcBIS5TvkvuzSLy8asT3BlbkFJLq83zMskErFlHpuT9KMBRkPgrihZPskJwst1ctDX",
+          "This model carries elevated risk-taking behavior in production."
+        ]
+      }
+    },
+    {
+      "id": "huggingface-token",
+      "name": "Hugging Face access token",
+      "triggers": [
+        {
+          "literal": "hf_",
+          "caseFold": false
+        }
+      ],
+      "validator": "HuggingFaceToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 1,
+      "maxLookahead": 36,
+      "provenance": {
+        "source": "https://huggingface.co/docs/hub/security-tokens",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "HUGGINGFACE_TOKEN=hf_nW2OPJ0rGsD6y4OUtEXQxmAa3BItWMoP6J",
+          "Authorization: Bearer hf_SoSitdlyJv4jWuJOgem50hOrLw9OoFOcb4",
+          "{\"token\": \"hf_nW2OPJ0rGsD6y4OUtEXQxmAa3BItWMoP6J\"}"
+        ],
+        "nomatch": [
+          "hf_short",
+          "hf_ab-cdefghijklmnopqrstuvwxyz01234",
+          "from transformers import hf_hub_download",
+          "hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
+      "id": "groq-api-key",
+      "name": "Groq API key",
+      "triggers": [
+        {
+          "literal": "gsk_",
+          "caseFold": false
+        }
+      ],
+      "validator": "GroqAPIKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 1,
+      "maxLookahead": 56,
+      "provenance": {
+        "source": "https://console.groq.com/docs/api-keys",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "GROQ_API_KEY=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",
+          "Authorization: Bearer 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",
+          "{\"groq_api_key\": \"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\"}"
+        ],
+        "nomatch": [
+          "gsk_short",
+          "gsk_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "gsk_wJbCoeH86zjKgop71T4-viLZ6QRKh2kwaIp2lYCV9MiujTbzw3MA",
+          "gsk_wJbCoeH86zjKgop71T4uviLZ6QRKh2kwaIp2lYCV9MiujTbzw3MAZ"
+        ]
+      }
+    }
+  ]
+}
