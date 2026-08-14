@@ -6,10 +6,11 @@ not create plaintext temporary files.
 
 ```sh
 # stdin to stdout
-go run ./cmd/goredact -profile balanced <session.jsonl >session.redacted.jsonl
+go run ./cmd/goredact stream -profile balanced \
+  <session.jsonl >session.redacted.jsonl
 
 # file to a streaming zstd frame, with count-only progress and JSON stats
-go run ./cmd/goredact \
+go run ./cmd/goredact stream \
   -input session.jsonl \
   -output session.redacted.jsonl.zst \
   -profile deep -zstd \
@@ -17,12 +18,37 @@ go run ./cmd/goredact \
   -stats session.stats.json
 ```
 
-`-input -` and `-output -` select standard input and output. `-stats -` writes
+`stream -input -` and `stream -output -` select standard input and output.
+`stream -stats -` writes
 JSON statistics to standard error. Progress is also written to standard error
 and contains only a cumulative byte count. Neither channel includes matched
 content. Output files use mode `0600` and are removed if scanning or writing
 fails. A stream sent to stdout may already have delivered a redacted prefix on
 failure, so callers must not publish it as a completed object.
+
+## Directory scanning and reports
+
+`dir` recursively scans regular files without following symbolic links. It
+does not write redacted copies; findings are collected into a report suitable
+for review or CI systems. Paths are relative to the scan root, byte offsets
+refer to the original file, and matched secret values are never included.
+
+```sh
+# Human- and machine-readable JSON on stdout.
+goredact dir -report-format json -exit-code 0 ./workspace
+
+# CI reports. The default exit code is 1 when findings are present.
+goredact dir -report-format sarif -report-path findings.sarif ./workspace
+goredact dir -report-format junit -report-path findings.xml ./workspace
+goredact dir -report-format csv -report-path findings.csv ./workspace
+```
+
+Supported report formats are `json`, `csv`, `junit`, and `sarif`. JSON reports
+also contain the schema identifier, selected profile, file count, and total
+bytes scanned. `-exit-code N` selects the finding exit code from 1 through 125;
+`-exit-code 0` makes findings a successful result. Operational failures still
+exit with status 1. If the report already exists inside the scan root, it is
+excluded from the input set.
 
 ## Multipart uploads
 

@@ -16,7 +16,8 @@ Initial release.
 - Generated rule schema with provenance and synthetic fixtures.
 - Accuracy corpus, sanitized offline Gitleaks differential harness, fuzz and
   property tests, and reproducible large-corpus benchmark tooling.
-- Reference CLI with streaming zstd and a bounded multipart-upload example.
+- Reference CLI with stream and recursive directory commands, JSON/CSV/JUnit/
+  SARIF reports, streaming zstd, and a bounded multipart-upload example.
 
 Release evidence and known detection limits are documented in `docs/ACCURACY.md`,
 `docs/BENCHMARKS.md`, and `docs/THREAT_MODEL.md`.

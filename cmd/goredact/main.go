@@ -29,12 +29,30 @@ func main() {
 	defer stop()
 	if err := run(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		var findings findingsError
+		if errors.As(err, &findings) {
+			os.Exit(findings.code)
+		}
 		os.Exit(1)
 	}
 }
 
 func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	fs := flag.NewFlagSet("goredact", flag.ContinueOnError)
+	if len(args) == 0 {
+		return errors.New("goredact: command required (use stream or dir)")
+	}
+	switch args[0] {
+	case "stream":
+		return runStream(ctx, args[1:], stdin, stdout, stderr)
+	case "dir":
+		return runDir(ctx, args[1:], stdout, stderr)
+	default:
+		return errors.New("goredact: unknown command (use stream or dir)")
+	}
+}
+
+func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	fs := flag.NewFlagSet("goredact stream", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	var o options
 	fs.StringVar(&o.input, "input", "-", "input file ('-' for stdin)")

@@ -30,15 +30,17 @@ whole input.
 ```sh
 go get github.com/lastpersonlabs/goredact@v0.1.0
 go install github.com/lastpersonlabs/goredact/cmd/goredact@v0.1.0
-goredact -profile balanced < session.jsonl > session.redacted.jsonl
-goredact -zstd -stats < session.jsonl > session.redacted.jsonl.zst
+goredact stream -profile balanced < session.jsonl > session.redacted.jsonl
+goredact stream -zstd -stats - < session.jsonl > session.redacted.jsonl.zst
+goredact dir -report-format sarif -report-path findings.sarif ./workspace
 ```
 
-The reference command also accepts `-input` and `-output`. It creates file
-output atomically and removes incomplete output after a failed scan. Progress
-and statistics contain counts only, never matched content. See
-[`docs/CLI_AND_UPLOAD.md`](docs/CLI_AND_UPLOAD.md) for compression and multipart
-upload integration.
+The `stream` command also accepts `-input` and `-output`; it removes incomplete
+output after a failed scan. The `dir` command recursively scans regular files
+and writes JSON, CSV, JUnit, or SARIF findings without including matched secret
+values. Progress, statistics, and reports contain metadata and counts only. See
+[`docs/CLI_AND_UPLOAD.md`](docs/CLI_AND_UPLOAD.md) for reports, compression, and
+multipart upload integration.
 
 ## Detection and guarantees
 

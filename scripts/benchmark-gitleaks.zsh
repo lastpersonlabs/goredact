@@ -26,7 +26,7 @@ for tool in goredact gitleaks; do
     TIMEFMT=$'%E\t%U\t%S\t%M'
     if [[ $tool == goredact ]]; then
       timing=$(
-        { time taskset -c 0 env GOMAXPROCS=1 "$goredact_binary" \
+        { time taskset -c 0 env GOMAXPROCS=1 "$goredact_binary" stream \
             -profile balanced -input "$corpus_file" -output - >/dev/null
         } 2>&1
       )

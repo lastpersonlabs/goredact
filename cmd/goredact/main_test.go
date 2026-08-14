@@ -17,7 +17,7 @@ import (
 func TestRunStdinStdoutProgressAndStats(t *testing.T) {
 	input := "before AWS_ACCESS_KEY_ID=AKIAUJZDEGXDNCF32EPF after"
 	var output, diagnostics bytes.Buffer
-	if err := run(context.Background(), []string{"-profile=fast", "-progress-bytes=1", "-stats=-"}, strings.NewReader(input), &output, &diagnostics); err != nil {
+	if err := run(context.Background(), []string{"stream", "-profile=fast", "-progress-bytes=1", "-stats=-"}, strings.NewReader(input), &output, &diagnostics); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(output.String(), "AKIAUJZDEGXDNCF32EPF") || !strings.Contains(output.String(), "[REDACTED]") {
@@ -35,7 +35,7 @@ func TestRunStdinStdoutProgressAndStats(t *testing.T) {
 
 func TestRunStreamsZstandard(t *testing.T) {
 	var output bytes.Buffer
-	if err := run(context.Background(), []string{"-zstd"}, strings.NewReader("hello"), &output, io.Discard); err != nil {
+	if err := run(context.Background(), []string{"stream", "-zstd"}, strings.NewReader("hello"), &output, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	decoder, err := zstd.NewReader(&output, zstd.WithDecoderConcurrency(1))
@@ -56,7 +56,7 @@ func TestRunFilesAndFailedScanRemovesOutput(t *testing.T) {
 	if err := os.WriteFile(in, []byte("ordinary text"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := run(context.Background(), []string{"-input=" + in, "-output=" + out}, nil, io.Discard, io.Discard); err != nil {
+	if err := run(context.Background(), []string{"stream", "-input=" + in, "-output=" + out}, nil, io.Discard, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := os.ReadFile(out); err != nil || string(got) != "ordinary text" {
@@ -64,7 +64,7 @@ func TestRunFilesAndFailedScanRemovesOutput(t *testing.T) {
 	}
 
 	secret := "AKIAUJZDEGXDNCF32EPF"
-	err := run(context.Background(), []string{"-output=" + out}, &failingReader{err: errors.New(secret)}, io.Discard, io.Discard)
+	err := run(context.Background(), []string{"stream", "-output=" + out}, &failingReader{err: errors.New(secret)}, io.Discard, io.Discard)
 	if err == nil || strings.Contains(err.Error(), secret) {
 		t.Fatalf("unsafe error: %v", err)
 	}
