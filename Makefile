@@ -1,4 +1,4 @@
-.PHONY: bin build test lint fuzz-smoke bench bench-large bench-ci cover
+.PHONY: bin build test lint fuzz-smoke bench bench-large bench-ci accuracy-secretbench cover
 
 FUZZTIME ?= 10s
 
@@ -62,6 +62,11 @@ bench-ci:
 	go run ./tools/benchreport -sizes 16MiB -scenarios adversarial,confirmed-secret \
 		-profiles balanced -modes raw -min-throughput 5 -max-alloc-per-byte 0.25 \
 		-output benchmark-ci.json
+
+# Evaluate a locally acquired SecretBench corpus. Pass paths and coordinate
+# options through ARGS; the access-controlled dataset is never downloaded.
+accuracy-secretbench:
+	go run ./tools/secretbench $(ARGS)
 
 # Generate and summarize test coverage.
 cover:

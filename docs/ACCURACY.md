@@ -27,7 +27,7 @@ directory and is used only to compute sanitized per-rule metrics.
 
 ## v0.1.0 release run
 
-On 2026-08-14, the generated 265-fixture matrix passed for fast, balanced,
+On 2026-08-14, the generated 300-fixture matrix passed for fast, balanced,
 and deep profiles across all three placements. All negative fixtures reported
 zero same-rule false positives. The report deliberately exposes partial recall
 for conservative or boundary-sensitive shapes instead of turning the corpus
@@ -41,3 +41,56 @@ placeholder tokens while Gitleaks reports that shape. A compatibility run found
 both real-shape GitHub fixtures and also reported one such placeholder.
 Keeping the subset explicit prevents a difference in documented placeholder
 policy from being misreported as a detector regression.
+
+## SecretBench evaluation
+
+`tools/secretbench` measures candidate-level precision, recall, and F1 against
+the independently labeled [SecretBench](https://github.com/setu1421/SecretBench)
+corpus. SecretBench's repository is public, but its labels and source files are
+access-controlled because they contain historical credentials. Obtain access
+from the dataset authors and accept its data-protection agreement before using
+the harness. The tool does not download the corpus.
+
+After access is granted, export the BigQuery table and extract `Files.zip` into
+the ignored `.secretbench` directory:
+
+```sh
+mkdir -p .secretbench/files
+bq query --use_legacy_sql=false --format=json \
+  'SELECT * FROM `dev-range-332204.secretbench.secrets` ORDER BY id' \
+  > .secretbench/annotations.json
+gcloud storage cp gs://secretbench/Files.zip .secretbench/Files.zip
+unzip .secretbench/Files.zip -d .secretbench/files
+```
+
+Run the public-comparability and product-policy views separately:
+
+```sh
+make accuracy-secretbench ARGS='-annotations .secretbench/annotations.json \
+  -files .secretbench/files -policy full -format json \
+  -output .secretbench/full.json'
+
+make accuracy-secretbench ARGS='-annotations .secretbench/annotations.json \
+  -files .secretbench/files -policy goredact -format markdown \
+  -output .secretbench/goredact.md'
+```
+
+`full` scores all eight SecretBench categories for comparison with other
+tools. `goredact` excludes `Username` and the mixed `Other` category because
+those categories include identifiers that this library does not claim to
+redact. Reports contain micro totals, macro averages, per-category metrics,
+the rule-set version, and SHA-256 hashes of the annotation export and scanned
+corpus. They never include the dataset's `secret` field or matched bytes.
+
+SecretBench does not document whether columns are zero- or one-based or whether
+the end column is inclusive. The defaults are zero-based and inclusive; verify
+them against the supplied files, then use `-column-base 1` or
+`-end-inclusive=false` when required. Columns are interpreted as byte offsets.
+
+The dataset labels regex-mined candidates rather than every byte span in each
+file. Therefore a true-labeled detected candidate is a true positive, a
+false-labeled detected candidate is a false positive, and an unmatched
+goredact finding is reported separately as `unmatched_findings`. Treating such
+unlabeled findings as false positives would understate precision without manual
+adjudication. Reports should be described as SecretBench candidate-level
+metrics, not as deployment-wide alert precision.
