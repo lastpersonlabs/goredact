@@ -28,10 +28,23 @@ failure, so callers must not publish it as a completed object.
 
 ## Directory scanning and reports
 
-`dir` recursively scans regular files without following symbolic links. It
-does not write redacted copies; findings are collected into a report suitable
-for review or CI systems. Paths are relative to the scan root, byte offsets
-refer to the original file, and matched secret values are never included.
+`dir` recursively scans regular, non-empty files without following symbolic
+links. It prunes the same common dependency trees as Gitleaks' default path
+allowlist: `node_modules`, `bower_components`, `.git`, installed Python
+environment libraries, Ruby bundle/vendor dependencies, and the standard
+third-party Go vendor namespaces. It deliberately still scans hidden files,
+`dist`, `target`, first-party `vendor` trees, and explicit file paths. It does
+not read `.gitignore` because ignored local configuration is often exactly
+where credentials are found. Gitleaks' default generated/dependency file
+exclusions are also applied, including common package-manager lockfiles,
+language wrappers, generated library bundles, media, fonts, and document or
+binary extensions. Supplying one of those files explicitly still scans it.
+
+Directory work is processed by a bounded worker pool and reports remain sorted
+by path regardless of completion order. The command does not write redacted
+copies; findings are collected into a report suitable for review or CI
+systems. Paths are relative to the scan root, byte offsets refer to the
+original file, and matched secret values are never included.
 
 ```sh
 # Human- and machine-readable JSON on stdout.

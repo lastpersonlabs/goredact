@@ -3,6 +3,14 @@
 All notable changes are documented here. This project follows semantic
 versioning.
 
+## Unreleased
+
+- Detect `session_secret` and `secret_key_base` assignment families.
+- Make directory scans parallel and deterministic while reusing compiled
+  engines across files.
+- Apply Gitleaks-compatible default dependency, generated-file, media, and
+  binary path exclusions during recursive directory scans.
+
 ## v0.1.0 — 2026-08-14
 
 Initial release.

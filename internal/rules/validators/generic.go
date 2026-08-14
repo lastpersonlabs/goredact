@@ -233,7 +233,8 @@ func parseAssignmentValue(window []byte, pos int) (valStart, valEnd int, ok bool
 
 // GenericAPIKeyAssignment confirms an api-key/access-token-shaped
 // assignment: one of this rule's triggers (api_key, apikey, api-key,
-// access_token, auth_token, client_secret, secret_key, private_token —
+// access_token, auth_token, client_secret, secret_key, secret_key_base,
+// session_secret, private_token —
 // see internal/rules/specs/generic-credentials.json), not itself a suffix
 // of a longer identifier, followed by an assignment separator and a value
 // that entropy.Secretlike confirms as plausibly random under

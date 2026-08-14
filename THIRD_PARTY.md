@@ -5,9 +5,10 @@ source code included in this repository.
 
 ## Current status
 
-**No third-party code is vendored or adapted in this repository.** The core
-library under the module root and `internal/` is original and stdlib-only.
-The reference integrations use the pure-Go dependency recorded below.
+The core library under the module root and `internal/` is original and
+stdlib-only. The directory CLI adapts the Gitleaks path-exclusion list recorded
+below, and the reference integrations use the pure-Go dependency also recorded
+below.
 
 The `licence-check` CI job (`.github/workflows/ci.yml`) enforces this by
 scanning for copyright headers that do not attribute Last Person Labs and by
@@ -45,6 +46,39 @@ Each entry must record:
 Entries are append-only; do not remove a historical entry even if the code is
 later deleted, unless the entire file is being reset to reflect a clean
 audit (note the reset in the PR description).
+
+## Adapted code
+
+### Gitleaks default path exclusions
+
+- Source URL: https://github.com/gitleaks/gitleaks/blob/b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b/cmd/generate/config/base/config.go
+- Commit: `b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b`
+- Licence file: https://github.com/gitleaks/gitleaks/blob/b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b/LICENSE
+- Licence: MIT; compatible with this project's MIT licence.
+- Local path: `cmd/goredact/dir.go`
+- Notes: The upstream default path regular expressions are used to prune
+  dependency directories and skip generated, media, document, and binary files
+  during recursive scans. Traversal and explicit-file behavior are original.
+
+Copyright (c) 2019 Zachary Rice
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ## External dependencies
 

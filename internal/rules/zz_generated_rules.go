@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-40ce7a09c40b"
+const Version = "builtin-f1df68a7e990"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -145,6 +145,8 @@ func init() {
 				{Literal: "auth_token", CaseFold: true},
 				{Literal: "client_secret", CaseFold: true},
 				{Literal: "secret_key", CaseFold: true},
+				{Literal: "secret_key_base", CaseFold: true},
+				{Literal: "session_secret", CaseFold: true},
 				{Literal: "private_token", CaseFold: true},
 			},
 			Validate:      validators.GenericAPIKeyAssignment,
