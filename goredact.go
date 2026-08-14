@@ -50,6 +50,20 @@ type Config struct {
 	// matched input bytes. The callback must not retain references past
 	// its return and must be fast; it runs on the scanning path.
 	OnFinding func(Finding)
+
+	// RecordAligned, when true, makes the engine prefer emitting output
+	// aligned to newline record boundaries when it is safe to do so: a
+	// mid-stream emission is held back to the last buffered '\n' rather
+	// than the raw safe limit, so downstream consumers of structured,
+	// newline-delimited formats (e.g. JSONL session logs) observe whole
+	// records instead of a line split across two writes. It never
+	// changes what is redacted, only where emission boundaries fall
+	// while streaming, and it never relaxes any streaming guarantee
+	// (bounded memory, no temporary files, determinism): alignment is a
+	// best-effort output-shaping preference that falls back to the raw
+	// limit whenever no newline is buffered, so the stream still makes
+	// progress. Defaults to false.
+	RecordAligned bool
 }
 
 // CustomRule is a caller-supplied detection rule.
@@ -114,9 +128,9 @@ type Engine struct {
 	// down to the last '\n' at or before the safe emission limit, so
 	// downstream consumers observe whole records. It never violates
 	// safety limits and falls back to the raw limit when no newline is
-	// buffered. Unexported: it lands in the public Config with the
-	// record-aware work (ENG-99/ENG-101); ENG-99's escaped-JSON record
-	// detection builds on this hook. See (*scanRun).alignToRecord.
+	// buffered. Set from the public Config.RecordAligned (ENG-101);
+	// ENG-99's escaped-JSON record detection builds on this hook. See
+	// (*scanRun).alignToRecord.
 	recordAligned bool
 
 	// states pools per-Redact scan buffers so a reused Engine does not
@@ -129,6 +143,9 @@ type Engine struct {
 // New compiles the active rule set for the configuration and returns a
 // reusable Engine.
 func New(cfg Config) (*Engine, error) {
+	if cfg.Profile == profileUnspecified {
+		cfg.Profile = ProfileBalanced
+	}
 	if !cfg.Profile.valid() {
 		return nil, fmt.Errorf("%w: unknown profile %d", ErrInvalidConfig, int(cfg.Profile))
 	}
@@ -153,7 +170,7 @@ func New(cfg Config) (*Engine, error) {
 	if min := set.MinChunkSize(); cfg.ChunkSize < min {
 		return nil, fmt.Errorf("%w: chunk size %d below minimum %d required by rule set", ErrInvalidConfig, cfg.ChunkSize, min)
 	}
-	e := &Engine{cfg: cfg, rules: set, marker: []byte(cfg.Marker), window: set.MaxWindow()}
+	e := &Engine{cfg: cfg, rules: set, marker: []byte(cfg.Marker), window: set.MaxWindow(), recordAligned: cfg.RecordAligned}
 	if err := e.compileTriggers(); err != nil {
 		return nil, err
 	}

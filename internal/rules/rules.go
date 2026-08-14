@@ -15,8 +15,13 @@ import (
 // Profile is a bitmask of the profiles a rule belongs to.
 type Profile uint8
 
+// Numbering starts at 1, matching the public goredact.Profile (whose zero
+// value is reserved to mean "unspecified" so New(Config{}) can default to
+// ProfileBalanced): goredact.New passes Profile(cfg.Profile) straight
+// through as this type, so the two enums must stay numerically aligned.
 const (
-	ProfileFast Profile = iota
+	profileUnspecified Profile = iota
+	ProfileFast
 	ProfileBalanced
 	ProfileDeep
 )

@@ -537,7 +537,7 @@ func (r *scanRun) makeRoom() error {
 // records. A found newline always yields a limit strictly past the
 // emission frontier (progress is preserved), and when no newline is
 // buffered the raw limit is returned, so alignment can never deadlock the
-// stream. Enabled by the unexported Engine.recordAligned hook; ENG-99's
+// stream. Enabled by Config.RecordAligned (Engine.recordAligned); ENG-99's
 // escaped-JSON record detection builds on this.
 func (r *scanRun) alignToRecord(limit int64) int64 {
 	lo := r.emitted

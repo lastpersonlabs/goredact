@@ -456,17 +456,16 @@ func (w *recordingWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
-// TestRecordAlignedEmission exercises the unexported record-aware hook
-// (Engine.recordAligned): mid-stream emission boundaries must land just
-// past a '\n' whenever one is buffered, and the hook must fall back to raw
-// limits (no deadlock, identical output) when the input has no newlines.
-// ENG-99's escaped-JSON record detection builds on this hook.
+// TestRecordAlignedEmission exercises the public Config.RecordAligned
+// knob: mid-stream emission boundaries must land just past a '\n' whenever
+// one is buffered, and it must fall back to raw limits (no deadlock,
+// identical output) when the input has no newlines. ENG-99's escaped-JSON
+// record detection builds on the underlying hook.
 func TestRecordAlignedEmission(t *testing.T) {
 	line := strings.Repeat("x", 39) + "\n"
 	in := strings.Repeat(line, 512) // 20480 bytes, several 4096 buffers
 
-	e := mustEngine(t, Config{ChunkSize: 4096, EnableRules: []string{"github-pat", "slack-bot-token"}})
-	e.recordAligned = true // internal test hook; public knob lands with ENG-99/ENG-101
+	e := mustEngine(t, Config{ChunkSize: 4096, EnableRules: []string{"github-pat", "slack-bot-token"}, RecordAligned: true})
 
 	w := &recordingWriter{}
 	stats, err := e.Redact(context.Background(), w,
