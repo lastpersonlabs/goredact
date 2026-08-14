@@ -71,6 +71,47 @@ the 250 MiB/s/core target for the representative quiet-agent-log case. Results
 are host specific; use the full dedicated-host matrix below for cross-release
 claims.
 
+## One-core comparison with Gitleaks
+
+On 2026-08-14, GoRedact at commit `eb51eeddffbf` and Gitleaks 8.30.1-1 scanned
+the same deterministic 512 MiB `quiet` corpus. One warm-up was followed by
+three measured runs. Both processes were pinned to CPU 0 with `taskset`, and
+`GOMAXPROCS=1` prevented either Go runtime from using another core. The input
+was one file on tmpfs so that each tool had one process invocation and storage
+latency did not dominate the measurement.
+
+| Tool | Median wall time | Throughput | Median peak RSS |
+| --- | ---: | ---: | ---: |
+| GoRedact, balanced profile | 0.73 s | 701.37 MiB/s | 6,944 KiB |
+| Gitleaks, default rules | 71.24 s | 7.19 MiB/s | 56,048 KiB |
+
+GoRedact was **97.6x faster** on this workload. Its measured wall times were
+0.73, 0.73, and 0.74 seconds; Gitleaks measured 70.89, 71.24, and 75.68
+seconds. GoRedact streamed its redacted output to `/dev/null`. Gitleaks scanned
+the containing directory with Git history, archive extraction, and decoding
+disabled and wrote a redacted JSON report. Neither tool reported a secret.
+
+The host was an AMD Ryzen 9 9900X (12 physical cores, 24 logical CPUs, up to
+5,662 MHz, 64 MiB L3) with 64,912,039,936 bytes of RAM. It ran Arch Linux,
+kernel 7.1.8-arch1-3, on x86-64 with Go 1.26.6-X:nodwarf5. The corpus SHA-256
+was `e71ea70986c32622aa5640effa32f60709c890e6c600f53a479a0bae54e39755`.
+
+This is a throughput comparison, not a detection-accuracy comparison. The
+tools have different rules and behavior, and there is no standard public
+secret-scanner performance corpus. The quiet corpus represents ordinary log
+text without detector triggers and is useful for measuring baseline scanning
+cost, but it does not establish relative recall or precision.
+
+Reproduce the run on Linux with zsh and util-linux `taskset`:
+
+```sh
+go build -o /tmp/goredact ./cmd/goredact
+go run ./tools/corpusfiles -output /tmp/goredact-corpus -scenario quiet \
+  -files 1 -file-size 536870912
+RUNS=3 zsh ./scripts/benchmark-gitleaks.zsh \
+  /tmp/goredact-corpus/corpus-000.log /tmp/goredact "$(command -v gitleaks)"
+```
+
 ## Producing release reports
 
 Run the full matrix independently on dedicated `linux/amd64` and `linux/arm64`
