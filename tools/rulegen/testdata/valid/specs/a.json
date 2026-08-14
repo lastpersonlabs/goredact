@@ -1,0 +1,28 @@
+{
+  "rules": [
+    {
+      "id": "zzz-last",
+      "name": "Sorts last by ID",
+      "triggers": [{"literal": "zzz_", "caseFold": false}],
+      "validator": "FakeValidatorA",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 8,
+      "provenance": {"source": "https://example.com/zzz", "license": "original"},
+      "fixtures": {"match": ["zzz_ok"], "nomatch": ["zzz_"]}
+    },
+    {
+      "id": "aaa-first",
+      "name": "Sorts first by ID",
+      "triggers": [{"literal": "aaa_", "caseFold": true}],
+      "validator": "FakeValidatorB",
+      "minProfile": "balanced",
+      "confidence": "medium",
+      "maxLookbehind": 2,
+      "maxLookahead": 8,
+      "provenance": {"source": "https://example.com/aaa", "license": "original"},
+      "fixtures": {"match": ["aaa_ok"], "nomatch": []}
+    }
+  ]
+}

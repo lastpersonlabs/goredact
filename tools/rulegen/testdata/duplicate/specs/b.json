@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "id": "dup-rule",
+      "name": "Second definition",
+      "triggers": [{"literal": "dup2_", "caseFold": false}],
+      "validator": "FakeValidator",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 8,
+      "provenance": {"source": "https://example.com/dup2", "license": "original"},
+      "fixtures": {"match": ["dup2_ok"], "nomatch": []}
+    }
+  ]
+}

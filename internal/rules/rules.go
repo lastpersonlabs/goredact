@@ -7,9 +7,10 @@ import (
 	"sort"
 )
 
-// Version identifies the built-in rule-set revision. It is bumped whenever
-// generated rule tables change.
-const Version = "0.0.0-dev"
+// Version identifies the built-in rule-set revision. It is defined in the
+// generated zz_generated_rules.go (ENG-97): it is derived from the
+// canonical serialization of the generated rule table, so it changes
+// exactly when generated rules change.
 
 // Profile is a bitmask of the profiles a rule belongs to.
 type Profile uint8

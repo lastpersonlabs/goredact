@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "id": "dup-rule",
+      "name": "First definition",
+      "triggers": [{"literal": "dup_", "caseFold": false}],
+      "validator": "FakeValidator",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 8,
+      "provenance": {"source": "https://example.com/dup", "license": "original"},
+      "fixtures": {"match": ["dup_ok"], "nomatch": []}
+    }
+  ]
+}

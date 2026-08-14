@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "id": "bad-enum-rule",
+      "name": "Invalid minProfile enum",
+      "triggers": [{"literal": "bad_", "caseFold": false}],
+      "validator": "FakeValidator",
+      "minProfile": "medium",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 8,
+      "provenance": {"source": "https://example.com/bad", "license": "original"},
+      "fixtures": {"match": ["bad_ok"], "nomatch": []}
+    }
+  ]
+}

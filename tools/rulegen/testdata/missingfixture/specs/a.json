@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "id": "missing-fixture-rule",
+      "name": "No match fixtures",
+      "triggers": [{"literal": "mf_", "caseFold": false}],
+      "validator": "FakeValidator",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 8,
+      "provenance": {"source": "https://example.com/mf", "license": "original"},
+      "fixtures": {"match": [], "nomatch": ["mf_no"]}
+    }
+  ]
+}

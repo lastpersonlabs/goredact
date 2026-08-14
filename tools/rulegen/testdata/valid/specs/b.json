@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "id": "mmm-middle",
+      "name": "Sorts in the middle by ID",
+      "triggers": [{"literal": "zzz_", "caseFold": false}],
+      "validator": "FakeValidatorC",
+      "minProfile": "deep",
+      "confidence": "low",
+      "maxLookbehind": 0,
+      "maxLookahead": 0,
+      "provenance": {"source": "https://example.com/mmm", "license": "original"},
+      "fixtures": {"match": ["zzz_mmm"], "nomatch": []}
+    }
+  ]
+}

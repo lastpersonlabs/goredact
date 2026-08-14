@@ -1,0 +1,57 @@
+{
+  "rules": [
+    {
+      "id": "github-pat",
+      "name": "GitHub personal access token",
+      "triggers": [
+        {"literal": "ghp_", "caseFold": false}
+      ],
+      "validator": "GitHubPAT",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 64,
+      "provenance": {
+        "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "ghp_16C7e42F292c6912E7710c838347Ae178B4a",
+          "ghp_OhbVrpoiVgRV5IfLBcbfnoGMbJmTPSIAoCLr"
+        ],
+        "nomatch": [
+          "ghp_short",
+          "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          "ghp_u8jzPde0IgxLd6GncfBAepfJBd0Kh8oOOL8dA"
+        ]
+      }
+    },
+    {
+      "id": "slack-bot-token",
+      "name": "Slack bot token",
+      "triggers": [
+        {"literal": "xoxb-", "caseFold": false}
+      ],
+      "validator": "SlackBotToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 96,
+      "provenance": {
+        "source": "https://api.slack.com/authentication/token-types#bot",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "xoxb-0265423511615-5940781618495-KmTecQoXsf2o3gyrDO1xkxwnQrS7RP"
+        ],
+        "nomatch": [
+          "xoxb-123-456-abcdefgh",
+          "xoxb-0265423511615-5940781618495-aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "xoxb-99603082462819-48219935181-KdNnFRIBXuDL7DxtpYlSXpfKtHF4"
+        ]
+      }
+    }
+  ]
+}
