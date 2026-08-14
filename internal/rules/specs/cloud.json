@@ -1,0 +1,143 @@
+{
+  "rules": [
+    {
+      "id": "aws-access-key-id",
+      "name": "AWS access key ID",
+      "triggers": [
+        {
+          "literal": "AKIA",
+          "caseFold": false
+        },
+        {
+          "literal": "ASIA",
+          "caseFold": false
+        },
+        {
+          "literal": "ABIA",
+          "caseFold": false
+        },
+        {
+          "literal": "ACCA",
+          "caseFold": false
+        }
+      ],
+      "validator": "AWSAccessKeyID",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 1,
+      "maxLookahead": 18,
+      "provenance": {
+        "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "AWS_ACCESS_KEY_ID=AKIAUJZDEGXDNCF32EPF",
+          "{\"accessKeyId\": \"ASIA3DHODZDOCIS2JHTL\", \"region\": \"us-east-1\"}",
+          "aws configure set aws_access_key_id ACCAGMXGEDN73U55XTPL"
+        ],
+        "nomatch": [
+          "AWS_ACCESS_KEY_ID=AKIASHORT",
+          "AWS_ACCESS_KEY_ID=AKIAujzdegxdncf32epf",
+          "AWS_ACCESS_KEY_ID=XAKIAUJZDEGXDNCF32EPF",
+          "AWS_ACCESS_KEY_ID=AKIAUJZDEGXDNCF32EPF9",
+          "# example from the AWS docs: AKIAIOSFODNN7EXAMPLE"
+        ]
+      }
+    },
+    {
+      "id": "aws-secret-access-key",
+      "name": "AWS secret access key",
+      "triggers": [
+        {
+          "literal": "aws_secret_access_key",
+          "caseFold": true
+        }
+      ],
+      "validator": "AWSSecretAccessKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 80,
+      "provenance": {
+        "source": "https://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H",
+          "aws_secret_access_key: bkQfyy/KV5zjR3j1twdTKWTddB+XhkAS1voQG6yy",
+          "aws_secret_access_key = 'fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H'"
+        ],
+        "nomatch": [
+          "AWS_SECRET_ACCESS_KEY=tooshort",
+          "AWS_SECRET_ACCESS_KEY aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/!",
+          "aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+        ]
+      }
+    },
+    {
+      "id": "gcp-api-key",
+      "name": "GCP API key",
+      "triggers": [
+        {
+          "literal": "AIza",
+          "caseFold": false
+        }
+      ],
+      "validator": "GCPAPIKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 1,
+      "maxLookahead": 37,
+      "provenance": {
+        "source": "https://cloud.google.com/docs/authentication/api-keys",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "GOOGLE_API_KEY=AIzazyN9zHYIa4UOrGNATMuDJawTgsu8PO_799n",
+          "{\"apiKey\": \"AIzaKSNrh9UCauSDmLhuVtcqcYezdZ-tDDj8hYs\", \"authDomain\": \"example.firebaseapp.com\"}"
+        ],
+        "nomatch": [
+          "GOOGLE_API_KEY=AIzatooshort",
+          "GOOGLE_API_KEY=AIza!zyN9zHYIa4UOrGNATMuDJawTgsu8PO_799n",
+          "GOOGLE_API_KEY=xAIzazyN9zHYIa4UOrGNATMuDJawTgsu8PO_799n",
+          "GOOGLE_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      }
+    },
+    {
+      "id": "azure-storage-account-key",
+      "name": "Azure storage account key",
+      "triggers": [
+        {
+          "literal": "AccountKey=",
+          "caseFold": true
+        }
+      ],
+      "validator": "AzureStorageAccountKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 100,
+      "provenance": {
+        "source": "https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "DefaultEndpointsProtocol=https;AccountName=contosostorage;AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ==;EndpointSuffix=core.windows.net",
+          "AZURE_STORAGE_ACCOUNT_KEY=\"AccountKey=j59fhZ5R1Py4oJe2JbmPTuSgR7cMy+UcU3zr1ZtoLuCr64CxqlIOdNKhiFXiQ2hzT/pLjHX2JiCLhKcIhP6Br1==\""
+        ],
+        "nomatch": [
+          "AccountKey=tooshort==",
+          "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ",
+          "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ!!",
+          "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ===extra"
+        ]
+      }
+    }
+  ]
+}
