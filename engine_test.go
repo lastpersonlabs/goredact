@@ -352,7 +352,7 @@ func TestRedactZeroReadReader(t *testing.T) {
 }
 
 func TestRedactConcurrent(t *testing.T) {
-	e := mustEngine(t, Config{ChunkSize: 4096})
+	e := mustEngine(t, Config{ChunkSize: 4096, EnableRules: []string{"github-pat", "slack-bot-token"}})
 
 	// A few distinct inputs with known outputs, scanned concurrently on
 	// the one shared Engine.
@@ -403,7 +403,8 @@ func TestRedactConcurrent(t *testing.T) {
 // exactly one marker and one finding, byte-identical to a logical one-shot.
 func TestRedactMergedChainLongerThanBuffer(t *testing.T) {
 	cfg := Config{
-		ChunkSize: 4096,
+		ChunkSize:   4096,
+		EnableRules: []string{"github-pat", "slack-bot-token"},
 		CustomRules: []CustomRule{{
 			ID:         "chain",
 			Triggers:   []string{"ab"},
@@ -464,7 +465,7 @@ func TestRecordAlignedEmission(t *testing.T) {
 	line := strings.Repeat("x", 39) + "\n"
 	in := strings.Repeat(line, 512) // 20480 bytes, several 4096 buffers
 
-	e := mustEngine(t, Config{ChunkSize: 4096})
+	e := mustEngine(t, Config{ChunkSize: 4096, EnableRules: []string{"github-pat", "slack-bot-token"}})
 	e.recordAligned = true // internal test hook; public knob lands with ENG-99/ENG-101
 
 	w := &recordingWriter{}

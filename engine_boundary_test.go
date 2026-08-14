@@ -24,7 +24,8 @@ func isASCIIAlnum(c byte) bool {
 //   - a case-folded trigger with lookbehind.
 func boundaryConfig() Config {
 	return Config{
-		ChunkSize: 4096,
+		ChunkSize:   4096,
+		EnableRules: []string{"github-pat", "slack-bot-token"},
 		CustomRules: []CustomRule{
 			{
 				ID:           "key-alnum",
@@ -265,7 +266,7 @@ func TestChunkedEquivalenceProperty(t *testing.T) {
 		"xoxb-123-456-abc",               // rejected: segments too short
 		"\n", " ", "=", "ghp", "xoxb-1234567890-",
 	}
-	e := mustEngine(t, Config{ChunkSize: 4096})
+	e := mustEngine(t, Config{ChunkSize: 4096, EnableRules: []string{"github-pat", "slack-bot-token"}})
 
 	var in bytes.Buffer
 	var out1, out2 bytes.Buffer
@@ -301,7 +302,7 @@ func TestChunkedEquivalenceProperty(t *testing.T) {
 		// Cross-check against the splice oracle (fresh engine to capture
 		// findings for this input).
 		var findings []Finding
-		eo := mustEngine(t, Config{ChunkSize: 4096, OnFinding: func(f Finding) { findings = append(findings, f) }})
+		eo := mustEngine(t, Config{ChunkSize: 4096, EnableRules: []string{"github-pat", "slack-bot-token"}, OnFinding: func(f Finding) { findings = append(findings, f) }})
 		var out3 bytes.Buffer
 		if _, err := eo.Redact(context.Background(), &out3, bytes.NewReader(input)); err != nil {
 			t.Fatalf("iter %d: oracle Redact: %v", iter, err)

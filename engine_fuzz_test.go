@@ -28,8 +28,9 @@ func FuzzRedactChunkingEquivalence(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte, seed uint64) {
 		var findings []Finding
 		e, err := New(Config{
-			ChunkSize: 4096,
-			OnFinding: func(fd Finding) { findings = append(findings, fd) },
+			ChunkSize:   4096,
+			EnableRules: []string{"github-pat", "slack-bot-token"},
+			OnFinding:   func(fd Finding) { findings = append(findings, fd) },
 		})
 		if err != nil {
 			t.Fatalf("New: %v", err)
