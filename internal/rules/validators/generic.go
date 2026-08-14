@@ -1,0 +1,311 @@
+// This file implements the ENG-98 generic contextual credential rules:
+// heuristic ValidateFuncs that fire on assignment-style context around
+// keyword triggers like "api_key", "password", or "token" (as opposed to
+// the deterministic provider-specific validators in validators.go, which
+// confirm exact known token shapes). Header/URL/cookie contexts are
+// intentionally out of scope here (see ENG-100).
+//
+// # Parsing model
+//
+// All three validators share one parse: after the trigger, skip optional
+// horizontal whitespace, skip one optional quote character (the trigger's
+// own closing quote, for JSON-style quoted keys like "api_key": ...),
+// skip optional whitespace again, require an assignment separator ("=",
+// ":", or "=>"), skip optional whitespace again, then capture a value:
+//
+//   - If the next byte is a quote character (double quote, single quote,
+//     or backtick) — optionally itself escaped with a leading backslash
+//     (the case where an already-quoted string is embedded in a further
+//     layer of escaping, e.g. JSON embedded in a log line) — the value
+//     runs until the matching quote (or matching escaped-quote sequence,
+//     if the opening quote was itself escaped) and is captured without
+//     the quotes.
+//   - Otherwise the value is the maximal run of printable, non-space
+//     bytes, stopping at whitespace or one of the printable separators
+//     comma, semicolon, closing brace, or a stray quote character.
+//
+// This is deliberately not a full unescaping parser: a value containing
+// an actual backslash-escaped instance of its own delimiting quote (e.g.
+// a JSON string value that itself contains \") will be truncated at that
+// inner escape rather than continuing past it. That is an accepted
+// simplification — the truncated prefix is still fed through
+// entropy.Secretlike and, being shorter, is if anything less likely to
+// pass, which is the conservative failure direction for a redaction tool.
+//
+// The trigger's preceding byte is also checked (isTriggerBoundaryOK):
+// triggers are rejected when immediately preceded by an alphanumeric
+// byte, so "x_api_key=" still fires (preceded by '_', non-alnum) but
+// "capi_key=" does not (preceded by 'c', alnum) — the trigger must not be
+// a suffix of a longer identifier.
+//
+// # False-positive budget
+//
+// FalsePositiveBudgetPerTenMiB documents the accuracy target these
+// balanced-profile rules are tuned against. It is enforced empirically by
+// the ENG-103 accuracy corpus harness, not by any check in this package;
+// the constant exists so that harness (and this file's authors) have one
+// canonical number to reference and keep in sync.
+package validators
+
+import "github.com/lastpersonlabs/goredact/internal/entropy"
+
+// FalsePositiveBudgetPerTenMiB is the accuracy target for the balanced-
+// profile generic contextual rules in this file: fewer than this many
+// false-positive redactions per 10 MiB of ordinary keyword-dense log and
+// config data (the kind of text where "password", "token", "api_key" etc.
+// appear constantly without carrying an actual secret value). The ENG-103
+// accuracy corpus harness measures against this number; it is not
+// self-enforcing at build or test time.
+const FalsePositiveBudgetPerTenMiB = 1
+
+// bearerLikeTokenMinLen is the minimum captured value length required by
+// GenericBearerLikeTokenAssignment, stricter than entropy.PresetLooseToken's
+// own MinLen: the bare "token" trigger is much weaker evidence of a secret
+// position than "api_key" or "password" (it fires on ordinary variable
+// names, loop cursors, CSV/DB row tokens, etc.), so the value has to clear
+// a higher length bar before entropy is even considered.
+const bearerLikeTokenMinLen = 20
+
+// isTriggerBoundaryOK reports whether the byte immediately preceding
+// window[trigStart], if any, does not continue an identifier — i.e.
+// trigStart is at the start of window (start of input) or the preceding
+// byte is not alphanumeric. This rejects a trigger literal that is really
+// a suffix of a longer identifier, e.g. the "api_key" trigger must not
+// fire on "capi_key" (preceded by 'c'), but must still fire on
+// "x_api_key" (preceded by '_', which is not alphanumeric).
+func isTriggerBoundaryOK(window []byte, trigStart int) bool {
+	if trigStart <= 0 {
+		return true
+	}
+	return !isAlnum(window[trigStart-1])
+}
+
+// isSpaceByte reports whether c is ASCII horizontal whitespace (space or
+// tab). Only horizontal whitespace is skipped between a trigger and its
+// separator/value: a newline ends the search, since an assignment cannot
+// span a line break in the formats these rules target (shell, YAML,
+// JSON, .env).
+func isSpaceByte(c byte) bool {
+	return c == ' ' || c == '\t'
+}
+
+// skipHSpace returns the offset of the first byte at or after pos that is
+// not ASCII horizontal whitespace (or len(window) if none remains). It
+// never indexes out of range.
+func skipHSpace(window []byte, pos int) int {
+	for pos < len(window) && isSpaceByte(window[pos]) {
+		pos++
+	}
+	return pos
+}
+
+// consumeSeparator consumes one assignment separator ("=>", "=", or ":")
+// at pos, preferring the two-byte "=>" so that a lone "=" is not consumed
+// out from under it. It never indexes out of range.
+func consumeSeparator(window []byte, pos int) (next int, ok bool) {
+	if pos+1 < len(window) && window[pos] == '=' && window[pos+1] == '>' {
+		return pos + 2, true
+	}
+	if pos < len(window) && (window[pos] == '=' || window[pos] == ':') {
+		return pos + 1, true
+	}
+	return pos, false
+}
+
+// isQuoteByte reports whether c is one of the three quote characters this
+// parser recognizes: double quote, single quote, or backtick.
+func isQuoteByte(c byte) bool {
+	return c == '"' || c == '\'' || c == '`'
+}
+
+// isPrintableByte reports whether c is a printable, non-space ASCII byte
+// (0x21-0x7E): the alphabet allowed in an unquoted captured value.
+func isPrintableByte(c byte) bool {
+	return c >= 0x21 && c <= 0x7E
+}
+
+// detectQuote looks at window starting at pos for an opening quote,
+// optionally itself backslash-escaped, and reports which quote byte was
+// found, whether it was escaped, and the offset just past it. If pos does
+// not point at a quote (escaped or not), it reports quote 0 and next ==
+// pos unchanged, meaning "no quote, parse an unquoted value instead". It
+// never indexes out of range.
+func detectQuote(window []byte, pos int) (quote byte, escaped bool, next int) {
+	if pos+1 < len(window) && window[pos] == '\\' && isQuoteByte(window[pos+1]) {
+		return window[pos+1], true, pos + 2
+	}
+	if pos < len(window) && isQuoteByte(window[pos]) {
+		return window[pos], false, pos + 1
+	}
+	return 0, false, pos
+}
+
+// findQuotedEnd scans window from pos for the terminator of a quoted
+// value: the bare quote byte if the opening quote was not itself escaped,
+// or the two-byte sequence \<quote> if it was (see detectQuote and the
+// file-level doc comment on why escaped opens use an escaped close). A
+// literal newline before the terminator is treated as an unterminated
+// value and reported as failure, matching this parser's line-oriented
+// scope. It never indexes out of range.
+func findQuotedEnd(window []byte, pos int, quote byte, escaped bool) (end int, ok bool) {
+	for i := pos; i < len(window); i++ {
+		if window[i] == '\n' {
+			return 0, false
+		}
+		if escaped {
+			if window[i] == '\\' && i+1 < len(window) && window[i+1] == quote {
+				return i, true
+			}
+			continue
+		}
+		if window[i] == quote {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+// findUnquotedEnd scans window from pos for the end of an unquoted value:
+// the maximal run of printable, non-space bytes, stopping at whitespace,
+// a stray quote character, or one of ',', ';', '}'. It never indexes out
+// of range.
+func findUnquotedEnd(window []byte, pos int) (end int) {
+	i := pos
+	for i < len(window) {
+		c := window[i]
+		if !isPrintableByte(c) {
+			break
+		}
+		if c == ',' || c == ';' || c == '}' || isQuoteByte(c) {
+			break
+		}
+		i++
+	}
+	return i
+}
+
+// parseAssignmentValue implements the shared assignment-value parse
+// documented at the top of this file, starting at pos (normally
+// trigEnd). It reports the half-open span of the captured value
+// (excluding any quotes) within window, and ok == false if no
+// separator/value could be parsed at all (including running off the end
+// of window at any step). It never indexes out of range.
+func parseAssignmentValue(window []byte, pos int) (valStart, valEnd int, ok bool) {
+	pos = skipHSpace(window, pos)
+	// A JSON-style quoted key ("api_key": ...) leaves its own closing
+	// quote directly after the trigger; skip at most one such quote byte
+	// before looking for the separator. Unquoted keys (YAML, shell,
+	// .env) simply won't have one here, so this is a no-op for them.
+	if pos < len(window) && isQuoteByte(window[pos]) {
+		pos++
+		pos = skipHSpace(window, pos)
+	}
+	pos, ok = consumeSeparator(window, pos)
+	if !ok {
+		return 0, 0, false
+	}
+	pos = skipHSpace(window, pos)
+
+	quote, escaped, pos := detectQuote(window, pos)
+	valStart = pos
+	if quote != 0 {
+		valEnd, ok = findQuotedEnd(window, pos, quote, escaped)
+		if !ok {
+			return 0, 0, false
+		}
+	} else {
+		valEnd = findUnquotedEnd(window, pos)
+	}
+	if valEnd <= valStart {
+		return 0, 0, false
+	}
+	return valStart, valEnd, true
+}
+
+// GenericAPIKeyAssignment confirms an api-key/access-token-shaped
+// assignment: one of this rule's triggers (api_key, apikey, api-key,
+// access_token, auth_token, client_secret, secret_key, private_token —
+// see internal/rules/specs/generic-credentials.json), not itself a suffix
+// of a longer identifier, followed by an assignment separator and a value
+// that entropy.Secretlike confirms as plausibly random under
+// entropy.PresetAssignmentValue. Only the value is reported for
+// redaction.
+func GenericAPIKeyAssignment(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if !isTriggerBoundaryOK(window, trigStart) {
+		return 0, 0, false
+	}
+	valStart, valEnd, ok := parseAssignmentValue(window, trigEnd)
+	if !ok {
+		return 0, 0, false
+	}
+	if !entropy.Secretlike(window[valStart:valEnd], entropy.PresetAssignmentValue) {
+		return 0, 0, false
+	}
+	return valStart, valEnd, true
+}
+
+// GenericPasswordAssignment confirms a password-shaped assignment: one of
+// this rule's triggers (password, passwd, pwd), not itself a suffix of a
+// longer identifier, followed by an assignment separator and a value.
+// It uses entropy.PresetAssignmentValue with MinLen lowered to 8 (password
+// values run shorter than typical API keys) and additionally rejects any
+// value entropy.Classify buckets as ClassWordlike — a plain dictionary
+// word is never an acceptable password value, and this is checked
+// explicitly here (on top of entropy.Secretlike's own unconditional
+// word-like rejection) because password fields are exactly the position
+// where a bare dictionary word is most likely to show up in real fixtures
+// and logs. This validator's separator requirement also guards against
+// the `pwd`/`passwd` shell commands and utilities: bare "pwd" or
+// "passwd: files systemd" (an /etc/nsswitch.conf-style line) never parse
+// past the separator/value step and so never match. Only the value is
+// reported for redaction.
+func GenericPasswordAssignment(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if !isTriggerBoundaryOK(window, trigStart) {
+		return 0, 0, false
+	}
+	valStart, valEnd, ok := parseAssignmentValue(window, trigEnd)
+	if !ok {
+		return 0, 0, false
+	}
+	value := window[valStart:valEnd]
+	if entropy.Classify(value) == entropy.ClassWordlike {
+		return 0, 0, false
+	}
+	opts := entropy.PresetAssignmentValue
+	opts.MinLen = 8
+	if !entropy.Secretlike(value, opts) {
+		return 0, 0, false
+	}
+	return valStart, valEnd, true
+}
+
+// GenericBearerLikeTokenAssignment confirms a bearer-token-shaped
+// assignment behind the weak, single "token" trigger. Because "token"
+// alone is much weaker evidence of a secret position than api_key or
+// password (it also matches ordinary code like "token = csv.next()" or a
+// documentation placeholder like "token: <YOUR_TOKEN>"), this validator
+// demands more of the value than the other two: it must be at least
+// bearerLikeTokenMinLen (20) bytes long, and must pass
+// entropy.Secretlike under entropy.PresetLooseToken with that same
+// stricter MinLen. Only the value is reported for redaction.
+func GenericBearerLikeTokenAssignment(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if !isTriggerBoundaryOK(window, trigStart) {
+		return 0, 0, false
+	}
+	valStart, valEnd, ok := parseAssignmentValue(window, trigEnd)
+	if !ok {
+		return 0, 0, false
+	}
+	value := window[valStart:valEnd]
+	if len(value) < bearerLikeTokenMinLen {
+		return 0, 0, false
+	}
+	opts := entropy.PresetLooseToken
+	if opts.MinLen < bearerLikeTokenMinLen {
+		opts.MinLen = bearerLikeTokenMinLen
+	}
+	if !entropy.Secretlike(value, opts) {
+		return 0, 0, false
+	}
+	return valStart, valEnd, true
+}
