@@ -215,6 +215,15 @@ func parseAssignmentValue(window []byte, pos int) (valStart, valEnd int, ok bool
 		}
 	} else {
 		valEnd = findUnquotedEnd(window, pos)
+		// Source embedded in JSON often reaches this path as an unquoted
+		// assignment followed by one or more escape backslashes and the
+		// JSON string's closing quote. The backslashes frame the containing
+		// string; they are not part of the assigned value.
+		if valEnd < len(window) && isQuoteByte(window[valEnd]) {
+			for valEnd > valStart && window[valEnd-1] == '\\' {
+				valEnd--
+			}
+		}
 	}
 	if valEnd <= valStart {
 		return 0, 0, false

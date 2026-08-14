@@ -334,6 +334,8 @@ func TestGenericBearerLikeTokenAssignment(t *testing.T) {
 		{name: "Terraform reference", window: `token=var.cloudflare_api_token`, wantOK: false},
 		{name: "constant identifier", window: `token=BASE_WATCHER_INTERNAL_API_TOKEN`, wantOK: false},
 		{name: "blockchain address", window: `token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, wantOK: false},
+		{name: "escaped constant identifier", window: `token=BASE_WATCHER_INTERNAL_API_TOKEN\\\"`, wantOK: false},
+		{name: "escaped framing excluded from token", window: `token=aZ9kQ2vR7wL4mN8pX1sT6bF3jH0cD5yUaZ9k\\\"`, wantOK: true, wantVal: "aZ9kQ2vR7wL4mN8pX1sT6bF3jH0cD5yUaZ9k"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -414,6 +416,7 @@ func TestParseAssignmentValueSeparators(t *testing.T) {
 		{"= value1234567890", true, "value1234567890"},
 		{": value1234567890", true, "value1234567890"},
 		{"=> value1234567890", true, "value1234567890"},
+		{`= value1234567890\\\"`, true, "value1234567890"},
 		{"value1234567890", false, ""},
 		{"   ", false, ""},
 	}

@@ -106,7 +106,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "generic-bearer-like-token-assignment",
 			match:   []string{"export TOKEN=aZ9kQ2vR7wL4mN8pX1sT6bF3jH0cD5yUaZ9k", "token: \"Xk9mP2vQ7Rt4Ws8LbN3jF6hZ1cYdA0eB5gC7h\"", "{\"auth_token\": \"k3JmQz9XpL2vN7wR5tY8bC1sD4fA6hE0uI2oP\"}"},
-			nomatch: []string{"token = csv.next()", "token: <YOUR_TOKEN>", "token = \"your-token-here-1234567890abcdef\"", "token: \"550e8400-e29b-41d4-a716-446655440000\"", "token = \"helloworldconfigurationvalue\"", "token = sqlc.arg(claim_token)", "token=${GIT_REPOSITORY_INTERNAL_TOKEN:-fallback}", "token=op://ExampleVault/Cloudflare/token", "token=EXCLUDED.refresh_token", "token=bearerToken(request.headers.get(\"authorization\"))", "token=var.cloudflare_api_token", "token=BASE_WATCHER_INTERNAL_API_TOKEN", "token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"},
+			nomatch: []string{"token = csv.next()", "token: <YOUR_TOKEN>", "token = \"your-token-here-1234567890abcdef\"", "token: \"550e8400-e29b-41d4-a716-446655440000\"", "token = \"helloworldconfigurationvalue\"", "token = sqlc.arg(claim_token)", "token=${GIT_REPOSITORY_INTERNAL_TOKEN:-fallback}", "token=op://ExampleVault/Cloudflare/token", "token=EXCLUDED.refresh_token", "token=bearerToken(request.headers.get(\"authorization\"))", "token=var.cloudflare_api_token", "token=BASE_WATCHER_INTERNAL_API_TOKEN", "token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "token=BASE_WATCHER_INTERNAL_API_TOKEN\\\\\\\""},
 		},
 		{
 			id:      "generic-password-assignment",
