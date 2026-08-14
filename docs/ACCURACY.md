@@ -24,3 +24,17 @@ go test ./internal/accuracy -run TestGitleaksDifferential -v
 The harness never downloads tools and suppresses scanner output because it may
 contain matched text. Its JSON report lives in the test's private temporary
 directory and is used only to compute sanitized per-rule metrics.
+
+## v0.1.0 release run
+
+On 2026-08-14, the generated 265-fixture matrix passed for fast, balanced,
+and deep profiles across all three placements. All negative fixtures reported
+zero same-rule false positives. The report deliberately exposes partial recall
+for conservative or boundary-sensitive shapes instead of turning the corpus
+into a claim of perfect detection; see the threat model before treating output
+as a completeness guarantee.
+
+The Gitleaks comparison is environment-gated and was not executed on the local
+release host because no pinned offline binary was installed. The harness itself
+is covered by the Go suite and is ready for a release/CI host that supplies the
+binary and explicit supported subset.

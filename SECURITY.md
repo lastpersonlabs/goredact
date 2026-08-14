@@ -11,8 +11,7 @@ redact.
 Please report suspected vulnerabilities **privately**, not via a public
 GitHub issue or pull request:
 
-- Email: **security@lastpersonlabs.example** (placeholder — update once a
-  real security contact address is provisioned)
+- Email: **security@lastpersonlabs.com**
 
 Include:
 

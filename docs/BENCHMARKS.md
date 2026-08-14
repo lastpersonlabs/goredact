@@ -59,6 +59,16 @@ go run ./tools/benchreport -sizes 100MiB -profiles balanced \
 The command fails if any matching row loses more than the allowed throughput.
 Reports from a different OS/architecture are rejected rather than compared.
 
+## v0.1.0 release smoke result
+
+On 2026-08-14, commit `d3fce9f` processed the reproducible 100 MiB quiet corpus
+in balanced/raw `validate+redact` mode at **723.38 MiB/s** wall throughput on a
+24-vCPU linux/amd64 host running Go 1.26.6. The matcher-only row measured
+689.41 MiB/s. The full row allocated 265,720 bytes in 8 allocations and the
+process high-water RSS was 29,179,904 bytes. This exceeds the 250 MiB/s/core
+release target for the representative quiet-agent-log case. Results are host
+specific; use the full dedicated-host matrix below for cross-release claims.
+
 ## Release report scaffold
 
 Run the full matrix independently on dedicated `linux/amd64` and `linux/arm64`
