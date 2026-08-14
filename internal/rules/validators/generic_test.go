@@ -257,6 +257,10 @@ func TestGenericPasswordAssignment(t *testing.T) {
 			trigger: "passwd",
 			wantOK:  false,
 		},
+		{name: "template reference", window: `password=${STORAGE_SECRET_ACCESS_KEY:-fallback}`, trigger: "password", wantOK: false},
+		{name: "function call", window: `password=String(data.get("password"))`, trigger: "password", wantOK: false},
+		{name: "secret manager reference", window: `password=op://ExampleVault/Postgres/password`, trigger: "password", wantOK: false},
+		{name: "escaped logical newline", window: `password=secret123\\nnext`, trigger: "password", wantOK: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -322,6 +326,14 @@ func TestGenericBearerLikeTokenAssignment(t *testing.T) {
 			window: `token = "Xk9mP2vQ7Rt"`,
 			wantOK: false,
 		},
+		{name: "SQL expression", window: `token = sqlc.arg(claim_token)`, wantOK: false},
+		{name: "template reference", window: `token=${GIT_REPOSITORY_INTERNAL_TOKEN:-fallback}`, wantOK: false},
+		{name: "secret manager reference", window: `token=op://ExampleVault/Cloudflare/token`, wantOK: false},
+		{name: "member reference", window: `token=EXCLUDED.refresh_token`, wantOK: false},
+		{name: "function call", window: `token=bearerToken(request.headers.get("authorization"))`, wantOK: false},
+		{name: "Terraform reference", window: `token=var.cloudflare_api_token`, wantOK: false},
+		{name: "constant identifier", window: `token=BASE_WATCHER_INTERNAL_API_TOKEN`, wantOK: false},
+		{name: "blockchain address", window: `token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, wantOK: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

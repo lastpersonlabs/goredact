@@ -30,7 +30,8 @@
           "# example: Authorization: Bearer YOUR-TOKEN-HERE-1234",
           "Authorization: Basic dXNlcjE=",
           "Authorization: Digest username=\"user1\", realm=\"api\", nonce=\"dcd98b7102dd2f0e\", response=\"6629fae49393a05397450978507c4ef1\"",
-          "authorization: bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          "authorization: bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          "Authorization: Bearer USER_ACCESS_TOKEN"
         ]
       }
     },
@@ -68,7 +69,8 @@
           "Set-Cookie: csrftoken=Qw8kV3nR7wL4mN2xT6bF9jH0cD5yU1aE; Path=/",
           "GET /cb?next=%2Fdash&token=aK9mQ2vR7wL4mN8pX1sTbF3j HTTP/1.1",
           "Cookie: session=<session-token>; theme=dark",
-          "Cookie: auth=xxxxxxxxxxxxxxxxxxxx; theme=dark"
+          "Cookie: auth=xxxxxxxxxxxxxxxxxxxx; theme=dark",
+          "Cookie: session=1e084479-84e5-4834-bc8a-fc44c29aaed90ffb05&amp; theme=dark"
         ]
       }
     },
@@ -97,6 +99,9 @@
         "nomatch": [
           "https://deploy@github.com/org/repo.git",
           "postgres://user:password@localhost:5432/db",
+          "postgres://user:content@localhost:5432/db",
+          "https://user:TOKEN@github.com/owner/repo.git",
+          "postgres://user:unterminated%zz@localhost/db",
           "see http://user:pass@host.example.com for the URL shape",
           "redis://:@cache.internal:6379",
           "note: the \"://\" separator splits scheme from authority",
@@ -136,7 +141,8 @@
           "mysql --password= --host db.internal",
           "run.sh --password ${DB_PASSWORD}",
           "docs: use --api-key <your-key> to authenticate",
-          "login --secret changeme --user svc"
+          "login --secret changeme --user svc",
+          "deploy --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set token}"
         ]
       }
     }

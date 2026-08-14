@@ -270,7 +270,7 @@ func isIndirectAssignmentValue(value []byte) bool {
 			return true
 		}
 	}
-	for _, prefix := range []string{"env.", "cfg.", "config."} {
+	for _, prefix := range []string{"env.", "cfg.", "config.", "var.", "excluded."} {
 		if startsFold(value, prefix) {
 			return true
 		}
@@ -278,7 +278,7 @@ func isIndirectAssignmentValue(value []byte) bool {
 	if startsFold(value, "dev-") || startsFold(value, "dev_") {
 		return true
 	}
-	for _, suffix := range []string{".value", ".api_key", "_api_key", "apikey", ".apikey", ".access_token", ".auth_token", ".client_secret", ".secret_key", ".private_token"} {
+	for _, suffix := range []string{".value", ".api_key", "_api_key", "apikey", ".apikey", ".access_token", ".auth_token", ".refresh_token", ".client_secret", ".secret_key", ".private_token"} {
 		if endsFold(value, suffix) {
 			return true
 		}
@@ -286,7 +286,36 @@ func isIndirectAssignmentValue(value []byte) bool {
 	if hasInteriorEqual(value) {
 		return true
 	}
+	if isUpperCredentialIdentifier(value) || isHexAddress(value) {
+		return true
+	}
 	return false
+}
+
+func isUpperCredentialIdentifier(value []byte) bool {
+	for _, c := range value {
+		if c != '_' && (c < 'A' || c > 'Z') && (c < '0' || c > '9') {
+			return false
+		}
+	}
+	for _, suffix := range []string{"_TOKEN", "_KEY", "_SECRET", "_PASSWORD"} {
+		if endsFold(value, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func isHexAddress(value []byte) bool {
+	if len(value) != 42 || value[0] != '0' || value[1] != 'x' {
+		return false
+	}
+	for _, c := range value[2:] {
+		if !isHexByte(c) {
+			return false
+		}
+	}
+	return true
 }
 
 // hasInteriorEqual permits ordinary base64 padding but rejects structured
@@ -338,6 +367,9 @@ func GenericPasswordAssignment(window []byte, trigStart, trigEnd int) (start, en
 		return 0, 0, false
 	}
 	value := window[valStart:valEnd]
+	if isIndirectAssignmentValue(value) {
+		return 0, 0, false
+	}
 	if entropy.Classify(value) == entropy.ClassWordlike {
 		return 0, 0, false
 	}
@@ -367,6 +399,9 @@ func GenericBearerLikeTokenAssignment(window []byte, trigStart, trigEnd int) (st
 		return 0, 0, false
 	}
 	value := window[valStart:valEnd]
+	if isIndirectAssignmentValue(value) {
+		return 0, 0, false
+	}
 	if len(value) < bearerLikeTokenMinLen {
 		return 0, 0, false
 	}

@@ -391,6 +391,24 @@ func TestURLCredentials(t *testing.T) {
 			wantOK: false,
 		},
 		{
+			name:   "token placeholder",
+			window: "https://user:TOKEN@github.com/owner/repo.git",
+			trig:   "://",
+			wantOK: false,
+		},
+		{
+			name:   "malformed percent encoding",
+			window: "postgres://user:unterminated%zz@localhost/db",
+			trig:   "://",
+			wantOK: false,
+		},
+		{
+			name:   "word-like development password",
+			window: "postgres://user:content@localhost:5432/db",
+			trig:   "://",
+			wantOK: false,
+		},
+		{
 			name:   "password below the 3-byte floor",
 			window: "ftp://u:ab@h.example.com",
 			trig:   "://",

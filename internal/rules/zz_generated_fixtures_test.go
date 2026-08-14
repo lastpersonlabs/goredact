@@ -61,7 +61,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "authorization-bearer",
 			match:   []string{"GET /v1/orders HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer kJ8vQ2mZ7xW4pL9sN3tYbF6hR0cD5gU1aE\nAccept: */*\n", "curl -H 'Proxy-Authorization: Bearer nQ7wL4mX8pZ1sT6bK3jH0cV5yR2dF9gA' https://api.example.com/v1", "{\"event\":\"http\",\"line\":\"\\\"authorization: bearer eyJhbGciOiJIUzI1NiJ9.pZ8kQ2vR7wL4mN0pX1sT.hB3jF6hZ1cYdA0eBqG\\\"\"}", "Authorization: Basic c3ZjLXVzZXI6a0o4dlEybVo3eFc0cEw5cw==", "Authorization: AWS4-HMAC-SHA256 Credential=AKIAUJZDEGXDNCF32EPF/20260810/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-date, Signature=7f3a92c1e8b4d06f5a2c9e17b3d84f60a1c5e29b7d4f18a3c6e05b92d7f41a8c"},
-			nomatch: []string{"Authorization: Bearer <token>", "Authorization: Bearer ${API_TOKEN}", "# example: Authorization: Bearer YOUR-TOKEN-HERE-1234", "Authorization: Basic dXNlcjE=", "Authorization: Digest username=\"user1\", realm=\"api\", nonce=\"dcd98b7102dd2f0e\", response=\"6629fae49393a05397450978507c4ef1\"", "authorization: bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
+			nomatch: []string{"Authorization: Bearer <token>", "Authorization: Bearer ${API_TOKEN}", "# example: Authorization: Bearer YOUR-TOKEN-HERE-1234", "Authorization: Basic dXNlcjE=", "Authorization: Digest username=\"user1\", realm=\"api\", nonce=\"dcd98b7102dd2f0e\", response=\"6629fae49393a05397450978507c4ef1\"", "authorization: bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "Authorization: Bearer USER_ACCESS_TOKEN"},
 		},
 		{
 			id:      "aws-access-key-id",
@@ -81,12 +81,12 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "command-line-password-flag",
 			match:   []string{"mysql -h db.prod.internal -u app --password=tR8kW3nQ7zXm2 app_db", "vault login --token=hvs.9kQ3vR7wL4mN2xT6bF0jH5cD", "deploy --api-key 'Zp8kQ3vR7wL4mN2xT6bF9jH0' --env prod", "{\"cmd\":\"pg_restore --passwd=Xq7Lm2Vt9zR4 -d app\"}"},
-			nomatch: []string{"pg_dump --password-file /run/secrets/pgpass -h db", "fetch --token-url https://auth.example.com/oauth/token", "mysql --password= --host db.internal", "run.sh --password ${DB_PASSWORD}", "docs: use --api-key <your-key> to authenticate", "login --secret changeme --user svc"},
+			nomatch: []string{"pg_dump --password-file /run/secrets/pgpass -h db", "fetch --token-url https://auth.example.com/oauth/token", "mysql --password= --host db.internal", "run.sh --password ${DB_PASSWORD}", "docs: use --api-key <your-key> to authenticate", "login --secret changeme --user svc", "deploy --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set token}"},
 		},
 		{
 			id:      "cookie-session-token",
 			match:   []string{"Cookie: theme=dark; sessionid=aK9mQ2vR7wL4mN8pX1sTbF3j; lang=en", "Set-Cookie: sid=xT4bK9mQ2vR7wL0pZ8sN3jH6cY1dF5gA; Path=/; HttpOnly; Secure", "{\"headers\":{\"cookie\":\"gw_route=blue; auth_token=Zp8kQ3vR7wL4mN2xT6bF9jH0cD5yU1aE; region=eu\"}}", "{\"line\":\"\\\"cookie: jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.t8ZkQ2vRwLmN4xB7\\\"\"}"},
-			nomatch: []string{"Cookie: theme=dark; lang=en; tz=UTC", "Cookie: sessionid=short1; theme=dark", "Set-Cookie: csrftoken=Qw8kV3nR7wL4mN2xT6bF9jH0cD5yU1aE; Path=/", "GET /cb?next=%2Fdash&token=aK9mQ2vR7wL4mN8pX1sTbF3j HTTP/1.1", "Cookie: session=<session-token>; theme=dark", "Cookie: auth=xxxxxxxxxxxxxxxxxxxx; theme=dark"},
+			nomatch: []string{"Cookie: theme=dark; lang=en; tz=UTC", "Cookie: sessionid=short1; theme=dark", "Set-Cookie: csrftoken=Qw8kV3nR7wL4mN2xT6bF9jH0cD5yU1aE; Path=/", "GET /cb?next=%2Fdash&token=aK9mQ2vR7wL4mN8pX1sTbF3j HTTP/1.1", "Cookie: session=<session-token>; theme=dark", "Cookie: auth=xxxxxxxxxxxxxxxxxxxx; theme=dark", "Cookie: session=1e084479-84e5-4834-bc8a-fc44c29aaed90ffb05&amp; theme=dark"},
 		},
 		{
 			id:      "dockerhub-pat",
@@ -106,12 +106,12 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "generic-bearer-like-token-assignment",
 			match:   []string{"export TOKEN=aZ9kQ2vR7wL4mN8pX1sT6bF3jH0cD5yUaZ9k", "token: \"Xk9mP2vQ7Rt4Ws8LbN3jF6hZ1cYdA0eB5gC7h\"", "{\"auth_token\": \"k3JmQz9XpL2vN7wR5tY8bC1sD4fA6hE0uI2oP\"}"},
-			nomatch: []string{"token = csv.next()", "token: <YOUR_TOKEN>", "token = \"your-token-here-1234567890abcdef\"", "token: \"550e8400-e29b-41d4-a716-446655440000\"", "token = \"helloworldconfigurationvalue\""},
+			nomatch: []string{"token = csv.next()", "token: <YOUR_TOKEN>", "token = \"your-token-here-1234567890abcdef\"", "token: \"550e8400-e29b-41d4-a716-446655440000\"", "token = \"helloworldconfigurationvalue\"", "token = sqlc.arg(claim_token)", "token=${GIT_REPOSITORY_INTERNAL_TOKEN:-fallback}", "token=op://ExampleVault/Cloudflare/token", "token=EXCLUDED.refresh_token", "token=bearerToken(request.headers.get(\"authorization\"))", "token=var.cloudflare_api_token", "token=BASE_WATCHER_INTERNAL_API_TOKEN", "token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"},
 		},
 		{
 			id:      "generic-password-assignment",
 			match:   []string{"export PASSWORD=Xk9mP2vQ7Rt4Ws8Lb", "password: \"Zt7Qp2Xk9mLwR4vN8\"", "{\"pwd\": \"aZ9kQ2vR7wL4mN8pX1sT6bF3\"}"},
-			nomatch: []string{"password = \"changeme\"", "passwd: \"550e8400-e29b-41d4-a716-446655440000\"", "password = \"configuration\"", "pwd", "$ pwd", "passwd: files systemd"},
+			nomatch: []string{"password = \"changeme\"", "passwd: \"550e8400-e29b-41d4-a716-446655440000\"", "password = \"configuration\"", "pwd", "$ pwd", "passwd: files systemd", "password=${STORAGE_SECRET_ACCESS_KEY:-fallback}", "password=String(data.get(\"password\"))", "password=op://ExampleVault/Postgres/password", "password=secret123\\nnext"},
 		},
 		{
 			id:      "github-app-token",
@@ -241,7 +241,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "url-credentials",
 			match:   []string{"DATABASE_URL=postgres://svc_user:wZ8kQ3vR7pL4mN2x@db.internal:5432/app", "redis://:q8LmPz31vTk@cache.prod.svc:6379/0", "{\"msg\":\"connecting\",\"dsn\":\"mysql://root:Vt5xK8nQ2wZ7@10.0.0.12:3306/orders\"}", "amqps://ingest:R7pL4mN2xT6b@mq.internal:5671/%2Fprod"},
-			nomatch: []string{"https://deploy@github.com/org/repo.git", "postgres://user:password@localhost:5432/db", "see http://user:pass@host.example.com for the URL shape", "redis://:@cache.internal:6379", "note: the \"://\" separator splits scheme from authority", "https://status.example.com/healthz"},
+			nomatch: []string{"https://deploy@github.com/org/repo.git", "postgres://user:password@localhost:5432/db", "postgres://user:content@localhost:5432/db", "https://user:TOKEN@github.com/owner/repo.git", "postgres://user:unterminated%zz@localhost/db", "see http://user:pass@host.example.com for the URL shape", "redis://:@cache.internal:6379", "note: the \"://\" separator splits scheme from authority", "https://status.example.com/healthz"},
 		},
 	}
 

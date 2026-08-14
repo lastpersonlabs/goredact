@@ -51,6 +51,10 @@ func isASCIILetter(c byte) bool {
 	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
 }
 
+func isHexByte(c byte) bool {
+	return c >= '0' && c <= '9' || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F'
+}
+
 // lineEnd returns the offset of the first '\n' or '\r' at or after pos, or
 // len(window) if the line runs to the end of the window.
 func lineEnd(window []byte, pos int) int {
@@ -167,6 +171,9 @@ func AuthorizationHeader(window []byte, trigStart, trigEnd int) (start, end int,
 		if entropy.IsPlaceholder(window[valStart:valEnd]) {
 			return 0, 0, false
 		}
+		if isIndirectAssignmentValue(window[valStart:valEnd]) {
+			return 0, 0, false
+		}
 		return valStart, valEnd, true
 
 	case asciiEqualFold(scheme, "basic"):
@@ -273,6 +280,7 @@ func cookieNameQualifies(name []byte) bool {
 // same preset the generic bearer-like rule uses for weak triggers).
 func cookieValueQualifies(val []byte) bool {
 	return len(val) >= cookieValueMinLen &&
+		!isIndirectAssignmentValue(val) &&
 		entropy.Secretlike(val, entropy.PresetLooseToken)
 }
 
@@ -425,7 +433,7 @@ func cookiePairContextOK(window []byte, nameStart int) bool {
 // "pass" and "pwd" are the additions that matter, but the full list is
 // kept verbatim so this rule's placeholder policy is readable in one
 // place.
-var urlPasswordPlaceholders = []string{"pass", "password", "pwd", "xxx", "***"}
+var urlPasswordPlaceholders = []string{"pass", "password", "pwd", "token", "xxx", "***"}
 
 // urlPasswordMinLen is the minimum password length: 3 keeps short-but-real
 // database passwords in fixtures and dev DSNs while dropping one- and
@@ -475,9 +483,10 @@ func isUserinfoTerminator(c byte) bool {
 // password ("redis://:@host") is likewise no match. Percent-encoded
 // bytes pass through unexamined — they are just bytes to this scan.
 //
-// Placeholders are rejected via entropy.IsPlaceholder plus the tiny
-// urlPasswordPlaceholders whole-value list, so documentation shapes like
-// "user:pass", "user:password", and "foo:xxx" never fire.
+// Placeholders and plain word-like values are rejected via entropy helpers
+// plus the tiny urlPasswordPlaceholders whole-value list, so documentation
+// and development-default shapes like "user:pass", "user:content", and
+// "foo:xxx" never fire. Random-looking passwords remain detectable.
 func URLCredentials(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 	// Scheme: scan backwards from the trigger.
 	schemeStart := trigStart
@@ -519,12 +528,31 @@ func URLCredentials(window []byte, trigStart, trigEnd int) (start, end int, ok b
 	if entropy.IsPlaceholder(pw) {
 		return 0, 0, false
 	}
+	if entropy.Classify(pw) == entropy.ClassWordlike {
+		return 0, 0, false
+	}
+	if !validPercentEncoding(pw) {
+		return 0, 0, false
+	}
 	for _, p := range urlPasswordPlaceholders {
 		if asciiEqualFold(pw, p) {
 			return 0, 0, false
 		}
 	}
 	return pwStart, pwEnd, true
+}
+
+func validPercentEncoding(value []byte) bool {
+	for i := 0; i < len(value); i++ {
+		if value[i] != '%' {
+			continue
+		}
+		if i+2 >= len(value) || !isHexByte(value[i+1]) || !isHexByte(value[i+2]) {
+			return false
+		}
+		i += 2
+	}
+	return true
 }
 
 // ---------------------------------------------------------------------------
@@ -613,10 +641,13 @@ func CommandLinePasswordFlag(window []byte, trigStart, trigEnd int) (start, end 
 	if entropy.IsPlaceholder(val) {
 		return 0, 0, false
 	}
+	if isIndirectAssignmentValue(val) {
+		return 0, 0, false
+	}
 
 	trig := window[trigStart:trigEnd]
 	if asciiEqualFold(trig, "--password") || asciiEqualFold(trig, "--passwd") {
-		if len(val) < cliPasswordMinLen {
+		if len(val) < cliPasswordMinLen || entropy.Classify(val) == entropy.ClassWordlike {
 			return 0, 0, false
 		}
 		return valStart, valEnd, true
