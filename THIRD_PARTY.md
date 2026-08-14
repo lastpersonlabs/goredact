@@ -5,9 +5,9 @@ source code included in this repository.
 
 ## Current status
 
-**No third-party code is vendored or adapted in this repository.** The
-`go.mod` declares zero external dependencies, and all code under the module
-root and `internal/` is original to this project.
+**No third-party code is vendored or adapted in this repository.** The core
+library under the module root and `internal/` is original and stdlib-only.
+The reference integrations use the pure-Go dependency recorded below.
 
 The `licence-check` CI job (`.github/workflows/ci.yml`) enforces this by
 scanning for copyright headers that do not attribute Last Person Labs and by
@@ -45,3 +45,13 @@ Each entry must record:
 Entries are append-only; do not remove a historical entry even if the code is
 later deleted, unless the entire file is being reset to reflect a clean
 audit (note the reset in the PR description).
+
+## External dependencies
+
+### klauspost/compress
+
+- Source URL: https://github.com/klauspost/compress
+- Release: v1.18.0
+- Licence: BSD-3-Clause, compatible with this project's MIT licence
+- Local use: `cmd/goredact` and `examples/multipartupload`
+- Notes: pure-Go streaming Zstandard encoder; consumed as a Go module and not vendored or adapted

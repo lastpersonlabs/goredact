@@ -1,6 +1,6 @@
 # Contributing to goredact
 
-Thanks for contributing. goredact is a pure-Go, zero-dependency library that
+Thanks for contributing. goredact is a pure-Go, stdlib-only core library that
 redacts secrets from streams; because of what it handles, correctness and
 "never leak a secret value" are held to a higher bar than typical hygiene.
 Please read `docs/DESIGN.md` and `docs/THREAT_MODEL.md` before making
@@ -53,9 +53,9 @@ enforces.
 
 ## Coding conventions
 
-- **Stdlib only.** The library itself (module root and `internal/`) must
-  not take on external dependencies. Tooling used only by CI (e.g.
-  staticcheck) is fine since it isn't part of the module's dependency graph.
+- **Stdlib-only core.** The library itself (module root and `internal/`) must
+  not import external dependencies. Reference commands and integrations may
+  use reviewed pure-Go dependencies; record them in `THIRD_PARTY.md`.
 - **No cgo.** `CGO_ENABLED=0` must keep working.
 - **No allocation proportional to input size** in the streaming path;
   memory usage must stay bounded regardless of input size (see
