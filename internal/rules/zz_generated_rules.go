@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-e351f33440e2"
+const Version = "builtin-40ce7a09c40b"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -23,6 +23,19 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 8,
 			MaxLookahead:  150,
+		},
+		{
+			ID:   "authorization-bearer",
+			Name: "Authorization header credential",
+			Triggers: []Trigger{
+				{Literal: "authorization:", CaseFold: true},
+				{Literal: "proxy-authorization:", CaseFold: true},
+			},
+			Validate:      validators.AuthorizationHeader,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 2,
+			MaxLookahead:  512,
 		},
 		{
 			ID:   "aws-access-key-id",
@@ -62,6 +75,40 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
 			MaxLookahead:  100,
+		},
+		{
+			ID:   "command-line-password-flag",
+			Name: "Command-line password/token flag",
+			Triggers: []Trigger{
+				{Literal: "--password", CaseFold: true},
+				{Literal: "--passwd", CaseFold: true},
+				{Literal: "--token", CaseFold: true},
+				{Literal: "--api-key", CaseFold: true},
+				{Literal: "--secret", CaseFold: true},
+			},
+			Validate:      validators.CommandLinePasswordFlag,
+			MinProfile:    ProfileBalanced,
+			Confidence:    ConfidenceMedium,
+			MaxLookbehind: 2,
+			MaxLookahead:  200,
+		},
+		{
+			ID:   "cookie-session-token",
+			Name: "Session/token cookie value",
+			Triggers: []Trigger{
+				{Literal: "cookie:", CaseFold: true},
+				{Literal: "set-cookie:", CaseFold: true},
+				{Literal: "session=", CaseFold: true},
+				{Literal: "sid=", CaseFold: true},
+				{Literal: "token=", CaseFold: true},
+				{Literal: "jwt=", CaseFold: true},
+				{Literal: "auth=", CaseFold: true},
+			},
+			Validate:      validators.CookieSessionToken,
+			MinProfile:    ProfileBalanced,
+			Confidence:    ConfidenceMedium,
+			MaxLookbehind: 60,
+			MaxLookahead:  400,
 		},
 		{
 			ID:   "dockerhub-pat",
@@ -441,6 +488,18 @@ func init() {
 			Confidence:    ConfidenceMedium,
 			MaxLookbehind: 1,
 			MaxLookahead:  48,
+		},
+		{
+			ID:   "url-credentials",
+			Name: "URL userinfo password",
+			Triggers: []Trigger{
+				{Literal: "://", CaseFold: false},
+			},
+			Validate:      validators.URLCredentials,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 16,
+			MaxLookahead:  200,
 		},
 	})
 }

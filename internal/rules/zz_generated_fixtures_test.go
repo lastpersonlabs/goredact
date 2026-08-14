@@ -2,9 +2,12 @@
 //
 // Provenance:
 //   anthropic-api-key: https://docs.anthropic.com/en/api/getting-started (original)
+//   authorization-bearer: ENG-100 contextual header detection; scheme grammar per RFC 6750 (Bearer), RFC 7617 (Basic), AWS SigV4 Authorization header (original)
 //   aws-access-key-id: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids (original)
 //   aws-secret-access-key: https://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html (original)
 //   azure-storage-account-key: https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage (original)
+//   command-line-password-flag: ENG-100 contextual CLI flag detection (internal design, no single external spec) (original)
+//   cookie-session-token: ENG-100 contextual cookie detection; pair grammar per RFC 6265 (HTTP State Management Mechanism) (original)
 //   dockerhub-pat: https://docs.docker.com/security/for-developers/access-tokens/ (original)
 //   gcp-api-key: https://cloud.google.com/docs/authentication/api-keys (original)
 //   generic-api-key-assignment: ENG-98 contextual entropy detection: assignment-style generic credential heuristic (internal design, no single external spec) (original)
@@ -35,6 +38,7 @@
 //   stripe-secret-key: https://docs.stripe.com/keys (original)
 //   stripe-webhook-secret: https://docs.stripe.com/webhooks#verify-official-libraries (original)
 //   twilio-api-key-sid: https://www.twilio.com/docs/iam/api-keys (original)
+//   url-credentials: ENG-100 contextual URL detection; userinfo grammar per RFC 3986 section 3.2.1 (original)
 
 package rules
 
@@ -55,6 +59,11 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			nomatch: []string{"sk-ant-api03-short", "ANTHROPIC_API_KEY=sk-ant-xxxxxxxx…", "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "The zoo increased its risk-ant-eater enclosure budget this year."},
 		},
 		{
+			id:      "authorization-bearer",
+			match:   []string{"GET /v1/orders HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer kJ8vQ2mZ7xW4pL9sN3tYbF6hR0cD5gU1aE\nAccept: */*\n", "curl -H 'Proxy-Authorization: Bearer nQ7wL4mX8pZ1sT6bK3jH0cV5yR2dF9gA' https://api.example.com/v1", "{\"event\":\"http\",\"line\":\"\\\"authorization: bearer eyJhbGciOiJIUzI1NiJ9.pZ8kQ2vR7wL4mN0pX1sT.hB3jF6hZ1cYdA0eBqG\\\"\"}", "Authorization: Basic c3ZjLXVzZXI6a0o4dlEybVo3eFc0cEw5cw==", "Authorization: AWS4-HMAC-SHA256 Credential=AKIAUJZDEGXDNCF32EPF/20260810/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-date, Signature=7f3a92c1e8b4d06f5a2c9e17b3d84f60a1c5e29b7d4f18a3c6e05b92d7f41a8c"},
+			nomatch: []string{"Authorization: Bearer <token>", "Authorization: Bearer ${API_TOKEN}", "# example: Authorization: Bearer YOUR-TOKEN-HERE-1234", "Authorization: Basic dXNlcjE=", "Authorization: Digest username=\"user1\", realm=\"api\", nonce=\"dcd98b7102dd2f0e\", response=\"6629fae49393a05397450978507c4ef1\"", "authorization: bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
+		},
+		{
 			id:      "aws-access-key-id",
 			match:   []string{"AWS_ACCESS_KEY_ID=AKIAUJZDEGXDNCF32EPF", "{\"accessKeyId\": \"ASIA3DHODZDOCIS2JHTL\", \"region\": \"us-east-1\"}", "aws configure set aws_access_key_id ACCAGMXGEDN73U55XTPL"},
 			nomatch: []string{"AWS_ACCESS_KEY_ID=AKIASHORT", "AWS_ACCESS_KEY_ID=AKIAujzdegxdncf32epf", "AWS_ACCESS_KEY_ID=XAKIAUJZDEGXDNCF32EPF", "AWS_ACCESS_KEY_ID=AKIAUJZDEGXDNCF32EPF9", "# example from the AWS docs: AKIAIOSFODNN7EXAMPLE"},
@@ -68,6 +77,16 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			id:      "azure-storage-account-key",
 			match:   []string{"DefaultEndpointsProtocol=https;AccountName=contosostorage;AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ==;EndpointSuffix=core.windows.net", "AZURE_STORAGE_ACCOUNT_KEY=\"AccountKey=j59fhZ5R1Py4oJe2JbmPTuSgR7cMy+UcU3zr1ZtoLuCr64CxqlIOdNKhiFXiQ2hzT/pLjHX2JiCLhKcIhP6Br1==\""},
 			nomatch: []string{"AccountKey=tooshort==", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ!!", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ===extra"},
+		},
+		{
+			id:      "command-line-password-flag",
+			match:   []string{"mysql -h db.prod.internal -u app --password=tR8kW3nQ7zXm2 app_db", "vault login --token=hvs.9kQ3vR7wL4mN2xT6bF0jH5cD", "deploy --api-key 'Zp8kQ3vR7wL4mN2xT6bF9jH0' --env prod", "{\"cmd\":\"pg_restore --passwd=Xq7Lm2Vt9zR4 -d app\"}"},
+			nomatch: []string{"pg_dump --password-file /run/secrets/pgpass -h db", "fetch --token-url https://auth.example.com/oauth/token", "mysql --password= --host db.internal", "run.sh --password ${DB_PASSWORD}", "docs: use --api-key <your-key> to authenticate", "login --secret changeme --user svc"},
+		},
+		{
+			id:      "cookie-session-token",
+			match:   []string{"Cookie: theme=dark; sessionid=aK9mQ2vR7wL4mN8pX1sTbF3j; lang=en", "Set-Cookie: sid=xT4bK9mQ2vR7wL0pZ8sN3jH6cY1dF5gA; Path=/; HttpOnly; Secure", "{\"headers\":{\"cookie\":\"gw_route=blue; auth_token=Zp8kQ3vR7wL4mN2xT6bF9jH0cD5yU1aE; region=eu\"}}", "{\"line\":\"\\\"cookie: jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.t8ZkQ2vRwLmN4xB7\\\"\"}"},
+			nomatch: []string{"Cookie: theme=dark; lang=en; tz=UTC", "Cookie: sessionid=short1; theme=dark", "Set-Cookie: csrftoken=Qw8kV3nR7wL4mN2xT6bF9jH0cD5yU1aE; Path=/", "GET /cb?next=%2Fdash&token=aK9mQ2vR7wL4mN8pX1sTbF3j HTTP/1.1", "Cookie: session=<session-token>; theme=dark", "Cookie: auth=xxxxxxxxxxxxxxxxxxxx; theme=dark"},
 		},
 		{
 			id:      "dockerhub-pat",
@@ -218,6 +237,11 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			id:      "twilio-api-key-sid",
 			match:   []string{"export TWILIO_API_KEY_SID=SK3931bdb2a0df3dbe4d58fed8a728e7ec", "{\"api_key_sid\": \"SKa0fa5f6b8a880627df7ffe0297c79bfb\"}"},
 			nomatch: []string{"SKDABE898736A3566F893697B590481194", "SKf309ffea518f32cf21449273d7cee9", "the TASKd9136682575250def91799e2786d3748 list", "clean the DESK421599e3e9c8fe21da80270815fe85df now"},
+		},
+		{
+			id:      "url-credentials",
+			match:   []string{"DATABASE_URL=postgres://svc_user:wZ8kQ3vR7pL4mN2x@db.internal:5432/app", "redis://:q8LmPz31vTk@cache.prod.svc:6379/0", "{\"msg\":\"connecting\",\"dsn\":\"mysql://root:Vt5xK8nQ2wZ7@10.0.0.12:3306/orders\"}", "amqps://ingest:R7pL4mN2xT6b@mq.internal:5671/%2Fprod"},
+			nomatch: []string{"https://deploy@github.com/org/repo.git", "postgres://user:password@localhost:5432/db", "see http://user:pass@host.example.com for the URL shape", "redis://:@cache.internal:6379", "note: the \"://\" separator splits scheme from authority", "https://status.example.com/healthz"},
 		},
 	}
 
