@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-510efd5b5bc8"
+const Version = "builtin-744816e6a977"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -144,8 +144,8 @@ func init() {
 				{Literal: "csk-", CaseFold: false},
 			},
 			Validate:      validators.CerebrasAPIKey,
-			MinProfile:    ProfileFast,
-			Confidence:    ConfidenceHigh,
+			MinProfile:    ProfileBalanced,
+			Confidence:    ConfidenceMedium,
 			MaxLookbehind: 1,
 			MaxLookahead:  75,
 		},
@@ -219,7 +219,7 @@ func init() {
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 1,
-			MaxLookahead:  140,
+			MaxLookahead:  550,
 		},
 		{
 			ID:   "datadog-api-key",

@@ -90,6 +90,7 @@ const (
 	cursor20   = "VHI1kt4yqDD-vCw5ELuH"
 	cursor128  = "dXH1biOWh1mKSPKiCR87jThoUlmDwJZUhGD3c34aH0KZ0vaiFK3adtifajqK8Wl4Y0x9I-9Z4f63uIMkZ6z059ARirFAWf4eh6aOdUah_KapRVnEJ2VQIly22wFkqt9n"
 	cursor19   = "KXok_u1OPTjFbl1fFwM"
+	cursor300  = "NsKXJIdSI8QBP69Qka5wMQ_fhKUFaWyuhlGzKBvXyLZO73nvhJ8Gv3IiGO422fUX1dmwSY9mrhO_oe4TzE1PPxn5LTNhNqwYKzHUaj3Kyylv6vJ-ICVnpTwH5g2hhsnUUKoSexIZbgL3gRyfh7rHlkmklGaMHwPPaAYVZ2oA4q1Xo56QKWsUxmVNbd0A8d5aoMVD8fy4o8c94crPQgsYWxcCiidexmeG3MKAkyAYk8iOS7CLkOEEKLfFUHfYfGzQqsTsMPlSDrUSRpMykn1Mt60jfKItrQCCsG3Ia9llyHQ8"
 )
 
 func TestAnthropicAPIKey(t *testing.T) {
@@ -868,13 +869,25 @@ func TestCursorAPIKey(t *testing.T) {
 			wantEnd:   len(match),
 		},
 		{
-			name:      "match, generous body length (128 chars)",
+			name:      "match, 128-char body",
 			window:    "crsr_" + cursor128,
 			trigStart: 0,
 			trigEnd:   5,
 			wantOK:    true,
 			wantStart: 0,
 			wantEnd:   5 + 128,
+		},
+		{
+			// Cursor's own regex (crsr_[A-Za-z0-9_-]{20,}) has no upper
+			// bound, so a 300-char body (well past the old, since-removed
+			// 128-char cap) must still match.
+			name:      "match, 300-char body (no upper bound)",
+			window:    "crsr_" + cursor300,
+			trigStart: 0,
+			trigEnd:   5,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   5 + 300,
 		},
 		{
 			name:      "match with surrounding context",

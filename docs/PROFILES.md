@@ -90,7 +90,7 @@ finding).
 | `azure-servicebus-sas-key` | Azure Service Bus / Event Hubs shared access key | fast | high | `SharedAccessKey=` |
 | `azure-storage-account-key` | Azure storage account key | fast | high | `AccountKey=` |
 | `buildkite-api-token` | Buildkite API/agent access token | fast | high | `BUILDKITE_API_TOKEN`, `BUILDKITE_AGENT_TOKEN` |
-| `cerebras-api-key` | Cerebras API key | fast | high | `csk-` |
+| `cerebras-api-key` | Cerebras API key | balanced | medium | `csk-` |
 | `circleci-token` | CircleCI personal/project API token | fast | high | `CCIPAT_`, `CCIPRJ_` |
 | `cohere-api-key` | Cohere API key | fast | high | `CO_API_KEY`, `COHERE_API_KEY` |
 | `command-line-password-flag` | Command-line password/token flag | balanced | medium | `--password`, `--passwd`, `--token`, `--api-key`, `--secret` |
@@ -142,7 +142,7 @@ finding).
 | `vercel-legacy-token` | Vercel legacy access token | fast | high | `VERCEL_TOKEN`, `VERCEL_API_TOKEN`, `VERCEL_ACCESS_TOKEN` |
 | `vercel-token` | Vercel access token | fast | high | `vcp_`, `vci_`, `vca_`, `vcr_`, `vck_` |
 
-Per-profile counts: `fast` = 51 rules, `balanced` = 61 rules (adds 10),
+Per-profile counts: `fast` = 50 rules, `balanced` = 61 rules (adds 11),
 `deep` = 61 rules (adds 0, see above). Query these programmatically with
 `goredact.BuiltinRules()` (every built-in, any profile) and
 `(*Engine).ActiveRules()` (what a specific configured `Engine` actually
@@ -170,8 +170,11 @@ uppercase `T3BlbkFJ` infix a lowercase-only body can never contain.
 convergent third-party integration guides, not from Cerebras's own docs
 (`inference-docs.cerebras.ai` was unreachable during development, and
 neither gitleaks nor TruffleHog ships a Cerebras rule to cross-check
-against) — treat this one as lower-confidence pending direct verification
-against Cerebras's own documentation.
+against). Because that shape is unverified rather than confirmed against
+a primary source, it's deliberately kept out of the fast tier (medium
+confidence, balanced) despite otherwise looking like a normal
+fixed-prefix rule — treat it as pending direct verification against
+Cerebras's own documentation, at which point it can be promoted.
 
 CircleCI's older bare 40-character hex token format is deliberately not
 matched by any rule: unlike Buildkite/Datadog/legacy-Vercel, it has no

@@ -273,8 +273,8 @@
         }
       ],
       "validator": "CerebrasAPIKey",
-      "minProfile": "fast",
-      "confidence": "high",
+      "minProfile": "balanced",
+      "confidence": "medium",
       "maxLookbehind": 1,
       "maxLookahead": 75,
       "provenance": {
@@ -305,15 +305,16 @@
       "minProfile": "fast",
       "confidence": "high",
       "maxLookbehind": 1,
-      "maxLookahead": 140,
+      "maxLookahead": 550,
       "provenance": {
-        "source": "Cursor's own sensitive-prompt-guard hook script (github.com/cursor/cookbook hooks/.cursor/hooks/sensitive-prompt-guard.sh): crsr_[A-Za-z0-9_-]{20,}",
+        "source": "Cursor's own sensitive-prompt-guard hook script (github.com/cursor/cookbook hooks/.cursor/hooks/sensitive-prompt-guard.sh): crsr_[A-Za-z0-9_-]{20,}, an open floor with no upper bound",
         "license": "original"
       },
       "fixtures": {
         "match": [
           "export CURSOR_API_KEY=crsr_3UsvtDPkMeJCkV5Asrqi",
-          "Authorization: Bearer crsr_zmTUVm3EWjXW3eL7NHSMwEicBfcw3IVbjUF3d2kF8PPpH8DncrGeo3AN6UNG"
+          "Authorization: Bearer crsr_zmTUVm3EWjXW3eL7NHSMwEicBfcw3IVbjUF3d2kF8PPpH8DncrGeo3AN6UNG",
+          "export CURSOR_API_KEY=crsr_6UOfxC8_G330b9Gv_18TIVt0QP2IYsgln3aeqjn6T80N1CDNB4N_cvyp_OIZNcH8orqZeRes1QWv2CzOTxXHC6wNJUCdi6llz5i_O7edv12CY36k3joG_IIxtf7BBG3ep8mbzArQ4F-KENBllnucuTRmPL-byHAnYHrfPb3weLqpGSJiX-LdSBLSDa3aUEeFFsjb7khz"
         ],
         "nomatch": [
           "crsr_short",

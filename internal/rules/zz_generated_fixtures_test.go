@@ -16,7 +16,7 @@
 //   cohere-api-key: gitleaks cohere-api-token rule (github.com/gitleaks/gitleaks config/gitleaks.toml): keyword CO_API_KEY/cohere + 40-char alphanumeric, no fixed prefix on the key itself (original)
 //   command-line-password-flag: Original project design; no single external specification (original)
 //   cookie-session-token: https://www.rfc-editor.org/rfc/rfc6265 (original)
-//   cursor-api-key: Cursor's own sensitive-prompt-guard hook script (github.com/cursor/cookbook hooks/.cursor/hooks/sensitive-prompt-guard.sh): crsr_[A-Za-z0-9_-]{20,} (original)
+//   cursor-api-key: Cursor's own sensitive-prompt-guard hook script (github.com/cursor/cookbook hooks/.cursor/hooks/sensitive-prompt-guard.sh): crsr_[A-Za-z0-9_-]{20,}, an open floor with no upper bound (original)
 //   datadog-api-key: https://docs.datadoghq.com/agent/guide/environment-variables/ (original)
 //   datadog-application-key: https://registry.terraform.io/providers/DataDog/datadog/latest/docs (original)
 //   deepgram-api-key: TruffleHog deepgram detector (github.com/trufflesecurity/trufflehog pkg/detectors/deepgram/deepgram.go): 40-char lowercase alphanumeric, no fixed prefix on the key itself (original)
@@ -153,7 +153,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "cursor-api-key",
-			match:   []string{"export CURSOR_API_KEY=crsr_3UsvtDPkMeJCkV5Asrqi", "Authorization: Bearer crsr_zmTUVm3EWjXW3eL7NHSMwEicBfcw3IVbjUF3d2kF8PPpH8DncrGeo3AN6UNG"},
+			match:   []string{"export CURSOR_API_KEY=crsr_3UsvtDPkMeJCkV5Asrqi", "Authorization: Bearer crsr_zmTUVm3EWjXW3eL7NHSMwEicBfcw3IVbjUF3d2kF8PPpH8DncrGeo3AN6UNG", "export CURSOR_API_KEY=crsr_6UOfxC8_G330b9Gv_18TIVt0QP2IYsgln3aeqjn6T80N1CDNB4N_cvyp_OIZNcH8orqZeRes1QWv2CzOTxXHC6wNJUCdi6llz5i_O7edv12CY36k3joG_IIxtf7BBG3ep8mbzArQ4F-KENBllnucuTRmPL-byHAnYHrfPb3weLqpGSJiX-LdSBLSDa3aUEeFFsjb7khz"},
 			nomatch: []string{"crsr_short", "crsr_FwfRZvDDlQZYXwcXAD7"},
 		},
 		{

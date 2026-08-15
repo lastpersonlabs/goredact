@@ -306,7 +306,13 @@ func DeepSeekAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok b
 		return 0, 0, false
 	}
 	body := window[trigEnd:bodyEnd]
-	if isPlaceholder(body) || hasRepeatRun(body, 5) {
+	// DeepSeek's body alphabet is lowercase-only (36 symbols, versus the
+	// 62-64 symbols every other rule in this file draws its body from),
+	// so a coincidental run of 5 identical characters in a genuinely
+	// random 32-byte key is measurably more likely here than it is for
+	// e.g. AnthropicAPIKey at the same threshold. Requiring 6 restores a
+	// safety margin comparable to (in fact tighter than) that baseline.
+	if isPlaceholder(body) || hasRepeatRun(body, 6) {
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
@@ -325,7 +331,10 @@ func DeepgramAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok b
 	if !ok {
 		return 0, 0, false
 	}
-	if hasRepeatRun(window[start:end], 5) {
+	// See the matching comment on DeepSeekAPIKey: Deepgram's body is the
+	// same 36-symbol lowercase-only alphabet, so this uses the same
+	// widened threshold for the same reason.
+	if hasRepeatRun(window[start:end], 6) {
 		return 0, 0, false
 	}
 	return start, end, true
@@ -362,26 +371,29 @@ func CerebrasAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok b
 }
 
 // CursorAPIKey confirms the Cursor API key shape: trigger "crsr_"
-// followed by 20-128 characters of [A-Za-z0-9_-]. Cursor's own
+// followed by 20 or more characters of [A-Za-z0-9_-]. Cursor's own
 // sensitive-prompt-guard hook script (github.com/cursor/cookbook) uses
-// the regex crsr_[A-Za-z0-9_-]{20,}, an open-ended floor with no upper
-// bound documented anywhere; 128 is a generous cap chosen in its place.
-//
-// https://github.com/cursor/cookbook
+// the regex crsr_[A-Za-z0-9_-]{20,} — an open floor with no upper bound
+// at all, unlike every other rule in this file — so this validator
+// imposes no separate maximum of its own: it consumes the maximal
+// [A-Za-z0-9_-] run and only requires the 20-byte floor, relying on the
+// rule's own maxLookahead (deliberately generous, in ai.json) as the
+// practical ceiling rather than an arbitrary internal cap that a longer
+// real key could silently fall outside of.
 func CursorAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 	if !precedingBoundaryOK(window, trigStart) {
 		return 0, 0, false
 	}
-	bodyEnd, ok2 := consumeExtRun(window, trigEnd, 20, 128)
-	if !ok2 {
+	pos := trigEnd
+	for pos < len(window) && isAlnumExt(window[pos]) {
+		pos++
+	}
+	if pos-trigEnd < 20 {
 		return 0, 0, false
 	}
-	if !boundaryOK(window, bodyEnd) {
-		return 0, 0, false
-	}
-	body := window[trigEnd:bodyEnd]
+	body := window[trigEnd:pos]
 	if isPlaceholder(body) || hasRepeatRun(body, 5) {
 		return 0, 0, false
 	}
-	return trigStart, bodyEnd, true
+	return trigStart, pos, true
 }
