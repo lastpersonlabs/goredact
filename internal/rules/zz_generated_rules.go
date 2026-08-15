@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-5fa62b3bae1c"
+const Version = "builtin-811fd2b6e788"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -369,6 +369,23 @@ func init() {
 			Confidence:    ConfidenceMedium,
 			MaxLookbehind: 2,
 			MaxLookahead:  200,
+		},
+		{
+			ID:   "generic-secret-assignment",
+			Name: "Generic secret assignment (broad keyword, deep profile only)",
+			Triggers: []Trigger{
+				{Literal: "key", CaseFold: true},
+				{Literal: "secret", CaseFold: true},
+				{Literal: "auth", CaseFold: true},
+				{Literal: "access", CaseFold: true},
+				{Literal: "credential", CaseFold: true},
+				{Literal: "creds", CaseFold: true},
+			},
+			Validate:      validators.GenericSecretAssignment,
+			MinProfile:    ProfileDeep,
+			Confidence:    ConfidenceLow,
+			MaxLookbehind: 1,
+			MaxLookahead:  170,
 		},
 		{
 			ID:   "github-app-token",

@@ -1,0 +1,44 @@
+{
+  "rules": [
+    {
+      "id": "generic-secret-assignment",
+      "name": "Generic secret assignment (broad keyword, deep profile only)",
+      "triggers": [
+        {"literal": "key", "caseFold": true},
+        {"literal": "secret", "caseFold": true},
+        {"literal": "auth", "caseFold": true},
+        {"literal": "access", "caseFold": true},
+        {"literal": "credential", "caseFold": true},
+        {"literal": "creds", "caseFold": true}
+      ],
+      "validator": "GenericSecretAssignment",
+      "minProfile": "deep",
+      "confidence": "low",
+      "maxLookbehind": 1,
+      "maxLookahead": 170,
+      "provenance": {
+        "source": "gitleaks/betterleaks generic-api-key rule (github.com/gitleaks/gitleaks, github.com/betterleaks/betterleaks config/*.toml): both require one of a broad keyword set (access, auth, api, credential, creds, key, password, secret, token) followed within ~20 characters by an assignment operator -- confirmed neither rule is actually keyword-free despite sometimes being described that way",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "AWS Secret Key = rwsmyxydQrWgPCi4wtEP7qi75tWU",
+          "Client Auth Token: 9rtyiWofxFYcbVNBebGDBV2h",
+          "key = 69cv5BW8EwnNoBtGGe8aNAHh7NWfiM1O",
+          "{\"credential\": \"FlOJfSS2xyK7tLQh9bZU\"}",
+          "creds=0cXGCcKnSPVS3qsTbU7H3D8YTfkFdL"
+        ],
+        "nomatch": [
+          "keyboard shortcuts are useful for this workflow",
+          "author = 'Alice Programmer'",
+          "the monkey business continued for hours",
+          "access = os.environ.get('SECRET')",
+          "credential_id = 550e8400-e29b-41d4-a716-446655440000",
+          "key = short",
+          "secret = aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "`key=`rwsmyxydQrWgPCi4wtEP7qi75tWU`"
+        ]
+      }
+    }
+  ]
+}

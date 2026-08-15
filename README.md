@@ -89,8 +89,9 @@ material.
 The built-in rules cover provider tokens (source control, cloud, AI, payment,
 messaging, and project management), authentication headers, contextual
 assignments, cookies, credentials in URLs, and private-key blocks. Fast,
-balanced, and deep profiles trade detector coverage for cost; deep currently
-selects the same rules as balanced in v0.1. See [`docs/PROFILES.md`](docs/PROFILES.md)
+balanced, and deep profiles trade detector coverage for cost; deep adds a
+broader-keyword, lower-confidence generic assignment heuristic on top of
+everything balanced already catches. See [`docs/PROFILES.md`](docs/PROFILES.md)
 for the complete rule table.
 
 For every profile, memory is bounded by the configured chunk and rule windows.

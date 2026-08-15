@@ -28,6 +28,7 @@
 //   generic-api-key-assignment: Original project design: assignment-style generic credential heuristic; no single external specification (original)
 //   generic-bearer-like-token-assignment: Original project design: assignment-style generic credential heuristic; no single external specification (original)
 //   generic-password-assignment: Original project design: assignment-style generic credential heuristic; no single external specification (original)
+//   generic-secret-assignment: gitleaks/betterleaks generic-api-key rule (github.com/gitleaks/gitleaks, github.com/betterleaks/betterleaks config/*.toml): both require one of a broad keyword set (access, auth, api, credential, creds, key, password, secret, token) followed within ~20 characters by an assignment operator -- confirmed neither rule is actually keyword-free despite sometimes being described that way (original)
 //   github-app-token: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats (original)
 //   github-fine-grained-pat: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats (original)
 //   github-oauth-token: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats (original)
@@ -215,6 +216,11 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			id:      "generic-password-assignment",
 			match:   []string{"export PASSWORD=Xk9mP2vQ7Rt4Ws8Lb", "password: \"Zt7Qp2Xk9mLwR4vN8\"", "{\"pwd\": \"aZ9kQ2vR7wL4mN8pX1sT6bF3\"}"},
 			nomatch: []string{"password = \"changeme\"", "passwd: \"550e8400-e29b-41d4-a716-446655440000\"", "password = \"configuration\"", "pwd", "$ pwd", "passwd: files systemd", "password=${STORAGE_SECRET_ACCESS_KEY:-fallback}", "password=String(data.get(\"password\"))", "password=op://ExampleVault/Postgres/password", "password=secret123\\nnext", "password = \"correct horse battery staple\"", "password: URLPatternComponentResult", "password = 'trimmed prose, not a credential value. '"},
+		},
+		{
+			id:      "generic-secret-assignment",
+			match:   []string{"AWS Secret Key = rwsmyxydQrWgPCi4wtEP7qi75tWU", "Client Auth Token: 9rtyiWofxFYcbVNBebGDBV2h", "key = 69cv5BW8EwnNoBtGGe8aNAHh7NWfiM1O", "{\"credential\": \"FlOJfSS2xyK7tLQh9bZU\"}", "creds=0cXGCcKnSPVS3qsTbU7H3D8YTfkFdL"},
+			nomatch: []string{"keyboard shortcuts are useful for this workflow", "author = 'Alice Programmer'", "the monkey business continued for hours", "access = os.environ.get('SECRET')", "credential_id = 550e8400-e29b-41d4-a716-446655440000", "key = short", "secret = aaaaaaaaaaaaaaaaaaaaaaaaaaaa", "`key=`rwsmyxydQrWgPCi4wtEP7qi75tWU`"},
 		},
 		{
 			id:      "github-app-token",

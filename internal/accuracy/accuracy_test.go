@@ -131,5 +131,5 @@ func ExampleAll() {
 	}
 	fmt.Printf("fixtures=%d positive=%d negative=%d\n", len(corpus), positive, negative)
 	// Output:
-	// fixtures=454 positive=173 negative=281
+	// fixtures=467 positive=178 negative=289
 }
