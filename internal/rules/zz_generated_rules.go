@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-8388559dadb2"
+const Version = "builtin-f22336954dfc"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -125,6 +125,32 @@ func init() {
 			MaxLookahead:  100,
 		},
 		{
+			ID:   "buildkite-api-token",
+			Name: "Buildkite API/agent access token",
+			Triggers: []Trigger{
+				{Literal: "BUILDKITE_API_TOKEN", CaseFold: true},
+				{Literal: "BUILDKITE_AGENT_TOKEN", CaseFold: true},
+			},
+			Validate:      validators.BuildkiteAPIToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  60,
+		},
+		{
+			ID:   "circleci-token",
+			Name: "CircleCI personal/project API token",
+			Triggers: []Trigger{
+				{Literal: "CCIPAT_", CaseFold: false},
+				{Literal: "CCIPRJ_", CaseFold: false},
+			},
+			Validate:      validators.CircleCIToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  70,
+		},
+		{
 			ID:   "command-line-password-flag",
 			Name: "Command-line password/token flag",
 			Triggers: []Trigger{
@@ -159,6 +185,30 @@ func init() {
 			MaxLookahead:  400,
 		},
 		{
+			ID:   "datadog-api-key",
+			Name: "Datadog API key",
+			Triggers: []Trigger{
+				{Literal: "DD_API_KEY", CaseFold: true},
+			},
+			Validate:      validators.DatadogAPIKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  50,
+		},
+		{
+			ID:   "datadog-application-key",
+			Name: "Datadog Application key",
+			Triggers: []Trigger{
+				{Literal: "DD_APP_KEY", CaseFold: true},
+			},
+			Validate:      validators.DatadogApplicationKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  60,
+		},
+		{
 			ID:   "dockerhub-pat",
 			Name: "Docker Hub personal access token",
 			Triggers: []Trigger{
@@ -169,6 +219,24 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
 			MaxLookahead:  128,
+		},
+		{
+			ID:   "doppler-token",
+			Name: "Doppler token",
+			Triggers: []Trigger{
+				{Literal: "dp.st.", CaseFold: false},
+				{Literal: "dp.pt.", CaseFold: false},
+				{Literal: "dp.ct.", CaseFold: false},
+				{Literal: "dp.sa.", CaseFold: false},
+				{Literal: "dp.said.", CaseFold: false},
+				{Literal: "dp.scim.", CaseFold: false},
+				{Literal: "dp.audit.", CaseFold: false},
+			},
+			Validate:      validators.DopplerToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  90,
 		},
 		{
 			ID:   "gcp-api-key",
@@ -325,6 +393,30 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
 			MaxLookahead:  64,
+		},
+		{
+			ID:   "grafana-cloud-access-policy-token",
+			Name: "Grafana Cloud access policy token",
+			Triggers: []Trigger{
+				{Literal: "glc_", CaseFold: false},
+			},
+			Validate:      validators.GrafanaCloudAccessPolicyToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  420,
+		},
+		{
+			ID:   "grafana-service-account-token",
+			Name: "Grafana service-account token",
+			Triggers: []Trigger{
+				{Literal: "glsa_", CaseFold: false},
+			},
+			Validate:      validators.GrafanaServiceAccountToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  45,
 		},
 		{
 			ID:   "groq-api-key",
@@ -610,6 +702,36 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
 			MaxLookahead:  170,
+		},
+		{
+			ID:   "vercel-legacy-token",
+			Name: "Vercel legacy access token",
+			Triggers: []Trigger{
+				{Literal: "VERCEL_TOKEN", CaseFold: true},
+				{Literal: "VERCEL_API_TOKEN", CaseFold: true},
+				{Literal: "VERCEL_ACCESS_TOKEN", CaseFold: true},
+			},
+			Validate:      validators.VercelLegacyToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  40,
+		},
+		{
+			ID:   "vercel-token",
+			Name: "Vercel access token",
+			Triggers: []Trigger{
+				{Literal: "vcp_", CaseFold: false},
+				{Literal: "vci_", CaseFold: false},
+				{Literal: "vca_", CaseFold: false},
+				{Literal: "vcr_", CaseFold: false},
+				{Literal: "vck_", CaseFold: false},
+			},
+			Validate:      validators.VercelToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  85,
 		},
 	})
 }

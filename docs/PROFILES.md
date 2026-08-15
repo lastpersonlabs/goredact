@@ -71,7 +71,7 @@ much memory/disk do I use" or "is the output reproducible."
 
 ## Rule table
 
-47 built-in rules as of this writing. Columns: rule ID, name, minimum
+56 built-in rules as of this writing. Columns: rule ID, name, minimum
 profile that includes the rule (`fast` rules also run in `balanced` and
 `deep`; `balanced` rules also run in `deep`), confidence, and trigger
 literals (the Aho–Corasick literals that must appear before the rule's
@@ -89,9 +89,14 @@ finding).
 | `azure-app-configuration-secret` | Azure App Configuration secret | balanced | medium | `Secret=` |
 | `azure-servicebus-sas-key` | Azure Service Bus / Event Hubs shared access key | fast | high | `SharedAccessKey=` |
 | `azure-storage-account-key` | Azure storage account key | fast | high | `AccountKey=` |
+| `buildkite-api-token` | Buildkite API/agent access token | fast | high | `BUILDKITE_API_TOKEN`, `BUILDKITE_AGENT_TOKEN` |
+| `circleci-token` | CircleCI personal/project API token | fast | high | `CCIPAT_`, `CCIPRJ_` |
 | `command-line-password-flag` | Command-line password/token flag | balanced | medium | `--password`, `--passwd`, `--token`, `--api-key`, `--secret` |
 | `cookie-session-token` | Session/token cookie value | balanced | medium | `cookie:`, `set-cookie:`, `session=`, `sid=`, `token=`, `jwt=`, `auth=` |
+| `datadog-api-key` | Datadog API key | fast | high | `DD_API_KEY` |
+| `datadog-application-key` | Datadog Application key | fast | high | `DD_APP_KEY` |
 | `dockerhub-pat` | Docker Hub personal access token | fast | high | `dckr_pat_` |
+| `doppler-token` | Doppler token | fast | high | `dp.st.`, `dp.pt.`, `dp.ct.`, `dp.sa.`, `dp.said.`, `dp.scim.`, `dp.audit.` |
 | `gcp-api-key` | GCP API key | fast | high | `AIza` |
 | `generic-api-key-assignment` | Generic API key / access token assignment | balanced | medium | `api_key`, `apikey`, `api-key`, `access_token`, `auth_token`, `client_secret`, `secret_key`, `secret_key_base`, `session_secret`, `private_token` |
 | `generic-bearer-like-token-assignment` | Generic bearer-like token assignment | balanced | low | `token` |
@@ -104,6 +109,8 @@ finding).
 | `gitlab-deploy-token` | GitLab deploy token | fast | high | `gldt-` |
 | `gitlab-pat` | GitLab personal access token | fast | high | `glpat-` |
 | `gitlab-runner-token` | GitLab runner authentication token | fast | high | `glrt-` |
+| `grafana-cloud-access-policy-token` | Grafana Cloud access policy token | fast | high | `glc_` |
+| `grafana-service-account-token` | Grafana service-account token | fast | high | `glsa_` |
 | `groq-api-key` | Groq API key | fast | high | `gsk_` |
 | `huggingface-token` | Hugging Face access token | fast | high | `hf_` |
 | `jwt` | JSON Web Token (standalone) | balanced | medium | `eyJ` |
@@ -127,9 +134,11 @@ finding).
 | `url-credentials` | URL userinfo password | fast | high | `://` |
 | `vault-batch-token` | HashiCorp Vault batch token | fast | high | `hvb.` |
 | `vault-service-token` | HashiCorp Vault service token | fast | high | `hvs.` |
+| `vercel-legacy-token` | Vercel legacy access token | fast | high | `VERCEL_TOKEN`, `VERCEL_API_TOKEN`, `VERCEL_ACCESS_TOKEN` |
+| `vercel-token` | Vercel access token | fast | high | `vcp_`, `vci_`, `vca_`, `vcr_`, `vck_` |
 
-Per-profile counts: `fast` = 37 rules, `balanced` = 47 rules (adds 10),
-`deep` = 47 rules (adds 0, see above). Query these programmatically with
+Per-profile counts: `fast` = 46 rules, `balanced` = 56 rules (adds 10),
+`deep` = 56 rules (adds 0, see above). Query these programmatically with
 `goredact.BuiltinRules()` (every built-in, any profile) and
 `(*Engine).ActiveRules()` (what a specific configured `Engine` actually
 runs).
@@ -137,8 +146,18 @@ runs).
 ## Assignment rationale
 
 All fast rules are high-confidence and use an exact provider-token prefix,
-known header, private-key marker, or URL credential structure. Medium- and
+known header, private-key marker, URL credential structure, or (for the
+handful of providers — AWS's secret access key, Buildkite, Datadog, and
+legacy Vercel tokens — that issue a bare fixed-length value with no prefix
+of its own) a documented provider-specific environment-variable name as
+the trigger instead of a prefix within the value. Medium- and
 low-confidence contextual rules are excluded from fast.
+
+CircleCI's older bare 40-character hex token format is deliberately not
+matched by any rule: unlike Buildkite/Datadog/legacy-Vercel, it has no
+well-known distinguishing environment-variable name either, and the same
+shape as a git SHA-1 hash makes a deterministic rule for it too
+false-positive-prone to ship.
 
 `twilio-api-key-sid` and `notion-internal-token` are balanced rules because
 their short or generic triggers require additional structural validation.
