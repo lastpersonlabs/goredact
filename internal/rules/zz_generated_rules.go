@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-f22336954dfc"
+const Version = "builtin-510efd5b5bc8"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -138,6 +138,18 @@ func init() {
 			MaxLookahead:  60,
 		},
 		{
+			ID:   "cerebras-api-key",
+			Name: "Cerebras API key",
+			Triggers: []Trigger{
+				{Literal: "csk-", CaseFold: false},
+			},
+			Validate:      validators.CerebrasAPIKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 1,
+			MaxLookahead:  75,
+		},
+		{
 			ID:   "circleci-token",
 			Name: "CircleCI personal/project API token",
 			Triggers: []Trigger{
@@ -149,6 +161,19 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
 			MaxLookahead:  70,
+		},
+		{
+			ID:   "cohere-api-key",
+			Name: "Cohere API key",
+			Triggers: []Trigger{
+				{Literal: "CO_API_KEY", CaseFold: true},
+				{Literal: "COHERE_API_KEY", CaseFold: true},
+			},
+			Validate:      validators.CohereAPIKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  60,
 		},
 		{
 			ID:   "command-line-password-flag",
@@ -185,6 +210,18 @@ func init() {
 			MaxLookahead:  400,
 		},
 		{
+			ID:   "cursor-api-key",
+			Name: "Cursor API key",
+			Triggers: []Trigger{
+				{Literal: "crsr_", CaseFold: false},
+			},
+			Validate:      validators.CursorAPIKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 1,
+			MaxLookahead:  140,
+		},
+		{
 			ID:   "datadog-api-key",
 			Name: "Datadog API key",
 			Triggers: []Trigger{
@@ -207,6 +244,30 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
 			MaxLookahead:  60,
+		},
+		{
+			ID:   "deepgram-api-key",
+			Name: "Deepgram API key",
+			Triggers: []Trigger{
+				{Literal: "DEEPGRAM_API_KEY", CaseFold: true},
+			},
+			Validate:      validators.DeepgramAPIKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  60,
+		},
+		{
+			ID:   "deepseek-api-key",
+			Name: "DeepSeek API key",
+			Triggers: []Trigger{
+				{Literal: "sk-", CaseFold: false},
+			},
+			Validate:      validators.DeepSeekAPIKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 1,
+			MaxLookahead:  40,
 		},
 		{
 			ID:   "dockerhub-pat",

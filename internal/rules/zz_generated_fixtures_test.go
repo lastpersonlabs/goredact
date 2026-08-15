@@ -11,11 +11,16 @@
 //   azure-servicebus-sas-key: https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas; https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string (original)
 //   azure-storage-account-key: https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage (original)
 //   buildkite-api-token: https://buildkite.com/docs/apis/managing-api-tokens; https://buildkite.com/docs/agent/v3/tokens (original)
+//   cerebras-api-key: Third-party integration guides converging on csk-<32-char alphanumeric> (e.g. csk-1234567890abcdef1234567890abcdef); Cerebras's own docs (inference-docs.cerebras.ai) were unreachable during development and no gitleaks/TruffleHog rule exists to cross-check against — should be re-verified against Cerebras's own docs when reachable (original)
 //   circleci-token: https://circleci.com/changelog/new-format-for-api-access-tokens; https://circleci.com/docs/managing-api-tokens/ (original)
+//   cohere-api-key: gitleaks cohere-api-token rule (github.com/gitleaks/gitleaks config/gitleaks.toml): keyword CO_API_KEY/cohere + 40-char alphanumeric, no fixed prefix on the key itself (original)
 //   command-line-password-flag: Original project design; no single external specification (original)
 //   cookie-session-token: https://www.rfc-editor.org/rfc/rfc6265 (original)
+//   cursor-api-key: Cursor's own sensitive-prompt-guard hook script (github.com/cursor/cookbook hooks/.cursor/hooks/sensitive-prompt-guard.sh): crsr_[A-Za-z0-9_-]{20,} (original)
 //   datadog-api-key: https://docs.datadoghq.com/agent/guide/environment-variables/ (original)
 //   datadog-application-key: https://registry.terraform.io/providers/DataDog/datadog/latest/docs (original)
+//   deepgram-api-key: TruffleHog deepgram detector (github.com/trufflesecurity/trufflehog pkg/detectors/deepgram/deepgram.go): 40-char lowercase alphanumeric, no fixed prefix on the key itself (original)
+//   deepseek-api-key: TruffleHog deepseek detector (github.com/trufflesecurity/trufflehog pkg/detectors/deepseek/deepseek.go): sk- + 32 lowercase alphanumeric (original)
 //   dockerhub-pat: https://docs.docker.com/security/for-developers/access-tokens/ (original)
 //   doppler-token: https://docs.doppler.com/reference/auth-token-formats (original)
 //   gcp-api-key: https://cloud.google.com/docs/authentication/api-keys (original)
@@ -122,9 +127,19 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			nomatch: []string{"BUILDKITE_API_TOKEN=tooshort", "BUILDKITE_API_TOKEN 7c21bb00e72ed1eabed3610688adf0d449584ebb", "BUILDKITE_API_TOKEN=7C21BB00E72ED1EABED3610688ADF0D449584EBB"},
 		},
 		{
+			id:      "cerebras-api-key",
+			match:   []string{"export CEREBRAS_API_KEY=csk-FEy2DbVMMDMkVXPC6VwvroPDghvBVwkk", "Authorization: Bearer csk-JmXBkabEZpEaezCD7X1U3PtUiaNxe7DCOVWmx2W2mEkAWvyYJYMcGyTsXXTRfxVT"},
+			nomatch: []string{"csk-short", "csk-WfAcMgPulX4WlCSUGQTSGTipfgoGNm1"},
+		},
+		{
 			id:      "circleci-token",
 			match:   []string{"export CIRCLE_TOKEN=CCIPAT_t9WBafchSkTiQvrq4rafRp_4b90c0376d730396770ad17e54c7d6c7d059a2db", "{\"projectApiToken\":\"CCIPRJ_5aCa6zBzxoFWqcJGuwQE_7688c0760c387df4dd4523f92bef162d67f61a43\"}"},
 			nomatch: []string{"CCIPAT_short_4b90c0376d730396770ad17e54c7d6c7d059a2db", "CCIPAT_t9WBafchSkTiQvrq4rafRp_4b90c0376d730396770ad17e54c7d6c7d059a2", "CCIPAT_t9WBafchSkTiQvrq4rafRp-4b90c0376d730396770ad17e54c7d6c7d059a2db"},
+		},
+		{
+			id:      "cohere-api-key",
+			match:   []string{"export CO_API_KEY=H2KCBhpcOPYhC8jhRqcRSBueRVzkLJKUT5YsB16V", "COHERE_API_KEY: \"ILZo8C46vo3Ipa56xQ9vaey2pW44QkrEmSX61qMH\""},
+			nomatch: []string{"CO_API_KEY=tooshort", "CO_API_KEY=H2KCBhpcOPYhC8jhRqcRSBueRVzkLJKUT5YsB16"},
 		},
 		{
 			id:      "command-line-password-flag",
@@ -137,6 +152,11 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			nomatch: []string{"Cookie: theme=dark; lang=en; tz=UTC", "Cookie: sessionid=short1; theme=dark", "Set-Cookie: csrftoken=Qw8kV3nR7wL4mN2xT6bF9jH0cD5yU1aE; Path=/", "GET /cb?next=%2Fdash&token=aK9mQ2vR7wL4mN8pX1sTbF3j HTTP/1.1", "Cookie: session=<session-token>; theme=dark", "Cookie: auth=xxxxxxxxxxxxxxxxxxxx; theme=dark", "Cookie: session=1e084479-84e5-4834-bc8a-fc44c29aaed90ffb05&amp; theme=dark"},
 		},
 		{
+			id:      "cursor-api-key",
+			match:   []string{"export CURSOR_API_KEY=crsr_3UsvtDPkMeJCkV5Asrqi", "Authorization: Bearer crsr_zmTUVm3EWjXW3eL7NHSMwEicBfcw3IVbjUF3d2kF8PPpH8DncrGeo3AN6UNG"},
+			nomatch: []string{"crsr_short", "crsr_FwfRZvDDlQZYXwcXAD7"},
+		},
+		{
 			id:      "datadog-api-key",
 			match:   []string{"DD_API_KEY=af7c06c09c36c278cc2b6013ddcdb1fa datadog-agent start", "dd_api_key: af7c06c09c36c278cc2b6013ddcdb1fa"},
 			nomatch: []string{"DD_API_KEY=tooshort", "dd_api_key=af7c06c09c36c278cc2b6013ddcdb1f", "DD_API_KEY=AF7C06C09C36C278CC2B6013DDCDB1FA"},
@@ -145,6 +165,16 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			id:      "datadog-application-key",
 			match:   []string{"export DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68e", "dd_app_key: '9498dbc811f8185ac2b5b7d83d991de5bb18e68e'"},
 			nomatch: []string{"DD_APP_KEY=tooshort", "DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68"},
+		},
+		{
+			id:      "deepgram-api-key",
+			match:   []string{"export DEEPGRAM_API_KEY=08f7t2w36t9v3syfilru1v727m8rh2w5me4p0und", "deepgram_api_key: '2x7c1ir87vpi062xqtlsr2t5x9i3qsh8nwo6x3cw'"},
+			nomatch: []string{"DEEPGRAM_API_KEY=tooshort", "DEEPGRAM_API_KEY=08F7T2W36T9V3SYFILRU1V727M8RH2W5ME4P0UND"},
+		},
+		{
+			id:      "deepseek-api-key",
+			match:   []string{"DEEPSEEK_API_KEY=sk-duu8wkernulhwb7g0ncfo1otofxycuyg", "Authorization: Bearer sk-opslnxacaxmopm5g70kfg61k6oa3rnx7"},
+			nomatch: []string{"sk-short", "sk-duu8wkernulhwb7g0ncfo1otofxycuy", "sk-DUU8WKERNULHWB7G0NCFO1OTOFXYCUYG", "Authorization: Bearer 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"},
 		},
 		{
 			id:      "dockerhub-pat",

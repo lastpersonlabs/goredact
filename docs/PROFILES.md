@@ -71,7 +71,7 @@ much memory/disk do I use" or "is the output reproducible."
 
 ## Rule table
 
-56 built-in rules as of this writing. Columns: rule ID, name, minimum
+61 built-in rules as of this writing. Columns: rule ID, name, minimum
 profile that includes the rule (`fast` rules also run in `balanced` and
 `deep`; `balanced` rules also run in `deep`), confidence, and trigger
 literals (the Aho–Corasick literals that must appear before the rule's
@@ -90,11 +90,16 @@ finding).
 | `azure-servicebus-sas-key` | Azure Service Bus / Event Hubs shared access key | fast | high | `SharedAccessKey=` |
 | `azure-storage-account-key` | Azure storage account key | fast | high | `AccountKey=` |
 | `buildkite-api-token` | Buildkite API/agent access token | fast | high | `BUILDKITE_API_TOKEN`, `BUILDKITE_AGENT_TOKEN` |
+| `cerebras-api-key` | Cerebras API key | fast | high | `csk-` |
 | `circleci-token` | CircleCI personal/project API token | fast | high | `CCIPAT_`, `CCIPRJ_` |
+| `cohere-api-key` | Cohere API key | fast | high | `CO_API_KEY`, `COHERE_API_KEY` |
 | `command-line-password-flag` | Command-line password/token flag | balanced | medium | `--password`, `--passwd`, `--token`, `--api-key`, `--secret` |
 | `cookie-session-token` | Session/token cookie value | balanced | medium | `cookie:`, `set-cookie:`, `session=`, `sid=`, `token=`, `jwt=`, `auth=` |
+| `cursor-api-key` | Cursor API key | fast | high | `crsr_` |
 | `datadog-api-key` | Datadog API key | fast | high | `DD_API_KEY` |
 | `datadog-application-key` | Datadog Application key | fast | high | `DD_APP_KEY` |
+| `deepgram-api-key` | Deepgram API key | fast | high | `DEEPGRAM_API_KEY` |
+| `deepseek-api-key` | DeepSeek API key | fast | high | `sk-` |
 | `dockerhub-pat` | Docker Hub personal access token | fast | high | `dckr_pat_` |
 | `doppler-token` | Doppler token | fast | high | `dp.st.`, `dp.pt.`, `dp.ct.`, `dp.sa.`, `dp.said.`, `dp.scim.`, `dp.audit.` |
 | `gcp-api-key` | GCP API key | fast | high | `AIza` |
@@ -137,8 +142,8 @@ finding).
 | `vercel-legacy-token` | Vercel legacy access token | fast | high | `VERCEL_TOKEN`, `VERCEL_API_TOKEN`, `VERCEL_ACCESS_TOKEN` |
 | `vercel-token` | Vercel access token | fast | high | `vcp_`, `vci_`, `vca_`, `vcr_`, `vck_` |
 
-Per-profile counts: `fast` = 46 rules, `balanced` = 56 rules (adds 10),
-`deep` = 56 rules (adds 0, see above). Query these programmatically with
+Per-profile counts: `fast` = 51 rules, `balanced` = 61 rules (adds 10),
+`deep` = 61 rules (adds 0, see above). Query these programmatically with
 `goredact.BuiltinRules()` (every built-in, any profile) and
 `(*Engine).ActiveRules()` (what a specific configured `Engine` actually
 runs).
@@ -147,11 +152,26 @@ runs).
 
 All fast rules are high-confidence and use an exact provider-token prefix,
 known header, private-key marker, URL credential structure, or (for the
-handful of providers — AWS's secret access key, Buildkite, Datadog, and
-legacy Vercel tokens — that issue a bare fixed-length value with no prefix
-of its own) a documented provider-specific environment-variable name as
-the trigger instead of a prefix within the value. Medium- and
-low-confidence contextual rules are excluded from fast.
+handful of providers — AWS's secret access key, Buildkite, Datadog,
+Cohere, Deepgram, and legacy Vercel tokens — that issue a bare
+fixed-length value with no prefix of its own) a documented
+provider-specific environment-variable name as the trigger instead of a
+prefix within the value. Medium- and low-confidence contextual rules are
+excluded from fast.
+
+`deepseek-api-key` and `openai-legacy-key` share the literal `sk-`
+trigger — the engine dispatches one trigger occurrence to every rule
+registered on it, and the two validators never both confirm the same
+occurrence: DeepSeek's key is exactly 35 bytes total with a lowercase-only
+body, while OpenAI's legacy key is 51 bytes total and requires an
+uppercase `T3BlbkFJ` infix a lowercase-only body can never contain.
+
+`cerebras-api-key`'s `csk-` prefix and body-length range are sourced from
+convergent third-party integration guides, not from Cerebras's own docs
+(`inference-docs.cerebras.ai` was unreachable during development, and
+neither gitleaks nor TruffleHog ships a Cerebras rule to cross-check
+against) — treat this one as lower-confidence pending direct verification
+against Cerebras's own documentation.
 
 CircleCI's older bare 40-character hex token format is deliberately not
 matched by any rule: unlike Buildkite/Datadog/legacy-Vercel, it has no
