@@ -551,3 +551,682 @@ func TestAzureStorageAccountKeyNeverPanics(t *testing.T) {
 		}
 	}
 }
+
+// azureSas43Body/azureSas42Body/azureSas44Body/azureSas41Body are
+// synthetic standard-base64 runs of exactly 43/42/44/41 characters
+// (before the trailing "=" pad), spanning the AzureServiceBusSASKey /
+// AzureAppConfigurationSecret body-length boundary [42,44].
+const (
+	azureSas43Body = "bMnrHontIKARAH+Ggl2JfaQqHu42bojteVs3qfNUfTA"
+	azureSas42Body = "FnT0tEuw0dwQ0FIunWe8Cz6SNDCdyZQJiJSZQdoHwH"
+	azureSas44Body = "en3SO3oXyGf3azU3iQOpMN0PZLqy1WwMZaMKA3P744B8"
+	azureSas41Body = "vkKQlENCzsdfF8j61yX/ZFsan2Cw7gFp6r7O425u8"
+)
+
+func TestAzureServiceBusSASKey(t *testing.T) {
+	const trig = "SharedAccessKey="
+
+	cases := []struct {
+		name      string
+		window    string
+		trigEnd   int
+		wantOK    bool
+		wantStart int
+		wantEnd   int
+	}{
+		{
+			name:      "match, typical 43-char body",
+			window:    trig + azureSas43Body + "=",
+			trigEnd:   len(trig),
+			wantOK:    true,
+			wantStart: len(trig),
+			wantEnd:   len(trig) + 43 + 1,
+		},
+		{
+			name:      "match in full connection string",
+			window:    "Endpoint=sb://contoso.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;" + trig + azureSas43Body + "=",
+			trigEnd:   len("Endpoint=sb://contoso.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;") + len(trig),
+			wantOK:    true,
+			wantStart: len("Endpoint=sb://contoso.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;") + len(trig),
+			wantEnd:   len("Endpoint=sb://contoso.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;") + len(trig) + 43 + 1,
+		},
+		{
+			name:      "match, min body length (42 chars)",
+			window:    trig + azureSas42Body + "=",
+			trigEnd:   len(trig),
+			wantOK:    true,
+			wantStart: len(trig),
+			wantEnd:   len(trig) + 42 + 1,
+		},
+		{
+			name:      "match, max body length (44 chars)",
+			window:    trig + azureSas44Body + "=",
+			trigEnd:   len(trig),
+			wantOK:    true,
+			wantStart: len(trig),
+			wantEnd:   len(trig) + 44 + 1,
+		},
+		{
+			name:    "body too short (41 chars)",
+			window:  trig + azureSas41Body + "=",
+			trigEnd: len(trig),
+			wantOK:  false,
+		},
+		{
+			name:    "missing padding",
+			window:  trig + azureSas43Body,
+			trigEnd: len(trig),
+			wantOK:  false,
+		},
+		{
+			name:    "double padding rejected (wrong key size)",
+			window:  trig + azureSas42Body + "==",
+			trigEnd: len(trig),
+			wantOK:  false,
+		},
+		{
+			name:    "all-identical body rejected",
+			window:  trig + string(makeN('a', 43)) + "=",
+			trigEnd: len(trig),
+			wantOK:  false,
+		},
+		{
+			name:    "trigger at very end of window",
+			window:  trig,
+			trigEnd: len(trig),
+			wantOK:  false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, ok := AzureServiceBusSASKey([]byte(tc.window), 0, tc.trigEnd)
+			if ok != tc.wantOK {
+				t.Fatalf("AzureServiceBusSASKey(%q, 0, %d) ok = %v, want %v", tc.window, tc.trigEnd, ok, tc.wantOK)
+			}
+			if ok && (start != tc.wantStart || end != tc.wantEnd) {
+				t.Errorf("AzureServiceBusSASKey(%q, 0, %d) span = [%d,%d), want [%d,%d)", tc.window, tc.trigEnd, start, end, tc.wantStart, tc.wantEnd)
+			}
+		})
+	}
+}
+
+func TestAzureServiceBusSASKeyNeverPanics(t *testing.T) {
+	windows := []string{"", "S", "SharedAccessKey=", "SharedAccessKey=" + azureSas43Body[:10], "SharedAccessKey=" + azureSas43Body + "=", "\x00\x00\x00\x00\x00"}
+	for _, w := range windows {
+		for trigStart := 0; trigStart <= len(w); trigStart++ {
+			for trigEnd := trigStart; trigEnd <= len(w); trigEnd++ {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Fatalf("AzureServiceBusSASKey(%q, %d, %d) panicked: %v", w, trigStart, trigEnd, r)
+						}
+					}()
+					AzureServiceBusSASKey([]byte(w), trigStart, trigEnd)
+				}()
+			}
+		}
+	}
+}
+
+func TestAzureAppConfigurationSecret(t *testing.T) {
+	const trig = "Secret="
+
+	cases := []struct {
+		name      string
+		window    string
+		trigEnd   int
+		wantOK    bool
+		wantStart int
+		wantEnd   int
+	}{
+		{
+			name:      "match, typical 43-char body",
+			window:    trig + azureSas43Body + "=",
+			trigEnd:   len(trig),
+			wantOK:    true,
+			wantStart: len(trig),
+			wantEnd:   len(trig) + 43 + 1,
+		},
+		{
+			name:      "match in full connection string",
+			window:    "Endpoint=https://contoso.azconfig.io;Id=abcd-e6-s0:tl6ABcdefGHi7kLMno;" + trig + azureSas43Body + "=",
+			trigEnd:   len("Endpoint=https://contoso.azconfig.io;Id=abcd-e6-s0:tl6ABcdefGHi7kLMno;") + len(trig),
+			wantOK:    true,
+			wantStart: len("Endpoint=https://contoso.azconfig.io;Id=abcd-e6-s0:tl6ABcdefGHi7kLMno;") + len(trig),
+			wantEnd:   len("Endpoint=https://contoso.azconfig.io;Id=abcd-e6-s0:tl6ABcdefGHi7kLMno;") + len(trig) + 43 + 1,
+		},
+		{
+			name:    "body too short",
+			window:  trig + azureSas41Body + "=",
+			trigEnd: len(trig),
+			wantOK:  false,
+		},
+		{
+			name:    "client_secret prefix does not confuse the trigger match itself, but shape still required",
+			window:  "client_secret=notbase64shaped",
+			trigEnd: len("client_"),
+			wantOK:  false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, ok := AzureAppConfigurationSecret([]byte(tc.window), 0, tc.trigEnd)
+			if ok != tc.wantOK {
+				t.Fatalf("AzureAppConfigurationSecret(%q, 0, %d) ok = %v, want %v", tc.window, tc.trigEnd, ok, tc.wantOK)
+			}
+			if ok && (start != tc.wantStart || end != tc.wantEnd) {
+				t.Errorf("AzureAppConfigurationSecret(%q, 0, %d) span = [%d,%d), want [%d,%d)", tc.window, tc.trigEnd, start, end, tc.wantStart, tc.wantEnd)
+			}
+		})
+	}
+}
+
+func TestAzureAppConfigurationSecretNeverPanics(t *testing.T) {
+	windows := []string{"", "S", "Secret=", "Secret=" + azureSas43Body[:10], "Secret=" + azureSas43Body + "=", "\x00\x00\x00\x00\x00"}
+	for _, w := range windows {
+		for trigStart := 0; trigStart <= len(w); trigStart++ {
+			for trigEnd := trigStart; trigEnd <= len(w); trigEnd++ {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Fatalf("AzureAppConfigurationSecret(%q, %d, %d) panicked: %v", w, trigStart, trigEnd, r)
+						}
+					}()
+					AzureAppConfigurationSecret([]byte(w), trigStart, trigEnd)
+				}()
+			}
+		}
+	}
+}
+
+// vaultBody20/vaultBody150 are synthetic [A-Za-z0-9_-] runs of exactly
+// 20/150 characters, the VaultServiceToken body-length boundary.
+// vaultBatch100 is a synthetic 100-character run, the VaultBatchToken
+// minimum.
+const (
+	vaultBody20   = "odJFCrnl2edlBDdz1C5J"
+	vaultBody150  = "au2RJtBRnlWmTSHf6pWkLUyifDLkDmWJ6UuVTAIjvFu7WICPhDeOZIiBOB_Y6sHrFH2ZUCr_lgotu2iXW7GboIRoL3u6aHwnMztVuaP-coUNEhEkk-iqq8vH2BzNZV45pFCiRcDCajhDieQjEJ-Bq8"
+	vaultBatch100 = "F80ymm3T207gmhZRnFyy5r2xJ7Fj4mgblEv0-9BZhvWaXH6K2-tyLBhhOhg9uhkxiiEZpFfk1OHAOEHYqM6Ojb6mjBHqSiFVKu4M"
+)
+
+func TestVaultServiceToken(t *testing.T) {
+	cases := []struct {
+		name      string
+		window    string
+		trigStart int
+		trigEnd   int
+		wantOK    bool
+		wantEnd   int
+	}{
+		{
+			name:      "match, min body length (20 chars)",
+			window:    "hvs." + vaultBody20,
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    true,
+			wantEnd:   4 + 20,
+		},
+		{
+			name:      "match, max body length (150 chars), with surrounding context",
+			window:    "export VAULT_TOKEN=hvs." + vaultBody150,
+			trigStart: len("export VAULT_TOKEN="),
+			trigEnd:   len("export VAULT_TOKEN=hvs."),
+			wantOK:    true,
+			wantEnd:   len("export VAULT_TOKEN=hvs.") + 150,
+		},
+		{
+			name:      "body too short",
+			window:    "hvs." + vaultBody20[:19],
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    false,
+		},
+		{
+			name:      "body exceeds max (still matches this alphabet past the boundary)",
+			window:    "hvs." + vaultBody150 + "X",
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    false,
+		},
+		{
+			name:      "all-identical body rejected",
+			window:    "hvs." + string(makeN('a', 24)),
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    "hvs.",
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, ok := VaultServiceToken([]byte(tc.window), tc.trigStart, tc.trigEnd)
+			if ok != tc.wantOK {
+				t.Fatalf("VaultServiceToken(%q, %d, %d) ok = %v, want %v", tc.window, tc.trigStart, tc.trigEnd, ok, tc.wantOK)
+			}
+			if ok && (start != tc.trigStart || end != tc.wantEnd) {
+				t.Errorf("VaultServiceToken(%q, %d, %d) span = [%d,%d), want [%d,%d)", tc.window, tc.trigStart, tc.trigEnd, start, end, tc.trigStart, tc.wantEnd)
+			}
+		})
+	}
+}
+
+func TestVaultServiceTokenNeverPanics(t *testing.T) {
+	windows := []string{"", "h", "hvs.", "hvs." + vaultBody20[:5], "hvs." + vaultBody150, "\x00\x00\x00\x00\x00"}
+	for _, w := range windows {
+		for trigStart := 0; trigStart <= len(w); trigStart++ {
+			for trigEnd := trigStart; trigEnd <= len(w); trigEnd++ {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Fatalf("VaultServiceToken(%q, %d, %d) panicked: %v", w, trigStart, trigEnd, r)
+						}
+					}()
+					VaultServiceToken([]byte(w), trigStart, trigEnd)
+				}()
+			}
+		}
+	}
+}
+
+func TestVaultBatchToken(t *testing.T) {
+	cases := []struct {
+		name    string
+		window  string
+		trigEnd int
+		wantOK  bool
+		wantEnd int
+	}{
+		{
+			name:    "match, min body length (100 chars)",
+			window:  "hvb." + vaultBatch100,
+			trigEnd: 4,
+			wantOK:  true,
+			wantEnd: 4 + 100,
+		},
+		{
+			name:    "body too short",
+			window:  "hvb." + vaultBatch100[:99],
+			trigEnd: 4,
+			wantOK:  false,
+		},
+		{
+			name:    "trigger at very end of window",
+			window:  "hvb.",
+			trigEnd: 4,
+			wantOK:  false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, ok := VaultBatchToken([]byte(tc.window), 0, tc.trigEnd)
+			if ok != tc.wantOK {
+				t.Fatalf("VaultBatchToken(%q, 0, %d) ok = %v, want %v", tc.window, tc.trigEnd, ok, tc.wantOK)
+			}
+			if ok && (start != 0 || end != tc.wantEnd) {
+				t.Errorf("VaultBatchToken(%q, 0, %d) span = [%d,%d), want [0,%d)", tc.window, tc.trigEnd, start, end, tc.wantEnd)
+			}
+		})
+	}
+}
+
+func TestVaultBatchTokenNeverPanics(t *testing.T) {
+	windows := []string{"", "h", "hvb.", "hvb." + vaultBatch100[:5], "hvb." + vaultBatch100, "\x00\x00\x00\x00\x00"}
+	for _, w := range windows {
+		for trigStart := 0; trigStart <= len(w); trigStart++ {
+			for trigEnd := trigStart; trigEnd <= len(w); trigEnd++ {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Fatalf("VaultBatchToken(%q, %d, %d) panicked: %v", w, trigStart, trigEnd, r)
+						}
+					}()
+					VaultBatchToken([]byte(w), trigStart, trigEnd)
+				}()
+			}
+		}
+	}
+}
+
+// tfPrefix14 is a synthetic 14-character alphanumeric prefix. tfSecret60
+// and tfSecret70 are synthetic secrets of exactly 60/70 characters, the
+// TerraformCloudAPIToken secret-length boundary; tfSecret59 is one
+// character below the minimum.
+const (
+	tfPrefix14 = "CqWp1OrXXHFOpr"
+	tfSecret60 = "4jKEIQOkrtDXtBi10Q71hA1XcW9aTMX1C-CI3-dXRZv7qdYdk2r7xgHWPB6P"
+	tfSecret70 = "RWJ1Gk8cgSCifdFzctEq8oB7GVvouNndNWYzjFnMpfS2ViRb1-n3U6t3wI973IPFlJ5F7W"
+	tfSecret59 = "Rd_Px-BTHRJJbykE0-E8-5clLCZFNV8S2QT6INGDpyOpxyB9JKmyLDUwMbq"
+)
+
+func TestTerraformCloudAPIToken(t *testing.T) {
+	const infix = ".atlasv1."
+
+	cases := []struct {
+		name      string
+		window    string
+		trigStart int
+		trigEnd   int
+		wantOK    bool
+		wantStart int
+		wantEnd   int
+	}{
+		{
+			name:      "match, min secret length (60 chars)",
+			window:    tfPrefix14 + infix + tfSecret60,
+			trigStart: len(tfPrefix14),
+			trigEnd:   len(tfPrefix14) + len(infix),
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   len(tfPrefix14) + len(infix) + 60,
+		},
+		{
+			name:      "match, max secret length (70 chars)",
+			window:    tfPrefix14 + infix + tfSecret70,
+			trigStart: len(tfPrefix14),
+			trigEnd:   len(tfPrefix14) + len(infix),
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   len(tfPrefix14) + len(infix) + 70,
+		},
+		{
+			name:      "match with surrounding context",
+			window:    "export TF_TOKEN_app_terraform_io=" + tfPrefix14 + infix + tfSecret60,
+			trigStart: len("export TF_TOKEN_app_terraform_io=") + len(tfPrefix14),
+			trigEnd:   len("export TF_TOKEN_app_terraform_io=") + len(tfPrefix14) + len(infix),
+			wantOK:    true,
+			wantStart: len("export TF_TOKEN_app_terraform_io="),
+			wantEnd:   len("export TF_TOKEN_app_terraform_io=") + len(tfPrefix14) + len(infix) + 60,
+		},
+		{
+			name:      "secret too short",
+			window:    tfPrefix14 + infix + tfSecret59,
+			trigStart: len(tfPrefix14),
+			trigEnd:   len(tfPrefix14) + len(infix),
+			wantOK:    false,
+		},
+		{
+			name:      "prefix shorter than 14 chars (not enough room before trigger)",
+			window:    "short" + infix + tfSecret60,
+			trigStart: 5,
+			trigEnd:   5 + len(infix),
+			wantOK:    false,
+		},
+		{
+			name:      "prefix continues past 14 chars (preceding byte still alnum)",
+			window:    "X" + tfPrefix14 + infix + tfSecret60,
+			trigStart: 1 + len(tfPrefix14),
+			trigEnd:   1 + len(tfPrefix14) + len(infix),
+			wantOK:    false,
+		},
+		{
+			name:      "all-identical prefix rejected",
+			window:    string(makeN('a', 14)) + infix + tfSecret60,
+			trigStart: 14,
+			trigEnd:   14 + len(infix),
+			wantOK:    false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, ok := TerraformCloudAPIToken([]byte(tc.window), tc.trigStart, tc.trigEnd)
+			if ok != tc.wantOK {
+				t.Fatalf("TerraformCloudAPIToken(%q, %d, %d) ok = %v, want %v", tc.window, tc.trigStart, tc.trigEnd, ok, tc.wantOK)
+			}
+			if ok && (start != tc.wantStart || end != tc.wantEnd) {
+				t.Errorf("TerraformCloudAPIToken(%q, %d, %d) span = [%d,%d), want [%d,%d)", tc.window, tc.trigStart, tc.trigEnd, start, end, tc.wantStart, tc.wantEnd)
+			}
+		})
+	}
+}
+
+func TestTerraformCloudAPITokenNeverPanics(t *testing.T) {
+	windows := []string{
+		"", ".", ".atlasv1.", tfPrefix14 + ".atlasv1.", tfPrefix14 + ".atlasv1." + tfSecret60,
+		"short.atlasv1." + tfSecret60, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+	}
+	for _, w := range windows {
+		for trigStart := 0; trigStart <= len(w); trigStart++ {
+			for trigEnd := trigStart; trigEnd <= len(w); trigEnd++ {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Fatalf("TerraformCloudAPIToken(%q, %d, %d) panicked: %v", w, trigStart, trigEnd, r)
+						}
+					}()
+					TerraformCloudAPIToken([]byte(w), trigStart, trigEnd)
+				}()
+			}
+		}
+	}
+}
+
+// bedrockLongBody91/bedrockLongBody251 are synthetic standard-base64 runs
+// of exactly 91/251 characters, the AWSBedrockLongLivedAPIKey
+// body-length boundary; bedrockLongBody90 is one character below the
+// minimum.
+const (
+	bedrockLongBody91  = "JfgLq+nbK894RxgG9oiZ+jgttMkFp1CW54M2NhmABHkuEwjua058LeDKK6jDHz2oCtIsjhvNK4p7MZI/4kf3PGdlDcI"
+	bedrockLongBody251 = "fw84Jx3+l8S0QPnuQ0/KZe6lOGPoZa70gyU/4gAIqK4+pdEuNb0lCo7pt/LI198F6sXyriJ1RIaKM+t59SQW6PyEXD0fO8WXt/eqQm4m6bs0tj8HRYkQWO+eiEKDl3mm4vMdfPhLTV3sF0xvwkWE/sD7G6Gb7Kuj4SM2G6MzX9nEWTLLcYJbg/KDTCyGrmfN4eUqlLP1wzqUIvG9LRo7jsCYUlYbHp6VHWVnD8dPCi7M0orfeM/omErX6V1"
+	bedrockLongBody90  = "t1m+0JeVB44EUmVThYJyp6lBcgQFqAiABDQsaJsqGwodqbTEPcwHgq1oi85Un5CfM6dh9Z2n+4jkPsiqJPWL63moB3"
+	// bedrockLongBody91Alt is a second, distinct 91-char body used
+	// alongside padding characters: min/max bound only the non-padding
+	// base64 run (matching the upstream gitleaks regex this shape is
+	// modeled on, {min,max}={0,2}), so a padding test needs a body
+	// already at/above the minimum, not a shorter one "topped up" by
+	// padding.
+	bedrockLongBody91Alt = "eKs7Vm6/c3V3YwhnpWtmu/qXIxWighxhvLJjnhm6QQ4vqkOgIVxjoM/U3f81kTqltNn24esanpqcRp/H6RXlelAZyZH"
+)
+
+func TestAWSBedrockLongLivedAPIKey(t *testing.T) {
+	const anchor = "ABSKQmVkcm9ja0FQSUtleS"
+
+	cases := []struct {
+		name      string
+		window    string
+		trigStart int
+		trigEnd   int
+		wantOK    bool
+		wantEnd   int
+	}{
+		{
+			name:      "match, min body length (91 chars)",
+			window:    anchor + bedrockLongBody91,
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    true,
+			wantEnd:   len(anchor) + 91,
+		},
+		{
+			name:      "match, max body length (251 chars)",
+			window:    anchor + bedrockLongBody251,
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    true,
+			wantEnd:   len(anchor) + 251,
+		},
+		{
+			name:      "match with one '=' padding byte",
+			window:    anchor + bedrockLongBody91Alt + "=",
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    true,
+			wantEnd:   len(anchor) + 91 + 1,
+		},
+		{
+			name:      "match with two '=' padding bytes, with surrounding context",
+			window:    "AWS_BEARER_TOKEN_BEDROCK=" + anchor + bedrockLongBody91Alt + "==",
+			trigStart: len("AWS_BEARER_TOKEN_BEDROCK="),
+			trigEnd:   len("AWS_BEARER_TOKEN_BEDROCK=") + len(anchor),
+			wantOK:    true,
+			wantEnd:   len("AWS_BEARER_TOKEN_BEDROCK=") + len(anchor) + 91 + 2,
+		},
+		{
+			name:      "body too short",
+			window:    anchor + bedrockLongBody90,
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    false,
+		},
+		{
+			name:      "third padding byte rejected",
+			window:    anchor + bedrockLongBody91Alt + "===",
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    false,
+		},
+		{
+			name:      "all-identical body rejected",
+			window:    anchor + string(makeN('a', 91)),
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    anchor,
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, ok := AWSBedrockLongLivedAPIKey([]byte(tc.window), tc.trigStart, tc.trigEnd)
+			if ok != tc.wantOK {
+				t.Fatalf("AWSBedrockLongLivedAPIKey(%q, %d, %d) ok = %v, want %v", tc.window, tc.trigStart, tc.trigEnd, ok, tc.wantOK)
+			}
+			if ok && (start != tc.trigStart || end != tc.wantEnd) {
+				t.Errorf("AWSBedrockLongLivedAPIKey(%q, %d, %d) span = [%d,%d), want [%d,%d)", tc.window, tc.trigStart, tc.trigEnd, start, end, tc.trigStart, tc.wantEnd)
+			}
+		})
+	}
+}
+
+func TestAWSBedrockLongLivedAPIKeyNeverPanics(t *testing.T) {
+	const anchor = "ABSKQmVkcm9ja0FQSUtleS"
+	windows := []string{"", "A", anchor, anchor + bedrockLongBody91[:10], anchor + bedrockLongBody251, "\x00\x00\x00\x00\x00"}
+	for _, w := range windows {
+		for trigStart := 0; trigStart <= len(w); trigStart++ {
+			for trigEnd := trigStart; trigEnd <= len(w); trigEnd++ {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Fatalf("AWSBedrockLongLivedAPIKey(%q, %d, %d) panicked: %v", w, trigStart, trigEnd, r)
+						}
+					}()
+					AWSBedrockLongLivedAPIKey([]byte(w), trigStart, trigEnd)
+				}()
+			}
+		}
+	}
+}
+
+// bedrockShortBody20/bedrockShortBody19 are synthetic standard-base64
+// runs of exactly 20/19 characters, spanning the
+// AWSBedrockShortLivedAPIKey minimum body length.
+const (
+	bedrockShortBody20 = "5D0R6Z1mO2OGVt8ilkl3"
+	bedrockShortBody19 = "mVqhQp0T2gKNTnBt9Cn"
+)
+
+func TestAWSBedrockShortLivedAPIKey(t *testing.T) {
+	const anchor = "bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29t"
+
+	cases := []struct {
+		name      string
+		window    string
+		trigStart int
+		trigEnd   int
+		wantOK    bool
+		wantEnd   int
+	}{
+		{
+			name:      "match, min body length (20 chars)",
+			window:    anchor + bedrockShortBody20,
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    true,
+			wantEnd:   len(anchor) + 20,
+		},
+		{
+			name:      "match, long body (STS-session-token-shaped)",
+			window:    anchor + strings.Repeat(bedrockShortBody20, 20),
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    true,
+			wantEnd:   len(anchor) + 20*20,
+		},
+		{
+			name:      "match with padding, with surrounding context",
+			window:    "Authorization: Bearer " + anchor + bedrockShortBody20 + "==",
+			trigStart: len("Authorization: Bearer "),
+			trigEnd:   len("Authorization: Bearer ") + len(anchor),
+			wantOK:    true,
+			wantEnd:   len("Authorization: Bearer ") + len(anchor) + 20 + 2,
+		},
+		{
+			name:      "body too short",
+			window:    anchor + bedrockShortBody19,
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    false,
+		},
+		{
+			name:      "all-identical body rejected",
+			window:    anchor + string(makeN('a', 20)),
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    anchor,
+			trigStart: 0,
+			trigEnd:   len(anchor),
+			wantOK:    false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, ok := AWSBedrockShortLivedAPIKey([]byte(tc.window), tc.trigStart, tc.trigEnd)
+			if ok != tc.wantOK {
+				t.Fatalf("AWSBedrockShortLivedAPIKey(%q, %d, %d) ok = %v, want %v", tc.window, tc.trigStart, tc.trigEnd, ok, tc.wantOK)
+			}
+			if ok && (start != tc.trigStart || end != tc.wantEnd) {
+				t.Errorf("AWSBedrockShortLivedAPIKey(%q, %d, %d) span = [%d,%d), want [%d,%d)", tc.window, tc.trigStart, tc.trigEnd, start, end, tc.trigStart, tc.wantEnd)
+			}
+		})
+	}
+}
+
+func TestAWSBedrockShortLivedAPIKeyNeverPanics(t *testing.T) {
+	const anchor = "bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29t"
+	windows := []string{"", "b", anchor, anchor + bedrockShortBody20[:5], anchor + bedrockShortBody20 + "==", "\x00\x00\x00\x00\x00"}
+	for _, w := range windows {
+		for trigStart := 0; trigStart <= len(w); trigStart++ {
+			for trigEnd := trigStart; trigEnd <= len(w); trigEnd++ {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Fatalf("AWSBedrockShortLivedAPIKey(%q, %d, %d) panicked: %v", w, trigStart, trigEnd, r)
+						}
+					}()
+					AWSBedrockShortLivedAPIKey([]byte(w), trigStart, trigEnd)
+				}()
+			}
+		}
+	}
+}

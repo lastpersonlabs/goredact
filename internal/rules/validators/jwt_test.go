@@ -146,3 +146,112 @@ func TestJWTWindowEdge(t *testing.T) {
 		t.Fatal("mid-payload window: got ok, want reject")
 	}
 }
+
+// Synthetic Supabase-shaped JWS segments. The payloads decode (base64url)
+// to synthetic JSON claim sets; never derived from a real credential.
+const (
+	supabasePayloadServiceRole       = "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMTUzNTY4MDB9"             // {"iss":"supabase","ref":"abcdefghijklmnop","role":"service_role","iat":1700000000,"exp":2015356800}
+	supabasePayloadServiceRoleSpaced = "eyJyb2xlIjogInNlcnZpY2Vfcm9sZSIsICJpc3MiOiAic3VwYWJhc2UiLCAicmVmIjogImFiY2RlZmdoaWprbG1ub3AiLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDIwMTUzNTY4MDB9" // {"role": "service_role", "iss": "supabase", ...} (spaced JSON)
+	supabasePayloadAnon              = "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoyMDE1MzU2ODAwfQ"                       // {"iss":"supabase",...,"role":"anon",...}
+	supabasePayloadNoRole            = "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MjAxNTM1NjgwMH0"                                          // {"iss":"supabase",...} (no role claim at all)
+	supabaseSig1                     = "TsKdOf3JR-kSPIbMXpSE2IlyTs8tIAGHgmy-qA5m_Xc"
+	supabaseSig2                     = "EbrK-izzHh_fuSf8Ubf5ItUGm0ZkL0-HuL6cVkAnoqs"
+)
+
+var (
+	supabaseServiceRoleToken       = jwtHeader + "." + supabasePayloadServiceRole + "." + supabaseSig1
+	supabaseServiceRoleTokenSpaced = jwtHeader + "." + supabasePayloadServiceRoleSpaced + "." + supabaseSig2
+	supabaseAnonToken              = jwtHeader + "." + supabasePayloadAnon + "." + supabaseSig2
+	supabaseNoRoleToken            = jwtHeader + "." + supabasePayloadNoRole + "." + supabaseSig1
+)
+
+func TestSupabaseServiceRoleKey(t *testing.T) {
+	cases := []contextualCase{
+		{
+			name:    "service_role claim matches",
+			window:  "SUPABASE_SERVICE_ROLE_KEY=" + supabaseServiceRoleToken,
+			trig:    "eyJ",
+			wantOK:  true,
+			wantVal: supabaseServiceRoleToken,
+		},
+		{
+			name:    "service_role claim matches with spaced JSON and reordered fields",
+			window:  "key: " + supabaseServiceRoleTokenSpaced,
+			trig:    "eyJ",
+			wantOK:  true,
+			wantVal: supabaseServiceRoleTokenSpaced,
+		},
+		{
+			name:   "anon role rejected",
+			window: "SUPABASE_ANON_KEY=" + supabaseAnonToken,
+			trig:   "eyJ",
+			wantOK: false,
+		},
+		{
+			name:   "missing role claim rejected",
+			window: "token=" + supabaseNoRoleToken,
+			trig:   "eyJ",
+			wantOK: false,
+		},
+		{
+			name:   "generic bare JWT without a role claim rejected",
+			window: jwtFull,
+			trig:   "eyJ",
+			wantOK: false,
+		},
+		{
+			name:   "malformed non-JWT shape rejected same as JWT",
+			window: jwtHeader + "." + jwtPayload,
+			trig:   "eyJ",
+			wantOK: false,
+		},
+	}
+	runContextualCases(t, SupabaseServiceRoleKey, cases)
+}
+
+func TestSupabaseServiceRoleKeyNeverPanics(t *testing.T) {
+	windows := []string{
+		"", "eyJ", "eyJ.", "eyJ..", supabaseServiceRoleToken, supabaseServiceRoleToken[:20],
+		supabaseServiceRoleToken[:len(jwtHeader)+len(supabasePayloadServiceRole)+2],
+		"\x00\x00\x00\x00\x00\x00",
+	}
+	for _, w := range windows {
+		for trigStart := 0; trigStart <= len(w); trigStart++ {
+			for trigEnd := trigStart; trigEnd <= len(w); trigEnd++ {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Fatalf("SupabaseServiceRoleKey(%q, %d, %d) panicked: %v", w, trigStart, trigEnd, r)
+						}
+					}()
+					SupabaseServiceRoleKey([]byte(w), trigStart, trigEnd)
+				}()
+			}
+		}
+	}
+}
+
+func TestHasServiceRoleClaim(t *testing.T) {
+	cases := []struct {
+		name    string
+		payload string
+		want    bool
+	}{
+		{"exact match", `{"role":"service_role","iss":"supabase"}`, true},
+		{"space after colon", `{"role": "service_role"}`, true},
+		{"space before colon", `{"role" :"service_role"}`, true},
+		{"reordered fields", `{"iss":"supabase","role":"service_role","iat":1}`, true},
+		{"anon role", `{"role":"anon"}`, false},
+		{"no role field", `{"iss":"supabase"}`, false},
+		{"role key as substring of another key", `{"consumer_role":"service_role"}`, false},
+		{"role value merely prefixed by service_role rejected (closing quote required)", `{"role":"service_role_extra"}`, false},
+		{"empty payload", ``, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := hasServiceRoleClaim([]byte(tc.payload)); got != tc.want {
+				t.Errorf("hasServiceRoleClaim(%q) = %v, want %v", tc.payload, got, tc.want)
+			}
+		})
+	}
+}
