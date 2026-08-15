@@ -95,6 +95,31 @@ func StripeSecretKey(window []byte, trigStart, trigEnd int) (start, end int, ok 
 	return trigStart, bodyEnd, true
 }
 
+// StripeEphemeralKey confirms a Stripe ephemeral key: trigger "ek_live_"
+// or "ek_test_" followed by 60-150 characters from the URL-safe-base64
+// alphabet ([A-Za-z0-9_-]) and a boundary. Unlike sk_/rk_ secret keys,
+// an ephemeral key's body is not a flat random token: it's a base64url
+// encoding of the account ID it's scoped to plus a random component, so
+// it legitimately contains '-' and '_' and its length scales with the
+// account ID rather than being fixed. Neither gitleaks nor TruffleHog
+// has a rule for this key type; the shape here comes from real (but
+// synthetic-safe, since only the encoding structure was inspected, never
+// a real key's decoded contents) fixtures in Stripe's own stripe-ios and
+// stripe-android SDK repositories.
+func StripeEphemeralKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	bodyEnd, ok2 := consumeRun(window, trigEnd, 60, 150, isURLSafeChar)
+	if !ok2 {
+		return 0, 0, false
+	}
+	if !urlSafeBoundaryOK(window, bodyEnd) {
+		return 0, 0, false
+	}
+	if isPlaceholder(window[trigEnd:bodyEnd]) {
+		return 0, 0, false
+	}
+	return trigStart, bodyEnd, true
+}
+
 // StripeWebhookSecret confirms a Stripe webhook signing secret: trigger
 // "whsec_" followed by 32-64 ASCII alphanumeric characters and a
 // non-alphanumeric byte (or end of window).

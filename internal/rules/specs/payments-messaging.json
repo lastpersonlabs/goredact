@@ -58,6 +58,33 @@
       }
     },
     {
+      "id": "stripe-ephemeral-key",
+      "name": "Stripe ephemeral key",
+      "triggers": [
+        {"literal": "ek_live_", "caseFold": false},
+        {"literal": "ek_test_", "caseFold": false}
+      ],
+      "validator": "StripeEphemeralKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 170,
+      "provenance": {
+        "source": "Real (structure-only) fixtures in Stripe's own stripe-ios (github.com/stripe/stripe-ios) and stripe-android SDK repositories; docs.stripe.com/keys was unreachable during development and neither gitleaks nor TruffleHog has a rule for this key type",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "STRIPE_EPHEMERAL_KEY=ek_test_PE3RB812Fhej8HGrwfoGMxAc1AiQ9Ac5SIrOH4hKpqJt6k385lXWq8l1LbinwrlIQMHyBrqT0HlFM7Wvs-6GG",
+          "{\"ephemeralKey\": \"ek_live_vTh-0uCGqK6CHMwswkiIKtTDEcZp2OWJzmp1E8QW9DwUaK-En2mMSfw9SZgQClLRT\"}"
+        ],
+        "nomatch": [
+          "ek_test_tooshort",
+          "ek_live_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
       "id": "slack-user-token",
       "name": "Slack user token",
       "triggers": [
