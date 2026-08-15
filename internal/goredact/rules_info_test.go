@@ -49,10 +49,10 @@ func TestBuiltinRules(t *testing.T) {
 }
 
 // TestActiveRulesProfileNesting checks fast ⊆ balanced ⊆ deep, that the
-// nesting is strict where expected (balanced adds rules over fast) and
-// non-strict where documented (deep == balanced in v0.1, since no built-in
-// rule is deep-only), and that ActiveRules is sorted and copies (no
-// internal state leaked).
+// nesting is strict at both steps (balanced adds rules over fast, and
+// deep adds at least one rule over balanced — see
+// generic-secret-assignment in internal/rules/specs/generic-deep.json),
+// and that ActiveRules is sorted and copies (no internal state leaked).
 func TestActiveRulesProfileNesting(t *testing.T) {
 	fast := mustEngine(t, Config{Profile: ProfileFast}).ActiveRules()
 	balanced := mustEngine(t, Config{Profile: ProfileBalanced}).ActiveRules()
@@ -79,9 +79,8 @@ func TestActiveRulesProfileNesting(t *testing.T) {
 	if len(fast) >= len(balanced) {
 		t.Errorf("balanced (%d) should add rules over fast (%d)", len(balanced), len(fast))
 	}
-	// v0.1: no built-in rule is deep-only, so deep == balanced exactly.
-	if len(deep) != len(balanced) {
-		t.Errorf("deep (%d) should equal balanced (%d) in v0.1 (no deep-only rules yet)", len(deep), len(balanced))
+	if len(deep) <= len(balanced) {
+		t.Errorf("deep (%d) should add rules over balanced (%d)", len(deep), len(balanced))
 	}
 
 	// Mutating the returned slice must not affect the Engine.

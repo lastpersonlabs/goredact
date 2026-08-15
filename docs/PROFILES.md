@@ -43,14 +43,23 @@ below.
   `FalsePositiveBudgetPerTenMiB`, verified by the accuracy corpus).
 - **`deep`** — reserved for more expensive or lower-confidence detectors
   and selected decoding (e.g. base64-unwrapping a candidate before
-  validating it, or heavier entropy-only heuristics with no keyword
-  anchor). **In v0.1 no built-in rule has `minProfile: deep`: `deep` and
-  `balanced` select the identical rule set today.** `ProfileDeep` exists so
-  callers can opt in ahead of time and the profile is exercised by tests,
-  but there is currently nothing it adds over `balanced`. Future work
-  (decoding-based detectors, expensive whole-window heuristics) is expected
-  to land with `minProfile: deep` without changing the meaning of `fast` or
-  `balanced` for existing callers.
+  validating it, or heavier entropy-only heuristics). It currently adds
+  one rule over `balanced`: `generic-secret-assignment`
+  (`internal/rules/validators/genericdeep.go`), which widens the
+  keyword surface `balanced`'s three generic contextual rules use
+  (`api_key`, `secret_key`, `password`, `token`, …) to bare, generic
+  words — `key`, `secret`, `auth`, `access`, `credential`, `creds` — the
+  same broader anchor gitleaks' and betterleaks' own `generic-api-key`
+  rule uses. That catches real assignments `balanced`'s specific
+  keywords structurally cannot match (`AWS Secret Key = ...` contains no
+  literal `secret_key` substring), at the cost of firing on far more
+  ordinary text (English prose or identifiers containing those same
+  common words), so it's confined to `deep`, uses `low` confidence, and
+  is checked against a stricter entropy bar
+  (`entropy.PresetDeepGenericValue`) than any `balanced` generic rule
+  uses. Future work (decoding-based detectors, expensive whole-window
+  heuristics) is expected to land here too, without changing the meaning
+  of `fast` or `balanced` for existing callers.
 
 ### Streaming guarantees are profile-independent
 
@@ -71,7 +80,7 @@ much memory/disk do I use" or "is the output reproducible."
 
 ## Rule table
 
-66 built-in rules as of this writing. Columns: rule ID, name, minimum
+67 built-in rules as of this writing. Columns: rule ID, name, minimum
 profile that includes the rule (`fast` rules also run in `balanced` and
 `deep`; `balanced` rules also run in `deep`), confidence, and trigger
 literals (the Aho–Corasick literals that must appear before the rule's
@@ -107,6 +116,7 @@ finding).
 | `generic-api-key-assignment` | Generic API key / access token assignment | balanced | medium | `api_key`, `apikey`, `api-key`, `access_token`, `auth_token`, `client_secret`, `secret_key`, `secret_key_base`, `session_secret`, `private_token` |
 | `generic-bearer-like-token-assignment` | Generic bearer-like token assignment | balanced | low | `token` |
 | `generic-password-assignment` | Generic password assignment | balanced | medium | `password`, `passwd`, `pwd` |
+| `generic-secret-assignment` | Generic secret assignment (broad keyword, deep profile only) | deep | low | `key`, `secret`, `auth`, `access`, `credential`, `creds` |
 | `github-app-token` | GitHub App installation/user-to-server token | fast | high | `ghu_`, `ghs_` |
 | `github-fine-grained-pat` | GitHub fine-grained personal access token | fast | high | `github_pat_` |
 | `github-oauth-token` | GitHub OAuth access token | fast | high | `gho_` |
@@ -148,7 +158,7 @@ finding).
 | `vercel-token` | Vercel access token | fast | high | `vcp_`, `vci_`, `vca_`, `vcr_`, `vck_` |
 
 Per-profile counts: `fast` = 55 rules, `balanced` = 66 rules (adds 11),
-`deep` = 66 rules (adds 0, see above). Query these programmatically with
+`deep` = 67 rules (adds 1, see above). Query these programmatically with
 `goredact.BuiltinRules()` (every built-in, any profile) and
 `(*Engine).ActiveRules()` (what a specific configured `Engine` actually
 runs).
@@ -229,6 +239,22 @@ stays out of the noise-averse fast tier. `supabase-service-role-key` shares
 `jwt`'s `eyJ` trigger and lookahead cost (it decodes the same payload segment
 to check for a `"role":"service_role"` claim), so it stays in `balanced`
 alongside it even though the claim check pushes its own confidence to high.
+
+`generic-secret-assignment` is the one `deep`-only rule. Its keyword set
+(`key`, `secret`, `auth`, `access`, `credential`, `creds`) was cross-checked
+directly against gitleaks' and betterleaks' own `generic-api-key` rule
+source (neither is actually keyword-free, despite sometimes being
+described that way — both require one of that same broad keyword set
+followed within ~20 characters by an assignment operator), so its design
+mirrors established prior art rather than a novel heuristic. It reuses
+`generic.go`'s assignment-value parser and shape checks
+(`isIndirectAssignmentValue`, `isMachineTokenValue`, `isAlphaSpaceOnly`)
+so it inherits the same false-positive guards as the balanced rules,
+adding only a gap-tolerant fallback parse (`skipWeakGap`) for a short
+intervening phrase or hyphenated/underscored identifier between keyword
+and operator, and a stricter entropy floor
+(`entropy.PresetDeepGenericValue`) to compensate for its much broader,
+weaker keyword surface.
 
 `New(Config{})` selects `ProfileBalanced`. The zero `Profile` value is
 reserved as unspecified so callers receive the documented default;

@@ -182,6 +182,37 @@ var PresetLooseToken = Options{
 	RejectDigits:   true,
 }
 
+// PresetDeepGenericValue is the Options used by the deep-profile-only
+// generic-secret-assignment rule (GenericSecretAssignment, internal/rules/
+// validators/genericdeep.go). That rule's keyword surface (bare "key",
+// "secret", "auth", "access", "credential", "creds") is deliberately
+// broader — and so weaker evidence of a secret position — than any of
+// the three balanced-profile generic rules' own keywords: the entire
+// point of the rule is to catch assignments those narrower, specific
+// keywords miss (e.g. "AWS Secret Key = ..." contains no literal
+// "secret_key" substring). To compensate for that weaker context:
+//   - MinBitsPerByte of 3.7 matches PresetLooseToken's own compensation
+//     for a weak, generic trigger.
+//   - MinLen of 16 and MaxLen of 128 are the same general bounds
+//     PresetAssignmentValue and PresetLooseToken already use for this
+//     shape of credential value.
+//   - RejectHexHash is left false, for the same reason PresetLooseToken
+//     leaves it false: long hex strings are a common real session/auth
+//     token shape, and structurally rejecting all hex here would defeat
+//     a meaningful fraction of what this broader rule exists to catch.
+//   - RejectUUID and RejectDigits stay true: a bare UUID or digit run is
+//     essentially never the secret value itself in this position.
+//   - MaxRepeatRun of 4 catches placeholder runs the same way
+//     PresetAssignmentValue's does.
+var PresetDeepGenericValue = Options{
+	MinLen:         16,
+	MaxLen:         128,
+	MinBitsPerByte: 3.7,
+	RejectUUID:     true,
+	RejectDigits:   true,
+	MaxRepeatRun:   4,
+}
+
 // Secretlike reports whether b plausibly looks like a secret under o: it
 // checks length bounds, rejects well-known placeholder values (see
 // IsPlaceholder), rejects long identical-byte runs (see
