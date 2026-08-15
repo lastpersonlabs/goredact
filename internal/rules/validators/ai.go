@@ -3,11 +3,13 @@ package validators
 import "bytes"
 
 // This file holds validators for AI-platform provider secrets from
-// Anthropic, OpenAI (project-scoped and legacy),
-// Hugging Face, and Groq API keys. See validators.go for the shared
-// ValidateFunc contract and low-level byte helpers (isAlnum, allAlnum,
-// isPlaceholder, boundaryOK, consumeByte, consumeDigitRun, consumeAlnumRun) that
-// these validators build on.
+// Anthropic, OpenAI (project-scoped and legacy), Hugging Face, Groq,
+// Cohere, DeepSeek, Deepgram, Cerebras, and Cursor API keys. See
+// validators.go for the shared ValidateFunc contract and low-level byte
+// helpers (isAlnum, allAlnum, isPlaceholder, boundaryOK, consumeByte,
+// consumeDigitRun, consumeAlnumRun) that these validators build on, and
+// devops.go for consumeAssignedValue, reused here for the providers
+// (Cohere, Deepgram) whose key has no prefix of its own.
 //
 // Google's "AIza..." API key shape is intentionally NOT implemented here;
 // it belongs to the cloud-provider validator set.
@@ -252,4 +254,146 @@ func GroqAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool)
 		return 0, 0, false
 	}
 	return trigStart, bodyEnd, true
+}
+
+// isLowerAlnum reports whether c is an ASCII lowercase letter or digit —
+// the alphabet DeepSeek and Deepgram API keys use for their bodies (no
+// uppercase, unlike every other provider in this family).
+func isLowerAlnum(c byte) bool {
+	return isDigit(c) || c >= 'a' && c <= 'z'
+}
+
+// CohereAPIKey confirms the shape of a value assigned to CO_API_KEY or
+// COHERE_API_KEY (matched case-insensitively; CO_API_KEY is the keyword
+// gitleaks' own "cohere-api-token" rule keys on): 40 characters of
+// mixed-case alphanumeric. Cohere's key has no prefix of its own — a bare
+// 40-character token, the same shape as many unrelated opaque or hex
+// identifiers — so this rule is keyed on the documented variable name
+// instead, the same design AWSSecretAccessKey (cloud.go) already uses for
+// AWS's equally prefix-less secret access key.
+//
+// https://docs.cohere.com
+func CohereAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	start, end, ok = consumeAssignedValue(window, trigEnd, 40, isAlnum)
+	if !ok {
+		return 0, 0, false
+	}
+	if hasRepeatRun(window[start:end], 5) {
+		return 0, 0, false
+	}
+	return start, end, true
+}
+
+// DeepSeekAPIKey confirms the DeepSeek API key shape: trigger "sk-"
+// followed by exactly 32 lowercase alphanumeric characters (35 bytes
+// total including the prefix). This shares its trigger literal with
+// openai-legacy-key but the two never both confirm the same occurrence:
+// OpenAI's legacy key is 51 bytes total with a mixed-case body containing
+// the mandatory uppercase "T3BlbkFJ" infix, which a lowercase-only,
+// exactly-32-byte DeepSeek body can never satisfy, and vice versa.
+//
+// https://api-docs.deepseek.com
+func DeepSeekAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if !precedingBoundaryExtOK(window, trigStart) {
+		return 0, 0, false
+	}
+	const tokenLen = 32
+	bodyEnd, ok2 := consumeRun(window, trigEnd, tokenLen, tokenLen, isLowerAlnum)
+	if !ok2 {
+		return 0, 0, false
+	}
+	if !boundaryOK(window, bodyEnd) {
+		return 0, 0, false
+	}
+	body := window[trigEnd:bodyEnd]
+	// DeepSeek's body alphabet is lowercase-only (36 symbols, versus the
+	// 62-64 symbols every other rule in this file draws its body from),
+	// so a coincidental run of 5 identical characters in a genuinely
+	// random 32-byte key is measurably more likely here than it is for
+	// e.g. AnthropicAPIKey at the same threshold. Requiring 6 restores a
+	// safety margin comparable to (in fact tighter than) that baseline.
+	if isPlaceholder(body) || hasRepeatRun(body, 6) {
+		return 0, 0, false
+	}
+	return trigStart, bodyEnd, true
+}
+
+// DeepgramAPIKey confirms the shape of a value assigned to
+// DEEPGRAM_API_KEY (matched case-insensitively): 40 characters of
+// lowercase alphanumeric. Like Cohere's, Deepgram's key has no prefix of
+// its own — TruffleHog's own detector keys on the literal word "deepgram"
+// appearing nearby rather than on any byte prefix — so this rule is
+// keyed on the documented environment-variable name instead.
+//
+// https://developers.deepgram.com
+func DeepgramAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	start, end, ok = consumeAssignedValue(window, trigEnd, 40, isLowerAlnum)
+	if !ok {
+		return 0, 0, false
+	}
+	// See the matching comment on DeepSeekAPIKey: Deepgram's body is the
+	// same 36-symbol lowercase-only alphabet, so this uses the same
+	// widened threshold for the same reason.
+	if hasRepeatRun(window[start:end], 6) {
+		return 0, 0, false
+	}
+	return start, end, true
+}
+
+// CerebrasAPIKey confirms the Cerebras API key shape: trigger "csk-"
+// followed by 32-64 alphanumeric characters.
+//
+// Cerebras does not publish a format spec on any source reachable during
+// development: no gitleaks or TruffleHog detector exists for it, and
+// inference-docs.cerebras.ai itself was unreachable. The "csk-" prefix
+// and a 32-character example body come from several independent
+// third-party integration guides that converge on the same placeholder
+// shape ("csk-1234567890abcdef1234567890abcdef"), not from Cerebras's own
+// docs, which show only a generic "your-api-key-here" placeholder. This
+// should be re-verified against
+// inference-docs.cerebras.ai/api-reference/authentication when reachable.
+func CerebrasAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if !precedingBoundaryOK(window, trigStart) {
+		return 0, 0, false
+	}
+	bodyEnd, ok2 := consumeAlnumRun(window, trigEnd, 32, 64)
+	if !ok2 {
+		return 0, 0, false
+	}
+	if !boundaryOK(window, bodyEnd) {
+		return 0, 0, false
+	}
+	body := window[trigEnd:bodyEnd]
+	if isPlaceholder(body) || hasRepeatRun(body, 5) {
+		return 0, 0, false
+	}
+	return trigStart, bodyEnd, true
+}
+
+// CursorAPIKey confirms the Cursor API key shape: trigger "crsr_"
+// followed by 20 or more characters of [A-Za-z0-9_-]. Cursor's own
+// sensitive-prompt-guard hook script (github.com/cursor/cookbook) uses
+// the regex crsr_[A-Za-z0-9_-]{20,} — an open floor with no upper bound
+// at all, unlike every other rule in this file — so this validator
+// imposes no separate maximum of its own: it consumes the maximal
+// [A-Za-z0-9_-] run and only requires the 20-byte floor, relying on the
+// rule's own maxLookahead (deliberately generous, in ai.json) as the
+// practical ceiling rather than an arbitrary internal cap that a longer
+// real key could silently fall outside of.
+func CursorAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if !precedingBoundaryOK(window, trigStart) {
+		return 0, 0, false
+	}
+	pos := trigEnd
+	for pos < len(window) && isAlnumExt(window[pos]) {
+		pos++
+	}
+	if pos-trigEnd < 20 {
+		return 0, 0, false
+	}
+	body := window[trigEnd:pos]
+	if isPlaceholder(body) || hasRepeatRun(body, 5) {
+		return 0, 0, false
+	}
+	return trigStart, pos, true
 }

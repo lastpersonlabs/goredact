@@ -76,6 +76,21 @@ const (
 	hf34       = "nW2OPJ0rGsD6y4OUtEXQxmAa3BItWMoP6J"
 	groq52     = "wJbCoeH86zjKgop71T4uviLZ6QRKh2kwaIp2lYCV9MiujTbzw3MA"
 	infix      = "T3BlbkFJ"
+
+	cohere40   = "GcXBCHAL67B88Af4aBTd6Hf0KtoYC1Z6HIKgO73S"
+	cohere39   = "mxDWK42dOroKyVu4jSaQpEcok4u4Fq0BSB7x9z2"
+	deepseek32 = "plpfu2ngnks0ef8zzjd4gapm7xh4b02g"
+	deepseek31 = "6kg2zn23xwq9cnyoby3qev17ls4gvu5"
+	deepgram40 = "v27iwqrzc9b84dk13ako0xqjuvmszfg6y4ypq0v1"
+	deepgram39 = "rsjs7arv7cc3tukl5oq4y6viyveny3v6gtrjo8w"
+	cerebras32 = "5CugDz3Xt69Ogu5jpl6sZ55j8aKCsn7b"
+	cerebras64 = "nhiflCWtLfFrk49Jc5f0471NixM3vsGhJYMT13ifU6OVcOT1WGCj2DyU1rPIz1lg"
+	cerebras65 = "zrR2TgIavjanJuL0gyVUNUezPIDXTUfyyKPg1CKKYjxyUrUpS3RnMUSpPRDvX9Smn"
+	cerebras31 = "07DDF0C7Ih2XDpH0kkZIeNIXjTgbVUs"
+	cursor20   = "VHI1kt4yqDD-vCw5ELuH"
+	cursor128  = "dXH1biOWh1mKSPKiCR87jThoUlmDwJZUhGD3c34aH0KZ0vaiFK3adtifajqK8Wl4Y0x9I-9Z4f63uIMkZ6z059ARirFAWf4eh6aOdUah_KapRVnEJ2VQIly22wFkqt9n"
+	cursor19   = "KXok_u1OPTjFbl1fFwM"
+	cursor300  = "NsKXJIdSI8QBP69Qka5wMQ_fhKUFaWyuhlGzKBvXyLZO73nvhJ8Gv3IiGO422fUX1dmwSY9mrhO_oe4TzE1PPxn5LTNhNqwYKzHUaj3Kyylv6vJ-ICVnpTwH5g2hhsnUUKoSexIZbgL3gRyfh7rHlkmklGaMHwPPaAYVZ2oA4q1Xo56QKWsUxmVNbd0A8d5aoMVD8fy4o8c94crPQgsYWxcCiidexmeG3MKAkyAYk8iOS7CLkOEEKLfFUHfYfGzQqsTsMPlSDrUSRpMykn1Mt60jfKItrQCCsG3Ia9llyHQ8"
 )
 
 func TestAnthropicAPIKey(t *testing.T) {
@@ -565,5 +580,360 @@ func TestGroqAPIKey(t *testing.T) {
 func TestGroqAPIKeyNeverPanics(t *testing.T) {
 	aiRunNeverPanics(t, "GroqAPIKey", GroqAPIKey, []string{
 		"", "g", "gsk_", "gsk_a", "gsk_" + repeat('a', 52), "gsk_" + repeat('a', 60), "\x00\x00\x00\x00",
+	})
+}
+
+func TestCohereAPIKey(t *testing.T) {
+	const trig = "CO_API_KEY"
+
+	cases := []validatorCase{
+		{
+			name:      "equals separator",
+			window:    trig + "=" + cohere40,
+			trigStart: 0,
+			trigEnd:   len(trig),
+			wantOK:    true,
+			wantStart: len(trig) + 1,
+			wantEnd:   len(trig) + 1 + 40,
+		},
+		{
+			name:      "colon separator with spaces and quotes",
+			window:    trig + `: "` + cohere40 + `"`,
+			trigStart: 0,
+			trigEnd:   len(trig),
+			wantOK:    true,
+			wantStart: len(trig) + 3,
+			wantEnd:   len(trig) + 3 + 40,
+		},
+		{
+			name:      "value too short",
+			window:    trig + "=" + cohere39,
+			trigStart: 0,
+			trigEnd:   len(trig),
+			wantOK:    false,
+		},
+		{
+			name:      "missing separator",
+			window:    trig + " " + cohere40,
+			trigStart: 0,
+			trigEnd:   len(trig),
+			wantOK:    false,
+		},
+		{
+			name:      "all-identical value rejected",
+			window:    trig + "=" + repeat('a', 40),
+			trigStart: 0,
+			trigEnd:   len(trig),
+			wantOK:    false,
+		},
+	}
+	runValidatorCases(t, CohereAPIKey, cases)
+}
+
+func TestCohereAPIKeyNeverPanics(t *testing.T) {
+	aiRunNeverPanics(t, "CohereAPIKey", CohereAPIKey, []string{
+		"", "C", "CO_API_KEY", "CO_API_KEY=", "CO_API_KEY=\"", "\x00\x00\x00\x00",
+	})
+}
+
+func TestDeepSeekAPIKey(t *testing.T) {
+	match := "sk-" + deepseek32
+
+	cases := []validatorCase{
+		{
+			name:      "match at window start",
+			window:    match,
+			trigStart: 0,
+			trigEnd:   3,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   len(match),
+		},
+		{
+			name:      "match with surrounding context",
+			window:    "DEEPSEEK_API_KEY=" + match + "\n",
+			trigStart: 17,
+			trigEnd:   20,
+			wantOK:    true,
+			wantStart: 17,
+			wantEnd:   17 + len(match),
+		},
+		{
+			name:      "too short rejected",
+			window:    "sk-short",
+			trigStart: 0,
+			trigEnd:   3,
+			wantOK:    false,
+		},
+		{
+			name:      "31 chars rejected (must be exactly 32)",
+			window:    "sk-" + deepseek31,
+			trigStart: 0,
+			trigEnd:   3,
+			wantOK:    false,
+		},
+		{
+			name:      "uppercase byte in body rejected",
+			window:    "sk-" + deepseek32[:31] + "A",
+			trigStart: 0,
+			trigEnd:   3,
+			wantOK:    false,
+		},
+		{
+			name:      "overlap: real OpenAI legacy key not confirmed by DeepSeek rule",
+			window:    "sk-" + legFirst20 + infix + legLast20,
+			trigStart: 0,
+			trigEnd:   3,
+			wantOK:    false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    "sk-",
+			trigStart: 0,
+			trigEnd:   3,
+			wantOK:    false,
+		},
+		{
+			name:      "all-identical body rejected",
+			window:    "sk-" + repeat('a', 32),
+			trigStart: 0,
+			trigEnd:   3,
+			wantOK:    false,
+		},
+		{
+			name:      "preceding alnum rejected (extended boundary)",
+			window:    "desk-" + deepseek32,
+			trigStart: 2,
+			trigEnd:   5,
+			wantOK:    false,
+		},
+		{
+			name:      "trailing alnum boundary violation rejected",
+			window:    match + "9",
+			trigStart: 0,
+			trigEnd:   3,
+			wantOK:    false,
+		},
+		{
+			name:      "non-alnum boundary accepted",
+			window:    match + ".",
+			trigStart: 0,
+			trigEnd:   3,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   len(match),
+		},
+	}
+	runValidatorCases(t, DeepSeekAPIKey, cases)
+}
+
+func TestDeepSeekAPIKeyNeverPanics(t *testing.T) {
+	aiRunNeverPanics(t, "DeepSeekAPIKey", DeepSeekAPIKey, []string{
+		"", "s", "sk-", "sk-a", "sk-" + repeat('a', 32), "sk-" + repeat('a', 40), "\x00\x00\x00\x00",
+	})
+}
+
+func TestDeepgramAPIKey(t *testing.T) {
+	const trig = "DEEPGRAM_API_KEY"
+
+	cases := []validatorCase{
+		{
+			name:      "equals separator",
+			window:    trig + "=" + deepgram40,
+			trigStart: 0,
+			trigEnd:   len(trig),
+			wantOK:    true,
+			wantStart: len(trig) + 1,
+			wantEnd:   len(trig) + 1 + 40,
+		},
+		{
+			name:      "value too short",
+			window:    trig + "=" + deepgram39,
+			trigStart: 0,
+			trigEnd:   len(trig),
+			wantOK:    false,
+		},
+		{
+			name:      "uppercase byte in value rejected",
+			window:    trig + "=" + deepgram40[:39] + "A",
+			trigStart: 0,
+			trigEnd:   len(trig),
+			wantOK:    false,
+		},
+		{
+			name:      "all-identical value rejected",
+			window:    trig + "=" + repeat('a', 40),
+			trigStart: 0,
+			trigEnd:   len(trig),
+			wantOK:    false,
+		},
+	}
+	runValidatorCases(t, DeepgramAPIKey, cases)
+}
+
+func TestDeepgramAPIKeyNeverPanics(t *testing.T) {
+	aiRunNeverPanics(t, "DeepgramAPIKey", DeepgramAPIKey, []string{
+		"", "D", "DEEPGRAM_API_KEY", "DEEPGRAM_API_KEY=", "\x00\x00\x00\x00",
+	})
+}
+
+func TestCerebrasAPIKey(t *testing.T) {
+	match := "csk-" + cerebras32
+
+	cases := []validatorCase{
+		{
+			name:      "match, min body length (32 chars)",
+			window:    match,
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   len(match),
+		},
+		{
+			name:      "match, max body length (64 chars)",
+			window:    "csk-" + cerebras64,
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   4 + 64,
+		},
+		{
+			name:      "match with surrounding context",
+			window:    "Authorization: Bearer " + match + "\n",
+			trigStart: 22,
+			trigEnd:   26,
+			wantOK:    true,
+			wantStart: 22,
+			wantEnd:   22 + len(match),
+		},
+		{
+			name:      "body too short rejected",
+			window:    "csk-" + cerebras31,
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    false,
+		},
+		{
+			name:      "body run exceeding 64-byte max rejected",
+			window:    "csk-" + cerebras65,
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    "csk-",
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    false,
+		},
+		{
+			name:      "all-identical body rejected",
+			window:    "csk-" + repeat('a', 32),
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    false,
+		},
+		{
+			name:      "non-alnum boundary accepted",
+			window:    match + ".",
+			trigStart: 0,
+			trigEnd:   4,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   len(match),
+		},
+	}
+	runValidatorCases(t, CerebrasAPIKey, cases)
+}
+
+func TestCerebrasAPIKeyNeverPanics(t *testing.T) {
+	aiRunNeverPanics(t, "CerebrasAPIKey", CerebrasAPIKey, []string{
+		"", "c", "csk-", "csk-a", "csk-" + repeat('a', 32), "csk-" + repeat('a', 70), "\x00\x00\x00\x00",
+	})
+}
+
+func TestCursorAPIKey(t *testing.T) {
+	match := "crsr_" + cursor20
+
+	cases := []validatorCase{
+		{
+			name:      "match, min body length (20 chars)",
+			window:    match,
+			trigStart: 0,
+			trigEnd:   5,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   len(match),
+		},
+		{
+			name:      "match, 128-char body",
+			window:    "crsr_" + cursor128,
+			trigStart: 0,
+			trigEnd:   5,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   5 + 128,
+		},
+		{
+			// Cursor's own regex (crsr_[A-Za-z0-9_-]{20,}) has no upper
+			// bound, so a 300-char body (well past the old, since-removed
+			// 128-char cap) must still match.
+			name:      "match, 300-char body (no upper bound)",
+			window:    "crsr_" + cursor300,
+			trigStart: 0,
+			trigEnd:   5,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   5 + 300,
+		},
+		{
+			name:      "match with surrounding context",
+			window:    "Authorization: Bearer " + match + "\n",
+			trigStart: 22,
+			trigEnd:   27,
+			wantOK:    true,
+			wantStart: 22,
+			wantEnd:   22 + len(match),
+		},
+		{
+			name:      "body too short rejected",
+			window:    "crsr_" + cursor19,
+			trigStart: 0,
+			trigEnd:   5,
+			wantOK:    false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    "crsr_",
+			trigStart: 0,
+			trigEnd:   5,
+			wantOK:    false,
+		},
+		{
+			name:      "all-identical body rejected",
+			window:    "crsr_" + repeat('a', 20),
+			trigStart: 0,
+			trigEnd:   5,
+			wantOK:    false,
+		},
+		{
+			name:      "non-alnum boundary accepted",
+			window:    match + ".",
+			trigStart: 0,
+			trigEnd:   5,
+			wantOK:    true,
+			wantStart: 0,
+			wantEnd:   len(match),
+		},
+	}
+	runValidatorCases(t, CursorAPIKey, cases)
+}
+
+func TestCursorAPIKeyNeverPanics(t *testing.T) {
+	aiRunNeverPanics(t, "CursorAPIKey", CursorAPIKey, []string{
+		"", "c", "crsr_", "crsr_a", "crsr_" + repeat('a', 20), "crsr_" + repeat('a', 140), "\x00\x00\x00\x00",
 	})
 }
