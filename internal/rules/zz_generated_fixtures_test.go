@@ -21,6 +21,7 @@
 //   datadog-application-key: https://registry.terraform.io/providers/DataDog/datadog/latest/docs (original)
 //   deepgram-api-key: TruffleHog deepgram detector (github.com/trufflesecurity/trufflehog pkg/detectors/deepgram/deepgram.go): 40-char lowercase alphanumeric, no fixed prefix on the key itself (original)
 //   deepseek-api-key: TruffleHog deepseek detector (github.com/trufflesecurity/trufflehog pkg/detectors/deepseek/deepseek.go): sk- + 32 lowercase alphanumeric (original)
+//   dockerhub-oat: Docker's own docs describe organization access tokens as a distinct type (docs.docker.com/security/access-tokens/) but don't publish a byte-level format; prefix and 32-char floor cross-checked between TruffleHog (pkg/detectors/dockerhub/v2/dockerhub.go) and the betterleaks gitleaks fork (config/betterleaks.toml) (original)
 //   dockerhub-pat: https://docs.docker.com/security/for-developers/access-tokens/ (original)
 //   doppler-token: https://docs.doppler.com/reference/auth-token-formats (original)
 //   gcp-api-key: https://cloud.google.com/docs/authentication/api-keys (original)
@@ -33,7 +34,10 @@
 //   github-pat: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats (original)
 //   github-refresh-token: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats (original)
 //   gitlab-deploy-token: https://docs.gitlab.com/user/project/deploy_tokens/ (original)
+//   gitlab-feed-token: https://docs.gitlab.com/security/tokens/#token-prefixes; gitleaks gitlab-feed-token rule; GitLab's own app/models/user.rb FEED_TOKEN_PREFIX and client-side secret_detection_patterns.js (original)
+//   gitlab-feed-token-v2: GitLab's own lib/gitlab/auth/auth_finders.rb path_dependent_feed_token_regex: /\A(glft-)(\h{64})-(\d+)\z/ — an HMAC-SHA256 digest of the feed path keyed by the user's real feed token, plus a dash-separated numeric user ID (original)
 //   gitlab-pat: https://docs.gitlab.com/user/profile/personal_access_tokens/#create-a-personal-access-token (original)
+//   gitlab-pipeline-trigger-token: https://docs.gitlab.com/security/tokens/#token-prefixes; GitLab's own client-side app/assets/javascripts/lib/utils/secret_detection_patterns.js (40-char [0-9a-zA-Z_-] body), cross-checked against gitleaks' gitlab-ptt rule (40-char length agrees, narrower hex-only alphabet) (original)
 //   gitlab-runner-token: https://docs.gitlab.com/ci/runners/new_creation_workflow/#glrt-authentication-tokens (original)
 //   grafana-cloud-access-policy-token: https://grafana.com/blog/2022/11/22/meet-grafana-cloud-access-policies-the-new-cloud-api-keys/ (original)
 //   grafana-service-account-token: https://grafana.com/docs/grafana/latest/administration/service-accounts/ (original)
@@ -52,6 +56,7 @@
 //   slack-app-token: https://api.slack.com/authentication/token-types#app-level (original)
 //   slack-bot-token: https://api.slack.com/authentication/token-types#bot (original)
 //   slack-user-token: https://api.slack.com/authentication/token-types#user (original)
+//   stripe-ephemeral-key: Real (structure-only) fixtures in Stripe's own stripe-ios (github.com/stripe/stripe-ios) and stripe-android SDK repositories; docs.stripe.com/keys was unreachable during development and neither gitleaks nor TruffleHog has a rule for this key type (original)
 //   stripe-secret-key: https://docs.stripe.com/keys (original)
 //   stripe-webhook-secret: https://docs.stripe.com/webhooks#verify-official-libraries (original)
 //   supabase-service-role-key: https://supabase.com/docs/guides/api/api-keys (legacy JWT-based service_role key, distinguished from the anon key by its "role":"service_role" claim, which Postgres row-level-security policies treat as bypassing RLS); https://www.rfc-editor.org/rfc/rfc7519 (JWT claims) (original)
@@ -177,6 +182,11 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			nomatch: []string{"sk-short", "sk-duu8wkernulhwb7g0ncfo1otofxycuy", "sk-DUU8WKERNULHWB7G0NCFO1OTOFXYCUYG", "Authorization: Bearer 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"},
 		},
 		{
+			id:      "dockerhub-oat",
+			match:   []string{"DOCKERHUB_OAT=dckr_oat_pEjGcIcQhKLjCKybHVg0UZQ8DSlrD_Km", "{\"password\": \"dckr_oat_x-FB4sKtVkyI8MlQjxZwJgbYVdkwrRA1\"}"},
+			nomatch: []string{"dckr_oat_short1234567890123", "dckr_oat_abcDE12345678901 pEjGcIcQhKLjCKybHVg0UZQ8DSlrD_Km", "dckr_oat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
+		},
+		{
 			id:      "dockerhub-pat",
 			match:   []string{"DOCKERHUB_PAT=dckr_pat_lBYwwQKx2h3qd82R5DtSx3oPE2-xPo0csQ6U", "{\"password\": \"dckr_pat_BMjUC6unM5EYWsQJ8jXp5k_KVfOY\"}"},
 			nomatch: []string{"dckr_pat_short12345", "dckr_pat_abcDE12345 lBYwwQKx2h3qd82R5DtSx3oPE2-xPo0csQ6U", "dckr_pat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
@@ -237,9 +247,24 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			nomatch: []string{"gldt-tiny1", "gldt-abcDE12345 KzooQLKR9hstfKw-FvxsBs2bzQFJDG0Vy9R", "gldt-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
 		},
 		{
+			id:      "gitlab-feed-token",
+			match:   []string{"https://gitlab.example.com/dashboard/projects.atom?feed_token=glft-qJqB_QybyiSr_oKMX6Sv", "GITLAB_FEED_TOKEN=glft-qJqB_QybyiSr_oKMX6Sv"},
+			nomatch: []string{"glft-tooshort", "glft-abcDE12345QybyiSr_oK BO_yY1vy1Dx71XJWCS", "glft-XXXXXXXXXXXXXXXXXXX"},
+		},
+		{
+			id:      "gitlab-feed-token-v2",
+			match:   []string{"https://gitlab.example.com/dashboard/projects.atom?feed_token=glft-adce58af7fb13e75e10872ccd70c698225791ea3e147cfda5d3f04e82f9badfe-12345678", "GITLAB_FEED_TOKEN=glft-ADCE58AF7FB13E75E10872CCD70C698225791EA3E147CFDA5D3F04E82F9BADFE-1"},
+			nomatch: []string{"glft-adce58af7fb13e75e10872ccd70c698225791ea3e147cfda5d3f04e82f9badf-12345678", "glft-adce58af7fb13e75e10872ccd70c698225791ea3e147cfda5d3f04e82f9badfe12345678", "glft-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-12345678"},
+		},
+		{
 			id:      "gitlab-pat",
 			match:   []string{"GITLAB_PAT=glpat-BO_yY1vy1Dx71XJWCS_eOE50i2nLmR", "Authorization: Bearer glpat-9M71uUC6dXE67HSyDv5S0ZGci"},
 			nomatch: []string{"glpat-abc123", "glpat-abcDE12345 BO_yY1vy1Dx71XJWCS_eOE50i2nLmR", "glpat-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
+		},
+		{
+			id:      "gitlab-pipeline-trigger-token",
+			match:   []string{"CI_TRIGGER_TOKEN=glptt-wu8ZwMSnGykZpCGoOORMvWtoGMrPK7pI79pt3Sp5", "curl -X POST --form token=glptt-wu8ZwMSnGykZpCGoOORMvWtoGMrPK7pI79pt3Sp5 https://gitlab.example.com/api/v4/projects/1/trigger/pipeline"},
+			nomatch: []string{"glptt-tooshort", "glptt-wu8ZwMSnGykZpCGoOORMvWtoGMrPK7pI79pt3Sp", "glptt-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
 		},
 		{
 			id:      "gitlab-runner-token",
@@ -330,6 +355,11 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			id:      "slack-user-token",
 			match:   []string{"export SLACK_USER_TOKEN=xoxa-80184514627-048281489325-wKi9x7h6AmUfBH7X41zTPDP4k8FFuf", "{\"token\": \"xoxp-1822782489-63834657871-331509839301-1721a278f64f7fd633dbdde1\"}"},
 			nomatch: []string{"xoxa-123-456-abcdefgh0123456789abcd", "xoxa-80184514627-048281489325-rppGDZuVz3", "xoxa-80184514627-048281489325-aaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+		},
+		{
+			id:      "stripe-ephemeral-key",
+			match:   []string{"STRIPE_EPHEMERAL_KEY=ek_test_PE3RB812Fhej8HGrwfoGMxAc1AiQ9Ac5SIrOH4hKpqJt6k385lXWq8l1LbinwrlIQMHyBrqT0HlFM7Wvs-6GG", "{\"ephemeralKey\": \"ek_live_vTh-0uCGqK6CHMwswkiIKtTDEcZp2OWJzmp1E8QW9DwUaK-En2mMSfw9SZgQClLRT\"}"},
+			nomatch: []string{"ek_test_tooshort", "ek_live_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
 		},
 		{
 			id:      "stripe-secret-key",

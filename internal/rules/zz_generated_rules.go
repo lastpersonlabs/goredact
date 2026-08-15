@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-744816e6a977"
+const Version = "builtin-5fa62b3bae1c"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -270,6 +270,18 @@ func init() {
 			MaxLookahead:  40,
 		},
 		{
+			ID:   "dockerhub-oat",
+			Name: "Docker Hub organization access token",
+			Triggers: []Trigger{
+				{Literal: "dckr_oat_", CaseFold: false},
+			},
+			Validate:      validators.DockerHubOAT,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  128,
+		},
+		{
 			ID:   "dockerhub-pat",
 			Name: "Docker Hub personal access token",
 			Triggers: []Trigger{
@@ -432,6 +444,30 @@ func init() {
 			MaxLookahead:  64,
 		},
 		{
+			ID:   "gitlab-feed-token",
+			Name: "GitLab feed token (v1)",
+			Triggers: []Trigger{
+				{Literal: "glft-", CaseFold: false},
+			},
+			Validate:      validators.GitLabFeedToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  30,
+		},
+		{
+			ID:   "gitlab-feed-token-v2",
+			Name: "GitLab feed token (v2, path-dependent)",
+			Triggers: []Trigger{
+				{Literal: "glft-", CaseFold: false},
+			},
+			Validate:      validators.GitLabFeedTokenV2,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  100,
+		},
+		{
 			ID:   "gitlab-pat",
 			Name: "GitLab personal access token",
 			Triggers: []Trigger{
@@ -442,6 +478,18 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
 			MaxLookahead:  64,
+		},
+		{
+			ID:   "gitlab-pipeline-trigger-token",
+			Name: "GitLab pipeline trigger token",
+			Triggers: []Trigger{
+				{Literal: "glptt-", CaseFold: false},
+			},
+			Validate:      validators.GitLabPipelineTriggerToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  55,
 		},
 		{
 			ID:   "gitlab-runner-token",
@@ -664,6 +712,19 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
 			MaxLookahead:  100,
+		},
+		{
+			ID:   "stripe-ephemeral-key",
+			Name: "Stripe ephemeral key",
+			Triggers: []Trigger{
+				{Literal: "ek_live_", CaseFold: false},
+				{Literal: "ek_test_", CaseFold: false},
+			},
+			Validate:      validators.StripeEphemeralKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  170,
 		},
 		{
 			ID:   "stripe-secret-key",

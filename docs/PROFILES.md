@@ -71,7 +71,7 @@ much memory/disk do I use" or "is the output reproducible."
 
 ## Rule table
 
-61 built-in rules as of this writing. Columns: rule ID, name, minimum
+66 built-in rules as of this writing. Columns: rule ID, name, minimum
 profile that includes the rule (`fast` rules also run in `balanced` and
 `deep`; `balanced` rules also run in `deep`), confidence, and trigger
 literals (the Aho–Corasick literals that must appear before the rule's
@@ -100,6 +100,7 @@ finding).
 | `datadog-application-key` | Datadog Application key | fast | high | `DD_APP_KEY` |
 | `deepgram-api-key` | Deepgram API key | fast | high | `DEEPGRAM_API_KEY` |
 | `deepseek-api-key` | DeepSeek API key | fast | high | `sk-` |
+| `dockerhub-oat` | Docker Hub organization access token | fast | high | `dckr_oat_` |
 | `dockerhub-pat` | Docker Hub personal access token | fast | high | `dckr_pat_` |
 | `doppler-token` | Doppler token | fast | high | `dp.st.`, `dp.pt.`, `dp.ct.`, `dp.sa.`, `dp.said.`, `dp.scim.`, `dp.audit.` |
 | `gcp-api-key` | GCP API key | fast | high | `AIza` |
@@ -112,7 +113,10 @@ finding).
 | `github-pat` | GitHub personal access token | fast | high | `ghp_` |
 | `github-refresh-token` | GitHub OAuth refresh token | fast | high | `ghr_` |
 | `gitlab-deploy-token` | GitLab deploy token | fast | high | `gldt-` |
+| `gitlab-feed-token` | GitLab feed token (v1) | fast | high | `glft-` |
+| `gitlab-feed-token-v2` | GitLab feed token (v2, path-dependent) | fast | high | `glft-` |
 | `gitlab-pat` | GitLab personal access token | fast | high | `glpat-` |
+| `gitlab-pipeline-trigger-token` | GitLab pipeline trigger token | fast | high | `glptt-` |
 | `gitlab-runner-token` | GitLab runner authentication token | fast | high | `glrt-` |
 | `grafana-cloud-access-policy-token` | Grafana Cloud access policy token | fast | high | `glc_` |
 | `grafana-service-account-token` | Grafana service-account token | fast | high | `glsa_` |
@@ -131,6 +135,7 @@ finding).
 | `slack-app-token` | Slack app-level token | fast | high | `xapp-` |
 | `slack-bot-token` | Slack bot token | fast | high | `xoxb-` |
 | `slack-user-token` | Slack user token | fast | high | `xoxp-`, `xoxa-`, `xoxr-`, `xoxs-` |
+| `stripe-ephemeral-key` | Stripe ephemeral key | fast | high | `ek_live_`, `ek_test_` |
 | `stripe-secret-key` | Stripe secret API key | fast | high | `sk_live_`, `sk_test_`, `rk_live_`, `rk_test_` |
 | `stripe-webhook-secret` | Stripe webhook signing secret | fast | high | `whsec_` |
 | `supabase-service-role-key` | Supabase service-role key | balanced | high | `eyJ` |
@@ -142,8 +147,8 @@ finding).
 | `vercel-legacy-token` | Vercel legacy access token | fast | high | `VERCEL_TOKEN`, `VERCEL_API_TOKEN`, `VERCEL_ACCESS_TOKEN` |
 | `vercel-token` | Vercel access token | fast | high | `vcp_`, `vci_`, `vca_`, `vcr_`, `vck_` |
 
-Per-profile counts: `fast` = 50 rules, `balanced` = 61 rules (adds 11),
-`deep` = 61 rules (adds 0, see above). Query these programmatically with
+Per-profile counts: `fast` = 55 rules, `balanced` = 66 rules (adds 11),
+`deep` = 66 rules (adds 0, see above). Query these programmatically with
 `goredact.BuiltinRules()` (every built-in, any profile) and
 `(*Engine).ActiveRules()` (what a specific configured `Engine` actually
 runs).
@@ -165,6 +170,32 @@ registered on it, and the two validators never both confirm the same
 occurrence: DeepSeek's key is exactly 35 bytes total with a lowercase-only
 body, while OpenAI's legacy key is 51 bytes total and requires an
 uppercase `T3BlbkFJ` infix a lowercase-only body can never contain.
+
+`gitlab-feed-token` and `gitlab-feed-token-v2` similarly share the
+literal `glft-` trigger, covering GitLab's two coexisting feed-token
+generations (both still documented as distinct rule IDs in GitLab's own
+secret-detection docs): v1 is a fixed 20-byte `[A-Za-z0-9_-]` body, v2 is
+a path-dependent HMAC-SHA256 digest (64 hex characters, a literal `-`,
+then the scoped user's numeric ID). The two never both confirm the same
+occurrence — a real v2 token's first 20 bytes are hex digits, which
+satisfy v1's alphabet but never its exact-20-byte-then-boundary
+requirement, since the real token keeps going for 64+ more bytes.
+
+`stripe-restricted-api-key` was evaluated and found already fully
+covered: `stripe-secret-key`'s `rk_live_`/`rk_test_` triggers (alongside
+`sk_live_`/`sk_test_`) already validate restricted keys with the
+identical body shape, confirmed against gitleaks, TruffleHog, Google's
+osv-scalibr, and Stripe's own `stripe-cli` sanitizer — none of those
+sources treat `rk_` as structurally different from `sk_`. No separate
+rule was added.
+
+`dockerhub-oat` (organization access tokens) was added as a sibling to
+the existing `dockerhub-pat` (personal access tokens) after confirming
+via TruffleHog and the betterleaks gitleaks fork that Docker Hub's two
+token kinds are shape-distinguishable by prefix alone (`dckr_oat_` vs
+`dckr_pat_`) and by a different minimum body length (32 vs 27) — Docker's
+own docs describe the two as distinct products but don't publish either
+detail themselves.
 
 `cerebras-api-key`'s `csk-` prefix and body-length range are sourced from
 convergent third-party integration guides, not from Cerebras's own docs

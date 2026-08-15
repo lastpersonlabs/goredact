@@ -1,6 +1,9 @@
 package validators
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // validateFunc mirrors rules.ValidateFunc without importing the rules
 // package (which would create an import cycle risk and isn't needed for
@@ -110,6 +113,18 @@ const (
 	pypi90b     = "Fy7lOBCGPVunOMqKKLByo2Azdma5XY3XWladYTLBrX1P9HS2JJWJTgPCEQQLtkaREmFr1hs7k7dnztUQC9AsSxYc1x"
 	dh36a       = "lBYwwQKx2h3qd82R5DtSx3oPE2-xPo0csQ6U"
 	dh28b       = "BMjUC6unM5EYWsQJ8jXp5k_KVfOY"
+
+	glft20a     = "XJJLCZ04E6yueXEpQefR"
+	glft20b     = "UFYyyRawWqeAbaVXuUJi"
+	glft19      = "CLxhv_NHIVx5KNI_UW2"
+	glftV2Hex64 = "84f112654236471bc18d24d00cc1b55ad8709046ed3c988085de23eb6b7b4469"
+	glftV2Hex63 = "a8a7265ce15ed1f17a28be7a987bbf95072249af09390f98be90c4aa3abca51"
+	glptt40a    = "wz8oguT2oAIeK7BCnbcsxaRzaDNf1V9R35VCfS64"
+	glptt40b    = "oJWqsIdbQqt_0d6eu2-isgybGn4CIag0ZUG0CCle"
+	glptt39     = "uInZw-iAVKG_KZwOLJnaESEbVBaCCuwZQ_9FMrZ"
+	dhOat32a    = "O2TPoiMQpBYgkeZsuy1X65fLTSjef12C"
+	dhOat100    = "jkzcAlm3lER4Bs673LUvfiPd4SyTffGfLn0b5h3PgIkppkDbSF9b6h4EPT2cRr9crtNjcpByF2TgMaJoSbm_1hukVDRIU3j9VmHP"
+	dhOat31     = "HnKtVesHHO-mmpkvxro6pmOrrFZ6a0w"
 )
 
 func TestGitHubOAuthToken(t *testing.T) {
@@ -685,6 +700,224 @@ func TestDockerHubPATNeverPanics(t *testing.T) {
 		"", "dckr_pat_", "dckr_pat_a",
 	}
 	sweepFixtures(t, "DockerHubPAT", DockerHubPAT, "dckr_pat_", fixtures)
+}
+
+func TestGitLabFeedToken(t *testing.T) {
+	cases := []sourceControlCase{
+		{
+			name:      "match at window start",
+			window:    "glft-" + glft20a,
+			trigStart: 0, trigEnd: 5,
+			wantOK: true, wantStart: 0, wantEnd: 5 + 20,
+		},
+		{
+			name:      "match with surrounding context",
+			window:    "feed_token=glft-" + glft20b,
+			trigStart: 11, trigEnd: 16,
+			wantOK: true, wantStart: 11, wantEnd: 16 + 20,
+		},
+		{
+			name:      "too short rejected",
+			window:    "glft-" + glft19,
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+		{
+			name:      "placeholder rejected",
+			window:    "glft-" + string(makeN('X', 20)),
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+		{
+			name:      "a real v2 token's first 20 bytes are not confirmed by v1",
+			window:    "glft-" + glftV2Hex64 + "-12345678",
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    "glft-",
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+	}
+	runSourceControlCases(t, GitLabFeedToken, cases)
+}
+
+func TestGitLabFeedTokenNeverPanics(t *testing.T) {
+	fixtures := []string{
+		"feed_token=glft-" + glft20a,
+		"glft-" + glft19,
+		"glft-" + string(makeN('X', 20)),
+		"glft-" + glftV2Hex64 + "-12345678",
+		"", "glft-", "glft-a",
+	}
+	sweepFixtures(t, "GitLabFeedToken", GitLabFeedToken, "glft-", fixtures)
+}
+
+func TestGitLabFeedTokenV2(t *testing.T) {
+	cases := []sourceControlCase{
+		{
+			name:      "match at window start",
+			window:    "glft-" + glftV2Hex64 + "-12345678",
+			trigStart: 0, trigEnd: 5,
+			wantOK: true, wantStart: 0, wantEnd: 5 + 64 + 1 + 8,
+		},
+		{
+			name:      "match with surrounding context, single-digit user id",
+			window:    "feed_token=glft-" + glftV2Hex64 + "-1",
+			trigStart: 11, trigEnd: 16,
+			wantOK: true, wantStart: 11, wantEnd: 16 + 64 + 1 + 1,
+		},
+		{
+			name:      "uppercase hex accepted",
+			window:    "glft-" + strings.ToUpper(glftV2Hex64) + "-42",
+			trigStart: 0, trigEnd: 5,
+			wantOK: true, wantStart: 0, wantEnd: 5 + 64 + 1 + 2,
+		},
+		{
+			name:      "63-char hex (one short) rejected",
+			window:    "glft-" + glftV2Hex63 + "-12345678",
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+		{
+			name:      "missing dash separator rejected",
+			window:    "glft-" + glftV2Hex64 + "12345678",
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+		{
+			name:      "no digits after dash rejected",
+			window:    "glft-" + glftV2Hex64 + "-",
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+		{
+			name:      "a real v1 token is not confirmed by v2",
+			window:    "glft-" + glft20a,
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+		{
+			name:      "placeholder hex rejected",
+			window:    "glft-" + string(makeN('a', 64)) + "-12345678",
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    "glft-",
+			trigStart: 0, trigEnd: 5,
+			wantOK: false,
+		},
+	}
+	runSourceControlCases(t, GitLabFeedTokenV2, cases)
+}
+
+func TestGitLabFeedTokenV2NeverPanics(t *testing.T) {
+	fixtures := []string{
+		"feed_token=glft-" + glftV2Hex64 + "-12345678",
+		"glft-" + glftV2Hex63 + "-12345678",
+		"glft-" + glftV2Hex64 + "12345678",
+		"glft-" + glftV2Hex64 + "-",
+		"glft-" + glft20a,
+		"", "glft-", "glft-a",
+	}
+	sweepFixtures(t, "GitLabFeedTokenV2", GitLabFeedTokenV2, "glft-", fixtures)
+}
+
+func TestGitLabPipelineTriggerToken(t *testing.T) {
+	cases := []sourceControlCase{
+		{
+			name:      "match at window start",
+			window:    "glptt-" + glptt40a,
+			trigStart: 0, trigEnd: 6,
+			wantOK: true, wantStart: 0, wantEnd: 6 + 40,
+		},
+		{
+			name:      "match with surrounding context",
+			window:    "token=glptt-" + glptt40b,
+			trigStart: 6, trigEnd: 12,
+			wantOK: true, wantStart: 6, wantEnd: 12 + 40,
+		},
+		{
+			name:      "too short rejected",
+			window:    "glptt-" + glptt39,
+			trigStart: 0, trigEnd: 6,
+			wantOK: false,
+		},
+		{
+			name:      "placeholder rejected",
+			window:    "glptt-" + string(makeN('X', 40)),
+			trigStart: 0, trigEnd: 6,
+			wantOK: false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    "glptt-",
+			trigStart: 0, trigEnd: 6,
+			wantOK: false,
+		},
+	}
+	runSourceControlCases(t, GitLabPipelineTriggerToken, cases)
+}
+
+func TestGitLabPipelineTriggerTokenNeverPanics(t *testing.T) {
+	fixtures := []string{
+		"token=glptt-" + glptt40a,
+		"glptt-" + glptt39,
+		"glptt-" + string(makeN('X', 40)),
+		"", "glptt-", "glptt-a",
+	}
+	sweepFixtures(t, "GitLabPipelineTriggerToken", GitLabPipelineTriggerToken, "glptt-", fixtures)
+}
+
+func TestDockerHubOAT(t *testing.T) {
+	cases := []sourceControlCase{
+		{
+			name:      "match, min length (32 chars)",
+			window:    "dckr_oat_" + dhOat32a,
+			trigStart: 0, trigEnd: 9,
+			wantOK: true, wantStart: 0, wantEnd: 9 + len(dhOat32a),
+		},
+		{
+			name:      "match, generous length (100 chars)",
+			window:    `{"password": "dckr_oat_` + dhOat100 + `"}`,
+			trigStart: 14, trigEnd: 23,
+			wantOK: true, wantStart: 14, wantEnd: 23 + len(dhOat100),
+		},
+		{
+			name:      "31 chars (one short of the personal-token-derived floor) rejected",
+			window:    "dckr_oat_" + dhOat31,
+			trigStart: 0, trigEnd: 9,
+			wantOK: false,
+		},
+		{
+			name:      "placeholder rejected",
+			window:    "dckr_oat_" + string(makeN('X', 32)),
+			trigStart: 0, trigEnd: 9,
+			wantOK: false,
+		},
+		{
+			name:      "trigger at very end of window",
+			window:    "dckr_oat_",
+			trigStart: 0, trigEnd: 9,
+			wantOK: false,
+		},
+	}
+	runSourceControlCases(t, DockerHubOAT, cases)
+}
+
+func TestDockerHubOATNeverPanics(t *testing.T) {
+	fixtures := []string{
+		"DOCKERHUB_OAT=dckr_oat_" + dhOat32a,
+		`{"password": "dckr_oat_` + dhOat100 + `"}`,
+		"dckr_oat_" + dhOat31,
+		"dckr_oat_" + string(makeN('X', 32)),
+		"", "dckr_oat_", "dckr_oat_a",
+	}
+	sweepFixtures(t, "DockerHubOAT", DockerHubOAT, "dckr_oat_", fixtures)
 }
 
 func TestSourceControlHelpers(t *testing.T) {

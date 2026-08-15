@@ -84,6 +84,33 @@ func TestStripeSecretKeyNeverPanics(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------
+// stripe-ephemeral-key / StripeEphemeralKey
+// ---------------------------------------------------------------------
+
+func TestStripeEphemeralKey(t *testing.T) {
+	const body60 = "vc_CXMngASo3pADSN-5jvbHqlMnbhGr_vRYRt8prk_qQgG0NV8ZQOq6gRDtH" // 60 chars: min bound
+	const body150 = "zgYnqpcPtSkK1q69D11SxSo1uvQW6wCeRp-Jy0mk4bNUdDsCB0D8No2zenQj-JDBd0Vn0ctus2qrGkKdBrbHMbLMe-EY8CmkKHhJiaPyNEE6rmwVMeHUoBZkjm_R8_LxqXCyibsoOfkmQzNccwpxoL"
+
+	cases := []paymentsCase{
+		{name: "ek_test_ min length body accepted", window: "ek_test_" + body60, trigStart: 0, trigEnd: 8, wantOK: true, wantEnd: 8 + len(body60)},
+		{name: "ek_live_ max length body accepted", window: "ek_live_" + body150, trigStart: 0, trigEnd: 8, wantOK: true, wantEnd: 8 + len(body150)},
+		{name: "one below min length rejected", window: "ek_test_" + body60[:59], trigStart: 0, trigEnd: 8, wantOK: false},
+		{name: "one above max length rejected (no valid boundary)", window: "ek_live_" + body150 + "Z", trigStart: 0, trigEnd: 8, wantOK: false},
+		{name: "all-identical body rejected as placeholder", window: "ek_test_" + string(makeN('X', 65)), trigStart: 0, trigEnd: 8, wantOK: false},
+		{name: "space breaks run, resulting run too short", window: "ek_test_" + body60[:30] + " " + body60[30:], trigStart: 0, trigEnd: 8, wantOK: false},
+		{name: "non-url-safe trailing boundary accepted", window: "ek_test_" + body60 + ".", trigStart: 0, trigEnd: 8, wantOK: true, wantEnd: 8 + len(body60)},
+		{name: "trailing underscore extends the match rather than breaking it (still under max)", window: "ek_test_" + body60 + "_", trigStart: 0, trigEnd: 8, wantOK: true, wantEnd: 8 + len(body60) + 1},
+		{name: "trigger at very end of window, zero body bytes", window: "ek_test_", trigStart: 0, trigEnd: 8, wantOK: false},
+		{name: "window truncated shorter than min body", window: "ek_test_short", trigStart: 0, trigEnd: 8, wantOK: false},
+	}
+	runPaymentsCases(t, StripeEphemeralKey, cases)
+}
+
+func TestStripeEphemeralKeyNeverPanics(t *testing.T) {
+	paymentsAssertNeverPanics(t, StripeEphemeralKey, []string{"", "e", "ek_test_", "ek_test_a", "\x00\x00\x00\x00"})
+}
+
+// ---------------------------------------------------------------------
 // stripe-webhook-secret / StripeWebhookSecret
 // ---------------------------------------------------------------------
 

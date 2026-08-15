@@ -215,6 +215,96 @@
       }
     },
     {
+      "id": "gitlab-feed-token",
+      "name": "GitLab feed token (v1)",
+      "triggers": [
+        {
+          "literal": "glft-",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitLabFeedToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 30,
+      "provenance": {
+        "source": "https://docs.gitlab.com/security/tokens/#token-prefixes; gitleaks gitlab-feed-token rule; GitLab's own app/models/user.rb FEED_TOKEN_PREFIX and client-side secret_detection_patterns.js",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "https://gitlab.example.com/dashboard/projects.atom?feed_token=glft-qJqB_QybyiSr_oKMX6Sv",
+          "GITLAB_FEED_TOKEN=glft-qJqB_QybyiSr_oKMX6Sv"
+        ],
+        "nomatch": [
+          "glft-tooshort",
+          "glft-abcDE12345QybyiSr_oK BO_yY1vy1Dx71XJWCS",
+          "glft-XXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
+      "id": "gitlab-feed-token-v2",
+      "name": "GitLab feed token (v2, path-dependent)",
+      "triggers": [
+        {
+          "literal": "glft-",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitLabFeedTokenV2",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 100,
+      "provenance": {
+        "source": "GitLab's own lib/gitlab/auth/auth_finders.rb path_dependent_feed_token_regex: /\\A(glft-)(\\h{64})-(\\d+)\\z/ — an HMAC-SHA256 digest of the feed path keyed by the user's real feed token, plus a dash-separated numeric user ID",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "https://gitlab.example.com/dashboard/projects.atom?feed_token=glft-adce58af7fb13e75e10872ccd70c698225791ea3e147cfda5d3f04e82f9badfe-12345678",
+          "GITLAB_FEED_TOKEN=glft-ADCE58AF7FB13E75E10872CCD70C698225791EA3E147CFDA5D3F04E82F9BADFE-1"
+        ],
+        "nomatch": [
+          "glft-adce58af7fb13e75e10872ccd70c698225791ea3e147cfda5d3f04e82f9badf-12345678",
+          "glft-adce58af7fb13e75e10872ccd70c698225791ea3e147cfda5d3f04e82f9badfe12345678",
+          "glft-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-12345678"
+        ]
+      }
+    },
+    {
+      "id": "gitlab-pipeline-trigger-token",
+      "name": "GitLab pipeline trigger token",
+      "triggers": [
+        {
+          "literal": "glptt-",
+          "caseFold": false
+        }
+      ],
+      "validator": "GitLabPipelineTriggerToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 55,
+      "provenance": {
+        "source": "https://docs.gitlab.com/security/tokens/#token-prefixes; GitLab's own client-side app/assets/javascripts/lib/utils/secret_detection_patterns.js (40-char [0-9a-zA-Z_-] body), cross-checked against gitleaks' gitlab-ptt rule (40-char length agrees, narrower hex-only alphabet)",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "CI_TRIGGER_TOKEN=glptt-wu8ZwMSnGykZpCGoOORMvWtoGMrPK7pI79pt3Sp5",
+          "curl -X POST --form token=glptt-wu8ZwMSnGykZpCGoOORMvWtoGMrPK7pI79pt3Sp5 https://gitlab.example.com/api/v4/projects/1/trigger/pipeline"
+        ],
+        "nomatch": [
+          "glptt-tooshort",
+          "glptt-wu8ZwMSnGykZpCGoOORMvWtoGMrPK7pI79pt3Sp",
+          "glptt-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
       "id": "npm-access-token",
       "name": "npm access token",
       "triggers": [
@@ -302,6 +392,36 @@
           "dckr_pat_short12345",
           "dckr_pat_abcDE12345 lBYwwQKx2h3qd82R5DtSx3oPE2-xPo0csQ6U",
           "dckr_pat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
+      "id": "dockerhub-oat",
+      "name": "Docker Hub organization access token",
+      "triggers": [
+        {
+          "literal": "dckr_oat_",
+          "caseFold": false
+        }
+      ],
+      "validator": "DockerHubOAT",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 128,
+      "provenance": {
+        "source": "Docker's own docs describe organization access tokens as a distinct type (docs.docker.com/security/access-tokens/) but don't publish a byte-level format; prefix and 32-char floor cross-checked between TruffleHog (pkg/detectors/dockerhub/v2/dockerhub.go) and the betterleaks gitleaks fork (config/betterleaks.toml)",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "DOCKERHUB_OAT=dckr_oat_pEjGcIcQhKLjCKybHVg0UZQ8DSlrD_Km",
+          "{\"password\": \"dckr_oat_x-FB4sKtVkyI8MlQjxZwJgbYVdkwrRA1\"}"
+        ],
+        "nomatch": [
+          "dckr_oat_short1234567890123",
+          "dckr_oat_abcDE12345678901 pEjGcIcQhKLjCKybHVg0UZQ8DSlrD_Km",
+          "dckr_oat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         ]
       }
     }

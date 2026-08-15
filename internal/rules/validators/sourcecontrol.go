@@ -255,6 +255,79 @@ func GitLabDeployToken(window []byte, trigStart, trigEnd int) (start, end int, o
 	return runToken(window, trigStart, trigEnd, 20, 50)
 }
 
+// GitLabFeedToken confirms the classic (v1) GitLab feed token shape:
+// trigger "glft-" followed by exactly 20 characters from [A-Za-z0-9_-].
+// This is GitLab's own default Devise.friendly_token length for the
+// user model's FEED_TOKEN_PREFIX field, corroborated by gitleaks'
+// "gitlab-feed-token" rule and by GitLab's own client-side secret
+// detection pattern.
+//
+// GitLab also issues a newer, structurally different "v2" feed token
+// (see GitLabFeedTokenV2) under the same "glft-" prefix; the two
+// validators safely coexist on the shared trigger because a v2 token's
+// body is always far longer than 20 bytes of [A-Za-z0-9_-] (it embeds a
+// 64-hex-character HMAC plus a dash-separated numeric ID), so this
+// validator's exact-20 length check never confirms one.
+//
+// https://docs.gitlab.com/security/tokens/#token-prefixes
+func GitLabFeedToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	return runToken(window, trigStart, trigEnd, 20, 20)
+}
+
+// gitlabFeedTokenV2HexLen is the fixed length of the HMAC-derived hex
+// segment in a GitLab v2 (path-dependent) feed token.
+const gitlabFeedTokenV2HexLen = 64
+
+// GitLabFeedTokenV2 confirms the newer, path-dependent GitLab feed token
+// shape: trigger "glft-" followed by exactly 64 hex characters, a
+// literal '-', and one or more ASCII digits (the numeric user ID this
+// token is scoped to). Unlike v1, this body is an HMAC-SHA256 digest of
+// the specific feed path keyed by the user's real feed token, not a
+// standalone random secret — but it's still sensitive: GitLab's own
+// backend accepts it as a bearer credential for that user's feed.
+//
+// https://docs.gitlab.com/security/tokens/#token-prefixes
+func GitLabFeedTokenV2(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	hexEnd := trigEnd + gitlabFeedTokenV2HexLen
+	if hexEnd > len(window) {
+		return 0, 0, false
+	}
+	hex := window[trigEnd:hexEnd]
+	for _, c := range hex {
+		if !isHexByte(c) {
+			return 0, 0, false
+		}
+	}
+	pos, ok := consumeByte(window, hexEnd, '-')
+	if !ok {
+		return 0, 0, false
+	}
+	digitsEnd, ok := consumeDigitRun(window, pos, 1, 20)
+	if !ok {
+		return 0, 0, false
+	}
+	if !boundaryOK(window, digitsEnd) {
+		return 0, 0, false
+	}
+	if isPlaceholder(hex) {
+		return 0, 0, false
+	}
+	return trigStart, digitsEnd, true
+}
+
+// GitLabPipelineTriggerToken confirms the GitLab pipeline trigger token
+// shape: trigger "glptt-" followed by exactly 40 characters from
+// [A-Za-z0-9_-]. GitLab's own client-side secret detection pattern uses
+// this full alphabet at this length; gitleaks independently corroborates
+// the 40-character length with a narrower hex-only alphabet, so the
+// broader alphabet here is a safe superset chosen to avoid false
+// negatives on a real token gitleaks' stricter pattern would miss.
+//
+// https://docs.gitlab.com/security/tokens/#token-prefixes
+func GitLabPipelineTriggerToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	return runToken(window, trigStart, trigEnd, 40, 40)
+}
+
 // NpmAccessToken confirms the npm access token shape: trigger "npm_"
 // followed by exactly 36 ASCII alphanumeric characters.
 //
@@ -288,4 +361,20 @@ func PyPIAPIToken(window []byte, trigStart, trigEnd int) (start, end int, ok boo
 // https://docs.docker.com/security/for-developers/access-tokens/
 func DockerHubPAT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 	return runToken(window, trigStart, trigEnd, 27, 100)
+}
+
+// DockerHubOAT confirms the Docker Hub organization access token shape:
+// trigger "dckr_oat_" followed by 32-100 characters from [A-Za-z0-9_-].
+// Docker's own docs describe organization access tokens (OATs) as a
+// distinct token type from personal access tokens (not tied to an
+// individual user, managed by organization owners) but don't publish a
+// byte-level format; the "dckr_oat_" prefix and 32-character floor come
+// from two independently-maintained scanners (TruffleHog and the
+// betterleaks gitleaks fork) that converge on the same shape. 100 is the
+// same generous practical ceiling DockerHubPAT uses, not a documented
+// maximum.
+//
+// https://docs.docker.com/security/access-tokens/ (token type); prefix/length: github.com/trufflesecurity/trufflehog pkg/detectors/dockerhub/v2/dockerhub.go
+func DockerHubOAT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	return runToken(window, trigStart, trigEnd, 32, 100)
 }
