@@ -35,7 +35,8 @@
           "access = os.environ.get('SECRET')",
           "credential_id = 550e8400-e29b-41d4-a716-446655440000",
           "key = short",
-          "secret = aaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          "secret = aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "`key=`rwsmyxydQrWgPCi4wtEP7qi75tWU`"
         ]
       }
     }

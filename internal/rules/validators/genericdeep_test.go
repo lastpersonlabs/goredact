@@ -109,6 +109,13 @@ func TestGenericSecretAssignment(t *testing.T) {
 			wantOK:    false,
 		},
 		{
+			name:      "empty inline backtick assignment followed by unrelated text rejected",
+			window:    "`key=`" + deepGenericBody1 + "`",
+			trigStart: len("`"),
+			trigEnd:   len("`key"),
+			wantOK:    false,
+		},
+		{
 			name:      "trigger at very end of window",
 			window:    "key",
 			trigStart: 0,

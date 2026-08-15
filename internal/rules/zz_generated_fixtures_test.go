@@ -220,7 +220,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "generic-secret-assignment",
 			match:   []string{"AWS Secret Key = rwsmyxydQrWgPCi4wtEP7qi75tWU", "Client Auth Token: 9rtyiWofxFYcbVNBebGDBV2h", "key = 69cv5BW8EwnNoBtGGe8aNAHh7NWfiM1O", "{\"credential\": \"FlOJfSS2xyK7tLQh9bZU\"}", "creds=0cXGCcKnSPVS3qsTbU7H3D8YTfkFdL"},
-			nomatch: []string{"keyboard shortcuts are useful for this workflow", "author = 'Alice Programmer'", "the monkey business continued for hours", "access = os.environ.get('SECRET')", "credential_id = 550e8400-e29b-41d4-a716-446655440000", "key = short", "secret = aaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			nomatch: []string{"keyboard shortcuts are useful for this workflow", "author = 'Alice Programmer'", "the monkey business continued for hours", "access = os.environ.get('SECRET')", "credential_id = 550e8400-e29b-41d4-a716-446655440000", "key = short", "secret = aaaaaaaaaaaaaaaaaaaaaaaaaaaa", "`key=`rwsmyxydQrWgPCi4wtEP7qi75tWU`"},
 		},
 		{
 			id:      "github-app-token",

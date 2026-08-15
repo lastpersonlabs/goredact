@@ -60,18 +60,26 @@ func skipWeakGap(window []byte, pos int) int {
 // GenericSecretAssignment confirms an assignment behind one of this
 // rule's broad, generic triggers (key, secret, auth, access, credential,
 // creds — see internal/rules/specs/generic-deep.json), not itself a
-// suffix of a longer identifier. It first tries the same tight,
-// zero-gap parse the balanced generic rules use (parseAssignmentValue,
-// which already understands the "key": ... JSON-quoted-key shape); if
-// that fails to find an immediate separator, it falls back to a
-// gap-tolerant parse (skipWeakGap) that allows a short intervening
-// phrase or hyphenated/underscored identifier before the separator.
-// The captured value must pass the same shape checks the balanced rules
-// use (isIndirectAssignmentValue, isMachineTokenValue, isAlphaSpaceOnly)
-// plus entropy.Secretlike under the stricter entropy.PresetDeepGenericValue.
-// Only the value is reported for redaction.
+// suffix of a longer identifier. Like the balanced generic rules, it
+// first rejects an empty inline assignment (isEmptyInlineAssignment) —
+// documentation fragments such as `key=` — since without that
+// guard the closing quote is mistaken for an opening value quote and
+// unrelated following text is captured as the "secret". It then tries
+// the same tight, zero-gap parse the balanced generic rules use
+// (parseAssignmentValue, which already understands the "key": ...
+// JSON-quoted-key shape); if that fails to find an immediate separator,
+// it falls back to a gap-tolerant parse (skipWeakGap) that allows a
+// short intervening phrase or hyphenated/underscored identifier before
+// the separator. The captured value must pass the same shape checks the
+// balanced rules use (isIndirectAssignmentValue, isMachineTokenValue,
+// isAlphaSpaceOnly) plus entropy.Secretlike under the stricter
+// entropy.PresetDeepGenericValue. Only the value is reported for
+// redaction.
 func GenericSecretAssignment(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 	if !isTriggerBoundaryOK(window, trigStart) {
+		return 0, 0, false
+	}
+	if isEmptyInlineAssignment(window, trigStart, trigEnd) {
 		return 0, 0, false
 	}
 	valStart, valEnd, ok := parseAssignmentValue(window, trigEnd)
