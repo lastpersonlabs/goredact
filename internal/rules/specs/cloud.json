@@ -138,6 +138,207 @@
           "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ===extra"
         ]
       }
+    },
+    {
+      "id": "azure-servicebus-sas-key",
+      "name": "Azure Service Bus / Event Hubs shared access key",
+      "triggers": [
+        {
+          "literal": "SharedAccessKey=",
+          "caseFold": true
+        }
+      ],
+      "validator": "AzureServiceBusSASKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 60,
+      "provenance": {
+        "source": "https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas; https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "Endpoint=sb://contoso-ns.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=dLIcySo/hlQZbpcUeroBfki2yLt1qc6PCYFQP79YcXe=",
+          "EVENTHUB_CONNECTION=\"Endpoint=sb://contoso-eh.servicebus.windows.net/;SharedAccessKeyName=send;SharedAccessKey=DLgtjFOrVEiHuAPOAJFIuaiduxuRQ4I/QWODAAReCfD=;EntityPath=orders\""
+        ],
+        "nomatch": [
+          "SharedAccessKey=LkkRnssrJa6yw4IUk6yEu4d+yIVGY+=",
+          "SharedAccessKey=dLIcySo/hlQZbpcUeroBfki2yLt1qc6PCYFQP79YcXe",
+          "SharedAccessKey=dLIcySo/hlQZbpcUeroBfki2yLt1qc6PCYFQP79YcXe=="
+        ]
+      }
+    },
+    {
+      "id": "azure-app-configuration-secret",
+      "name": "Azure App Configuration secret",
+      "triggers": [
+        {
+          "literal": "Secret=",
+          "caseFold": true
+        }
+      ],
+      "validator": "AzureAppConfigurationSecret",
+      "minProfile": "balanced",
+      "confidence": "medium",
+      "maxLookbehind": 0,
+      "maxLookahead": 60,
+      "provenance": {
+        "source": "https://learn.microsoft.com/en-us/azure/azure-app-configuration/enable-dynamic-configuration-dotnet-core-push-refresh; https://learn.microsoft.com/en-us/azure/service-connector/how-to-integrate-app-configuration",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "AZURE_APPCONFIG_CONNECTION_STRING=Endpoint=https://contoso.azconfig.io;Id=abcd-e6-s0:tl6ABcdefGHi7kLMno;Secret=mmxAIeZe895Wtq/pyHd+4RKKU6RfN71uJyIJ1Vzm53g=",
+          "{\"connectionString\":\"Endpoint=https://contoso.azconfig.io;Id=09pv-l0-s0:opFCQMC6zZ9485xJgN;Secret=iaTWpoAYKKGb273wx7ErgccAESuzBn3NcoaAoP37zKP=\"}"
+        ],
+        "nomatch": [
+          "Secret=jCIM7QEMhof8hn9tGqXB=",
+          "Secret=mmxAIeZe895Wtq/pyHd+4RKKU6RfN71uJyIJ1Vzm53g",
+          "client_secret=mmxAIeZe895Wtq/pyHd+4RKKU6RfN71uJyIJ1Vzm53gXX"
+        ]
+      }
+    },
+    {
+      "id": "vault-service-token",
+      "name": "HashiCorp Vault service token",
+      "triggers": [
+        {
+          "literal": "hvs.",
+          "caseFold": false
+        }
+      ],
+      "validator": "VaultServiceToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 170,
+      "provenance": {
+        "source": "https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export VAULT_TOKEN=hvs.ld4Ki-Hfk1htnZr3dfRKIbAPeW6N9c54fl9W2Fmz9c238OBYbOQjsfVeZdWc45s-4D3q2KyKXcJmNUJ4o7L_-RfvuZfhMuTfHRLu",
+          "{\"auth\":{\"client_token\":\"hvs.nssrJa6yw4IUk6yEu4d-yIVGKpG3tDejyK9pTLdUSl_Vq6wdBNoGaf-TyrN1Djzdd-Jsmdo41LD-iQdD5v\"}}"
+        ],
+        "nomatch": [
+          "hvs.tooshort",
+          "hvs.XXXXXXXXXXXXXXXXXXXXXXXX"
+        ]
+      }
+    },
+    {
+      "id": "vault-batch-token",
+      "name": "HashiCorp Vault batch token",
+      "triggers": [
+        {
+          "literal": "hvb.",
+          "caseFold": false
+        }
+      ],
+      "validator": "VaultBatchToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 330,
+      "provenance": {
+        "source": "https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export VAULT_TOKEN=hvb.KpG3tDejyK9pTLdUSl_Vq6wdBNoGaf-TyrN1Djzdd-Jsmdo41LD-iQdD5veIiTfY02uKTx4ioKi7IOLaIhbbUuYTN_ZEvWVYPknt1z18SGmNFPdLIcySo_hlQZbpcUeroBfki2yLt1qc6PCYFQP79YcXeDLgtjFOrVEiHuAPOAJFIuaiduxuRQ4I_QWODAAReCfDLkkR"
+        ],
+        "nomatch": [
+          "hvb.tooshort"
+        ]
+      }
+    },
+    {
+      "id": "terraform-cloud-api-token",
+      "name": "HCP Terraform / Terraform Enterprise API token",
+      "triggers": [
+        {
+          "literal": ".atlasv1.",
+          "caseFold": false
+        }
+      ],
+      "validator": "TerraformCloudAPIToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 16,
+      "maxLookahead": 90,
+      "provenance": {
+        "source": "https://developer.hashicorp.com/terraform/cloud-docs/api-docs/user-tokens; https://developer.hashicorp.com/terraform/cloud-docs/api-docs/team-tokens; https://developer.hashicorp.com/terraform/cloud-docs/api-docs/organization-tokens",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export TF_TOKEN_app_terraform_io=fbWTHJCs5eFRVZ.atlasv1.Hfk1htnZr3dfRKIbAPeW6N9c54fl9W2Fmz9c238OBYbOQjsfVeZdWc45s-4D3q2K",
+          "{\"credentials\":{\"app.terraform.io\":{\"token\":\"msXQyb5HRPrMMQ.atlasv1.mNUJ4o7L_-RfvuZfhMuTfHRLuKpG3tDejyK9pTLdUSl_Vq6wdBNoGaf-TyrN1Djzdd-Jsm\"}}}"
+        ],
+        "nomatch": [
+          "7Tbh35JCAso6J7.atlasv1.-iQdD5veIiTfY02uKTx4ioKi7IOLaIhbbUuYTN_ZEvWVYPknt1z18SGmNFP",
+          "short.atlasv1.Hfk1htnZr3dfRKIbAPeW6N9c54fl9W2Fmz9c238OBYbOQjsfVeZdWc45s-4D3q2K"
+        ]
+      }
+    },
+    {
+      "id": "aws-bedrock-long-lived-api-key",
+      "name": "AWS Bedrock long-lived API key",
+      "triggers": [
+        {
+          "literal": "ABSKQmVkcm9ja0FQSUtleS",
+          "caseFold": false
+        }
+      ],
+      "validator": "AWSBedrockLongLivedAPIKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 280,
+      "provenance": {
+        "source": "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html; https://github.com/awslabs/git-secrets",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "AWS_BEARER_TOKEN_BEDROCK=ABSKQmVkcm9ja0FQSUtleS1JsxxGJaQ4E7VYU861k0Q2JFWurEFcHTB3pWIQsxSkp17IPEFuZJ3LArOxD1u7fB08el5jzT3r5+5VZtUxmlfUSk2VaOi1tSZz3ARZsPFTH+BW",
+          "Authorization: Bearer ABSKQmVkcm9ja0FQSUtleSlRvuuRnt7Y3o6/Q75w8HPaglhAJxUx5Ayt9W+dXYUTiNW8XCYbXU1vvUoIQYUm1lHGdHQyywBI6VetDUAP8gleQJlIpJZ4J97nrpRrXps+PhB2tMROOlsn5She1qBi4hWthgd5CeARuVfb12mwEQ54=="
+        ],
+        "nomatch": [
+          "ABSKQmVkcm9ja0FQSUtleS0ITXcfEizf9p/ipTSw4dhRz68i9+ZVFYXE+s3GQoCTnVmfRUtn"
+        ]
+      }
+    },
+    {
+      "id": "aws-bedrock-short-lived-api-key",
+      "name": "AWS Bedrock short-lived API key",
+      "triggers": [
+        {
+          "literal": "bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29t",
+          "caseFold": false
+        }
+      ],
+      "validator": "AWSBedrockShortLivedAPIKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 4200,
+      "provenance": {
+        "source": "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html; https://github.com/aws/aws-bedrock-token-generator-js; https://github.com/awslabs/git-secrets",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "AWS_BEARER_TOKEN_BEDROCK=bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29tOvUPuU/PvaMhbol1ZyMjdn5udwoLB7xX0cr33qbGURHJUg4hNRSbHRfK5a4C4NSIS+kyy+mZA8aGG7QIU8GfPEHvflcBc6GAs2jGhA6dy1RV1of2wVtCK8ezu5mAdYTn1V8wdoZBsiZrGINe9lh7kFlpI0NYPew35N2Jlf4RM+0fzFJDMiSTu+IgWQ512K7kkHF7xjgYmJFpEJvmGW5+08pbKK2Xas4qyOSCPmsO6lGxxrMp7i98XG4IqFPkc+rt9bFUnW9uoJT6Sy4SnHeY6zpTkU18MxorrBZperajgvaN",
+          "Authorization: Bearer bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29tKSpybDxEDr1zJkNrNg0CfS39lWZIUzBRDmsQTTGcCDO4DudsHfptBHDXTCjN=="
+        ],
+        "nomatch": [
+          "bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29t35bxEdKAy+"
+        ]
+      }
     }
   ]
 }

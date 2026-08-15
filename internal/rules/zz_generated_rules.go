@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-efbbe1c074e0"
+const Version = "builtin-8388559dadb2"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -53,6 +53,30 @@ func init() {
 			MaxLookahead:  18,
 		},
 		{
+			ID:   "aws-bedrock-long-lived-api-key",
+			Name: "AWS Bedrock long-lived API key",
+			Triggers: []Trigger{
+				{Literal: "ABSKQmVkcm9ja0FQSUtleS", CaseFold: false},
+			},
+			Validate:      validators.AWSBedrockLongLivedAPIKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  280,
+		},
+		{
+			ID:   "aws-bedrock-short-lived-api-key",
+			Name: "AWS Bedrock short-lived API key",
+			Triggers: []Trigger{
+				{Literal: "bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29t", CaseFold: false},
+			},
+			Validate:      validators.AWSBedrockShortLivedAPIKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  4200,
+		},
+		{
 			ID:   "aws-secret-access-key",
 			Name: "AWS secret access key",
 			Triggers: []Trigger{
@@ -63,6 +87,30 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
 			MaxLookahead:  80,
+		},
+		{
+			ID:   "azure-app-configuration-secret",
+			Name: "Azure App Configuration secret",
+			Triggers: []Trigger{
+				{Literal: "Secret=", CaseFold: true},
+			},
+			Validate:      validators.AzureAppConfigurationSecret,
+			MinProfile:    ProfileBalanced,
+			Confidence:    ConfidenceMedium,
+			MaxLookbehind: 0,
+			MaxLookahead:  60,
+		},
+		{
+			ID:   "azure-servicebus-sas-key",
+			Name: "Azure Service Bus / Event Hubs shared access key",
+			Triggers: []Trigger{
+				{Literal: "SharedAccessKey=", CaseFold: true},
+			},
+			Validate:      validators.AzureServiceBusSASKey,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  60,
 		},
 		{
 			ID:   "azure-storage-account-key",
@@ -492,6 +540,30 @@ func init() {
 			MaxLookahead:  80,
 		},
 		{
+			ID:   "supabase-service-role-key",
+			Name: "Supabase service-role key",
+			Triggers: []Trigger{
+				{Literal: "eyJ", CaseFold: false},
+			},
+			Validate:      validators.SupabaseServiceRoleKey,
+			MinProfile:    ProfileBalanced,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 1,
+			MaxLookahead:  8192,
+		},
+		{
+			ID:   "terraform-cloud-api-token",
+			Name: "HCP Terraform / Terraform Enterprise API token",
+			Triggers: []Trigger{
+				{Literal: ".atlasv1.", CaseFold: false},
+			},
+			Validate:      validators.TerraformCloudAPIToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 16,
+			MaxLookahead:  90,
+		},
+		{
 			ID:   "twilio-api-key-sid",
 			Name: "Twilio API key SID",
 			Triggers: []Trigger{
@@ -514,6 +586,30 @@ func init() {
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 16,
 			MaxLookahead:  200,
+		},
+		{
+			ID:   "vault-batch-token",
+			Name: "HashiCorp Vault batch token",
+			Triggers: []Trigger{
+				{Literal: "hvb.", CaseFold: false},
+			},
+			Validate:      validators.VaultBatchToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  330,
+		},
+		{
+			ID:   "vault-service-token",
+			Name: "HashiCorp Vault service token",
+			Triggers: []Trigger{
+				{Literal: "hvs.", CaseFold: false},
+			},
+			Validate:      validators.VaultServiceToken,
+			MinProfile:    ProfileFast,
+			Confidence:    ConfidenceHigh,
+			MaxLookbehind: 0,
+			MaxLookahead:  170,
 		},
 	})
 }

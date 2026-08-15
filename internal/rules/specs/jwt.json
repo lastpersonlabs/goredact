@@ -35,6 +35,37 @@
           "eyJhbGciOiJIUzI1NiJ9.eyJhIjoxfQ.q4TnV7bXk2LwZ9pR0sYhF6dJ1aG5u"
         ]
       }
+    },
+    {
+      "id": "supabase-service-role-key",
+      "name": "Supabase service-role key",
+      "triggers": [
+        {
+          "literal": "eyJ",
+          "caseFold": false
+        }
+      ],
+      "validator": "SupabaseServiceRoleKey",
+      "minProfile": "balanced",
+      "confidence": "high",
+      "maxLookbehind": 1,
+      "maxLookahead": 8192,
+      "provenance": {
+        "source": "https://supabase.com/docs/guides/api/api-keys (legacy JWT-based service_role key, distinguished from the anon key by its \"role\":\"service_role\" claim, which Postgres row-level-security policies treat as bypassing RLS); https://www.rfc-editor.org/rfc/rfc7519 (JWT claims)",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "{\"env\":{\"SUPABASE_SERVICE_ROLE_KEY\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMTUzNTY4MDB9.TsKdOf3JR-kSPIbMXpSE2IlyTs8tIAGHgmy-qA5m_Xc\"}}",
+          "export SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMTUzNTY4MDB9.TsKdOf3JR-kSPIbMXpSE2IlyTs8tIAGHgmy-qA5m_Xc",
+          "2026-08-14T18:02:11Z DEBUG creating admin client with key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjogInNlcnZpY2Vfcm9sZSIsICJpc3MiOiAic3VwYWJhc2UiLCAicmVmIjogImFiY2RlZmdoaWprbG1ub3AiLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDIwMTUzNTY4MDB9.EbrK-izzHh_fuSf8Ubf5ItUGm0ZkL0-HuL6cVkAnoqs"
+        ],
+        "nomatch": [
+          "export SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoyMDE1MzU2ODAwfQ.EbrK-izzHh_fuSf8Ubf5ItUGm0ZkL0-HuL6cVkAnoqs",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MjAxNTM1NjgwMH0.TsKdOf3JR-kSPIbMXpSE2IlyTs8tIAGHgmy-qA5m_Xc",
+          "{\"role\":\"tool\",\"content\":\"exchanged assertion eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdmMtcmVwb3J0aW5nIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmludGVybmFsLmV4YW1wbGUiLCJleHAiOjE3NjcyMjU2MDB9.q4TnV7bXk2LwZ9pR0sYhF6dJ1aG5uEiO8cM3rTvQ6wN\"}"
+        ]
+      }
     }
   ]
 }

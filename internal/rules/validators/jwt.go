@@ -1,9 +1,14 @@
-// This file implements the standalone JWT detector: a bare JWS compact
-// serialization (header.payload.signature) anywhere in the input, with no
-// surrounding context required. Contextual occurrences (Authorization
-// headers, cookies) are also caught by the contextual rules; this rule
-// exists for the bare tokens those rules cannot see — JWTs pasted into
-// agent transcripts, log lines, and tool output.
+// This file implements two JWT-based detectors sharing one parser: the
+// standalone JWT detector (a bare JWS compact serialization,
+// header.payload.signature, anywhere in the input with no surrounding
+// context required) and the Supabase service-role key detector (the same
+// shape, additionally requiring a `"role":"service_role"` claim in the
+// decoded payload — the claim Supabase bakes into its highest-privilege
+// API key, the one Postgres treats as bypassing row-level security).
+// Contextual occurrences (Authorization headers, cookies) are also caught
+// by the contextual rules; these rules exist for the bare tokens those
+// rules cannot see — JWTs pasted into agent transcripts, log lines, and
+// tool output.
 //
 // The shape enforced here follows the betterleaks standalone-JWT rule
 // (both the header and the payload segment must begin with "ey" — the
@@ -12,7 +17,11 @@
 // alphabet RFC 7515 actually specifies for the two JSON segments.
 package validators
 
-import "github.com/lastpersonlabs/goredact/internal/entropy"
+import (
+	"encoding/base64"
+
+	"github.com/lastpersonlabs/goredact/internal/entropy"
+)
 
 const (
 	// jwtSegmentMinLen is the minimum length of the header and payload
@@ -64,10 +73,14 @@ func isJWTSignatureByte(c byte) bool {
 // EOF that is the true end of input, and mid-stream (a JWT longer than
 // the rule's lookahead) redacting the buffered prefix protects strictly
 // more than rejecting the whole token would.
-func JWT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+//
+// parseJWT also reports the window-relative bounds of the payload segment
+// (excluding the "." separators on either side), so SupabaseServiceRoleKey
+// can inspect its decoded claims without re-parsing the token shape.
+func parseJWT(window []byte, trigStart, trigEnd int) (start, end, payStart, payEnd int, ok bool) {
 	if trigStart > 0 {
 		if p := window[trigStart-1]; isBase64URLByte(p) || p == '.' {
-			return 0, 0, false
+			return 0, 0, 0, 0, false
 		}
 	}
 
@@ -77,27 +90,28 @@ func JWT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 		pos++
 	}
 	if pos-trigStart < jwtSegmentMinLen {
-		return 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 	pos, ok = consumeByte(window, pos, '.')
 	if !ok {
-		return 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 
 	// Payload segment: must itself begin with "ey" (base64 of '{').
 	segStart := pos
 	if pos+2 > len(window) || window[pos] != 'e' || window[pos+1] != 'y' {
-		return 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 	for pos < len(window) && isBase64URLByte(window[pos]) {
 		pos++
 	}
 	if pos-segStart < jwtSegmentMinLen {
-		return 0, 0, false
+		return 0, 0, 0, 0, false
 	}
+	segEnd := pos
 	pos, ok = consumeByte(window, pos, '.')
 	if !ok {
-		return 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 
 	// Signature segment, with up to two bytes of base64 padding.
@@ -106,16 +120,72 @@ func JWT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 		pos++
 	}
 	if pos-sigStart < jwtSignatureMinLen {
-		return 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 	if entropy.IsPlaceholder(window[sigStart:pos]) {
-		return 0, 0, false
+		return 0, 0, 0, 0, false
 	}
 	for pad := 0; pad < 2 && pos < len(window) && window[pos] == '='; pad++ {
 		pos++
 	}
 	if pos < len(window) && (isAlnum(window[pos]) || window[pos] == '=') {
+		return 0, 0, 0, 0, false
+	}
+	return trigStart, pos, segStart, segEnd, true
+}
+
+// JWT confirms a standalone JWS compact serialization. See parseJWT for
+// the exact shape enforced.
+func JWT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	start, end, _, _, ok = parseJWT(window, trigStart, trigEnd)
+	return start, end, ok
+}
+
+// supabaseServiceRoleClaimKey and supabaseServiceRoleClaimValue are the
+// JSON member Supabase bakes into every service-role key's payload,
+// distinguishing it from the low-privilege anon key ("role":"anon") and
+// from arbitrary bearer JWTs. RFC 8259 JSON strings are always
+// double-quoted, so the literal quote bytes are part of the match; only
+// the whitespace some encoders insert around ':' is treated as optional.
+const (
+	supabaseServiceRoleClaimKey   = `"role"`
+	supabaseServiceRoleClaimValue = `"service_role"`
+)
+
+// hasServiceRoleClaim reports whether decoded JSON (a JWT payload,
+// already base64url-decoded) contains the member
+// `"role":"service_role"`, tolerating optional spaces around the colon.
+// It is a targeted scan rather than a full JSON parse: sufficient to
+// disambiguate Supabase's own key shapes, and forgiving of a payload
+// whose other fields are malformed or reordered.
+func hasServiceRoleClaim(payload []byte) bool {
+	idx := indexLiteral(payload, supabaseServiceRoleClaimKey)
+	if idx < 0 {
+		return false
+	}
+	pos := idx + len(supabaseServiceRoleClaimKey)
+	pos = skipSpaces(payload, pos)
+	if pos >= len(payload) || payload[pos] != ':' {
+		return false
+	}
+	pos++
+	pos = skipSpaces(payload, pos)
+	return indexLiteral(payload[pos:], supabaseServiceRoleClaimValue) == 0
+}
+
+// SupabaseServiceRoleKey confirms the same JWS compact-serialization shape
+// as JWT (see parseJWT), additionally base64url-decoding the payload
+// segment and requiring a `"role":"service_role"` claim within it. A
+// payload that fails to decode as base64url — truncated by the window, or
+// simply not base64 — is rejected rather than guessed at.
+func SupabaseServiceRoleKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	start, end, payStart, payEnd, ok := parseJWT(window, trigStart, trigEnd)
+	if !ok {
 		return 0, 0, false
 	}
-	return trigStart, pos, true
+	decoded, err := base64.RawURLEncoding.DecodeString(string(window[payStart:payEnd]))
+	if err != nil || !hasServiceRoleClaim(decoded) {
+		return 0, 0, false
+	}
+	return start, end, true
 }

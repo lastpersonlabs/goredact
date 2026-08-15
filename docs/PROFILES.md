@@ -71,7 +71,7 @@ much memory/disk do I use" or "is the output reproducible."
 
 ## Rule table
 
-39 built-in rules as of this writing. Columns: rule ID, name, minimum
+47 built-in rules as of this writing. Columns: rule ID, name, minimum
 profile that includes the rule (`fast` rules also run in `balanced` and
 `deep`; `balanced` rules also run in `deep`), confidence, and trigger
 literals (the Aho–Corasick literals that must appear before the rule's
@@ -83,13 +83,17 @@ finding).
 | `anthropic-api-key` | Anthropic API key | fast | high | `sk-ant-` |
 | `authorization-bearer` | Authorization header credential | fast | high | `authorization:`, `proxy-authorization:` |
 | `aws-access-key-id` | AWS access key ID | fast | high | `AKIA`, `ASIA`, `ABIA`, `ACCA` |
+| `aws-bedrock-long-lived-api-key` | AWS Bedrock long-lived API key | fast | high | `ABSKQmVkcm9ja0FQSUtleS` |
+| `aws-bedrock-short-lived-api-key` | AWS Bedrock short-lived API key | fast | high | `bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29t` |
 | `aws-secret-access-key` | AWS secret access key | fast | high | `aws_secret_access_key` |
+| `azure-app-configuration-secret` | Azure App Configuration secret | balanced | medium | `Secret=` |
+| `azure-servicebus-sas-key` | Azure Service Bus / Event Hubs shared access key | fast | high | `SharedAccessKey=` |
 | `azure-storage-account-key` | Azure storage account key | fast | high | `AccountKey=` |
 | `command-line-password-flag` | Command-line password/token flag | balanced | medium | `--password`, `--passwd`, `--token`, `--api-key`, `--secret` |
 | `cookie-session-token` | Session/token cookie value | balanced | medium | `cookie:`, `set-cookie:`, `session=`, `sid=`, `token=`, `jwt=`, `auth=` |
 | `dockerhub-pat` | Docker Hub personal access token | fast | high | `dckr_pat_` |
 | `gcp-api-key` | GCP API key | fast | high | `AIza` |
-| `generic-api-key-assignment` | Generic API key / access token assignment | balanced | medium | `api_key`, `apikey`, `api-key`, `access_token`, `auth_token`, `client_secret`, `secret_key`, `private_token` |
+| `generic-api-key-assignment` | Generic API key / access token assignment | balanced | medium | `api_key`, `apikey`, `api-key`, `access_token`, `auth_token`, `client_secret`, `secret_key`, `secret_key_base`, `session_secret`, `private_token` |
 | `generic-bearer-like-token-assignment` | Generic bearer-like token assignment | balanced | low | `token` |
 | `generic-password-assignment` | Generic password assignment | balanced | medium | `password`, `passwd`, `pwd` |
 | `github-app-token` | GitHub App installation/user-to-server token | fast | high | `ghu_`, `ghs_` |
@@ -117,11 +121,15 @@ finding).
 | `slack-user-token` | Slack user token | fast | high | `xoxp-`, `xoxa-`, `xoxr-`, `xoxs-` |
 | `stripe-secret-key` | Stripe secret API key | fast | high | `sk_live_`, `sk_test_`, `rk_live_`, `rk_test_` |
 | `stripe-webhook-secret` | Stripe webhook signing secret | fast | high | `whsec_` |
+| `supabase-service-role-key` | Supabase service-role key | balanced | high | `eyJ` |
+| `terraform-cloud-api-token` | HCP Terraform / Terraform Enterprise API token | fast | high | `.atlasv1.` |
 | `twilio-api-key-sid` | Twilio API key SID | balanced | medium | `SK` |
 | `url-credentials` | URL userinfo password | fast | high | `://` |
+| `vault-batch-token` | HashiCorp Vault batch token | fast | high | `hvb.` |
+| `vault-service-token` | HashiCorp Vault service token | fast | high | `hvs.` |
 
-Per-profile counts: `fast` = 31 rules, `balanced` = 39 rules (adds 8),
-`deep` = 39 rules (adds 0, see above). Query these programmatically with
+Per-profile counts: `fast` = 37 rules, `balanced` = 47 rules (adds 10),
+`deep` = 47 rules (adds 0, see above). Query these programmatically with
 `goredact.BuiltinRules()` (every built-in, any profile) and
 `(*Engine).ActiveRules()` (what a specific configured `Engine` actually
 runs).
@@ -136,13 +144,18 @@ low-confidence contextual rules are excluded from fast.
 their short or generic triggers require additional structural validation.
 `generic-bearer-like-token-assignment` is also balanced: its `token` trigger
 is weaker than `api_key` or `password`, and its validator is tuned against the
-documented `FalsePositiveBudgetPerTenMiB` budget.
+documented `FalsePositiveBudgetPerTenMiB` budget. `azure-app-configuration-secret`
+joins them for the same reason: its `Secret=` trigger is a short, generic
+word rather than a long unique prefix.
 
 `jwt` is a balanced rule even though its shape (three dot-separated
 base64url segments, header and payload both starting with `ey`) is
 structural: agent transcripts from auth-debugging sessions are dense with
 `eyJ`-prefixed strings that are base64 JSON but not tokens, so the rule
-stays out of the noise-averse fast tier.
+stays out of the noise-averse fast tier. `supabase-service-role-key` shares
+`jwt`'s `eyJ` trigger and lookahead cost (it decodes the same payload segment
+to check for a `"role":"service_role"` claim), so it stays in `balanced`
+alongside it even though the claim check pushes its own confidence to high.
 
 `New(Config{})` selects `ProfileBalanced`. The zero `Profile` value is
 reserved as unspecified so callers receive the documented default;

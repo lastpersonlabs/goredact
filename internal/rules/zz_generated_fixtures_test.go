@@ -4,7 +4,11 @@
 //   anthropic-api-key: https://docs.anthropic.com/en/api/getting-started (original)
 //   authorization-bearer: https://www.rfc-editor.org/rfc/rfc6750 (Bearer); https://www.rfc-editor.org/rfc/rfc7617 (Basic); https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html (AWS SigV4) (original)
 //   aws-access-key-id: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids (original)
+//   aws-bedrock-long-lived-api-key: https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html; https://github.com/awslabs/git-secrets (original)
+//   aws-bedrock-short-lived-api-key: https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html; https://github.com/aws/aws-bedrock-token-generator-js; https://github.com/awslabs/git-secrets (original)
 //   aws-secret-access-key: https://docs.aws.amazon.com/general/latest/gr/aws-access-keys-best-practices.html (original)
+//   azure-app-configuration-secret: https://learn.microsoft.com/en-us/azure/azure-app-configuration/enable-dynamic-configuration-dotnet-core-push-refresh; https://learn.microsoft.com/en-us/azure/service-connector/how-to-integrate-app-configuration (original)
+//   azure-servicebus-sas-key: https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas; https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string (original)
 //   azure-storage-account-key: https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage (original)
 //   command-line-password-flag: Original project design; no single external specification (original)
 //   cookie-session-token: https://www.rfc-editor.org/rfc/rfc6265 (original)
@@ -38,8 +42,12 @@
 //   slack-user-token: https://api.slack.com/authentication/token-types#user (original)
 //   stripe-secret-key: https://docs.stripe.com/keys (original)
 //   stripe-webhook-secret: https://docs.stripe.com/webhooks#verify-official-libraries (original)
+//   supabase-service-role-key: https://supabase.com/docs/guides/api/api-keys (legacy JWT-based service_role key, distinguished from the anon key by its "role":"service_role" claim, which Postgres row-level-security policies treat as bypassing RLS); https://www.rfc-editor.org/rfc/rfc7519 (JWT claims) (original)
+//   terraform-cloud-api-token: https://developer.hashicorp.com/terraform/cloud-docs/api-docs/user-tokens; https://developer.hashicorp.com/terraform/cloud-docs/api-docs/team-tokens; https://developer.hashicorp.com/terraform/cloud-docs/api-docs/organization-tokens (original)
 //   twilio-api-key-sid: https://www.twilio.com/docs/iam/api-keys (original)
 //   url-credentials: https://www.rfc-editor.org/rfc/rfc3986#section-3.2.1 (original)
+//   vault-batch-token: https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml (original)
+//   vault-service-token: https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml (original)
 
 package rules
 
@@ -70,9 +78,29 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			nomatch: []string{"AWS_ACCESS_KEY_ID=AKIASHORT", "AWS_ACCESS_KEY_ID=AKIAujzdegxdncf32epf", "AWS_ACCESS_KEY_ID=XAKIAUJZDEGXDNCF32EPF", "AWS_ACCESS_KEY_ID=AKIAUJZDEGXDNCF32EPF9", "# example from the AWS docs: AKIAIOSFODNN7EXAMPLE"},
 		},
 		{
+			id:      "aws-bedrock-long-lived-api-key",
+			match:   []string{"AWS_BEARER_TOKEN_BEDROCK=ABSKQmVkcm9ja0FQSUtleS1JsxxGJaQ4E7VYU861k0Q2JFWurEFcHTB3pWIQsxSkp17IPEFuZJ3LArOxD1u7fB08el5jzT3r5+5VZtUxmlfUSk2VaOi1tSZz3ARZsPFTH+BW", "Authorization: Bearer ABSKQmVkcm9ja0FQSUtleSlRvuuRnt7Y3o6/Q75w8HPaglhAJxUx5Ayt9W+dXYUTiNW8XCYbXU1vvUoIQYUm1lHGdHQyywBI6VetDUAP8gleQJlIpJZ4J97nrpRrXps+PhB2tMROOlsn5She1qBi4hWthgd5CeARuVfb12mwEQ54=="},
+			nomatch: []string{"ABSKQmVkcm9ja0FQSUtleS0ITXcfEizf9p/ipTSw4dhRz68i9+ZVFYXE+s3GQoCTnVmfRUtn"},
+		},
+		{
+			id:      "aws-bedrock-short-lived-api-key",
+			match:   []string{"AWS_BEARER_TOKEN_BEDROCK=bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29tOvUPuU/PvaMhbol1ZyMjdn5udwoLB7xX0cr33qbGURHJUg4hNRSbHRfK5a4C4NSIS+kyy+mZA8aGG7QIU8GfPEHvflcBc6GAs2jGhA6dy1RV1of2wVtCK8ezu5mAdYTn1V8wdoZBsiZrGINe9lh7kFlpI0NYPew35N2Jlf4RM+0fzFJDMiSTu+IgWQ512K7kkHF7xjgYmJFpEJvmGW5+08pbKK2Xas4qyOSCPmsO6lGxxrMp7i98XG4IqFPkc+rt9bFUnW9uoJT6Sy4SnHeY6zpTkU18MxorrBZperajgvaN", "Authorization: Bearer bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29tKSpybDxEDr1zJkNrNg0CfS39lWZIUzBRDmsQTTGcCDO4DudsHfptBHDXTCjN=="},
+			nomatch: []string{"bedrock-api-key-YmVkcm9jay5hbWF6b25hd3MuY29t35bxEdKAy+"},
+		},
+		{
 			id:      "aws-secret-access-key",
 			match:   []string{"AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H", "aws_secret_access_key: bkQfyy/KV5zjR3j1twdTKWTddB+XhkAS1voQG6yy", "aws_secret_access_key = 'fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H'"},
 			nomatch: []string{"AWS_SECRET_ACCESS_KEY=tooshort", "AWS_SECRET_ACCESS_KEY aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/!", "aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"},
+		},
+		{
+			id:      "azure-app-configuration-secret",
+			match:   []string{"AZURE_APPCONFIG_CONNECTION_STRING=Endpoint=https://contoso.azconfig.io;Id=abcd-e6-s0:tl6ABcdefGHi7kLMno;Secret=mmxAIeZe895Wtq/pyHd+4RKKU6RfN71uJyIJ1Vzm53g=", "{\"connectionString\":\"Endpoint=https://contoso.azconfig.io;Id=09pv-l0-s0:opFCQMC6zZ9485xJgN;Secret=iaTWpoAYKKGb273wx7ErgccAESuzBn3NcoaAoP37zKP=\"}"},
+			nomatch: []string{"Secret=jCIM7QEMhof8hn9tGqXB=", "Secret=mmxAIeZe895Wtq/pyHd+4RKKU6RfN71uJyIJ1Vzm53g", "client_secret=mmxAIeZe895Wtq/pyHd+4RKKU6RfN71uJyIJ1Vzm53gXX"},
+		},
+		{
+			id:      "azure-servicebus-sas-key",
+			match:   []string{"Endpoint=sb://contoso-ns.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=dLIcySo/hlQZbpcUeroBfki2yLt1qc6PCYFQP79YcXe=", "EVENTHUB_CONNECTION=\"Endpoint=sb://contoso-eh.servicebus.windows.net/;SharedAccessKeyName=send;SharedAccessKey=DLgtjFOrVEiHuAPOAJFIuaiduxuRQ4I/QWODAAReCfD=;EntityPath=orders\""},
+			nomatch: []string{"SharedAccessKey=LkkRnssrJa6yw4IUk6yEu4d+yIVGY+=", "SharedAccessKey=dLIcySo/hlQZbpcUeroBfki2yLt1qc6PCYFQP79YcXe", "SharedAccessKey=dLIcySo/hlQZbpcUeroBfki2yLt1qc6PCYFQP79YcXe=="},
 		},
 		{
 			id:      "azure-storage-account-key",
@@ -240,6 +268,16 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			nomatch: []string{"whsec_fFwD3HJoKyrbmEYYmdhQ", "whsec_ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ", "whsec_7YFjS1on43XkMtECqOx_SF2O3GYRdo1XKXWNqRs7r"},
 		},
 		{
+			id:      "supabase-service-role-key",
+			match:   []string{"{\"env\":{\"SUPABASE_SERVICE_ROLE_KEY\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMTUzNTY4MDB9.TsKdOf3JR-kSPIbMXpSE2IlyTs8tIAGHgmy-qA5m_Xc\"}}", "export SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMTUzNTY4MDB9.TsKdOf3JR-kSPIbMXpSE2IlyTs8tIAGHgmy-qA5m_Xc", "2026-08-14T18:02:11Z DEBUG creating admin client with key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjogInNlcnZpY2Vfcm9sZSIsICJpc3MiOiAic3VwYWJhc2UiLCAicmVmIjogImFiY2RlZmdoaWprbG1ub3AiLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDIwMTUzNTY4MDB9.EbrK-izzHh_fuSf8Ubf5ItUGm0ZkL0-HuL6cVkAnoqs"},
+			nomatch: []string{"export SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoyMDE1MzU2ODAwfQ.EbrK-izzHh_fuSf8Ubf5ItUGm0ZkL0-HuL6cVkAnoqs", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MjAxNTM1NjgwMH0.TsKdOf3JR-kSPIbMXpSE2IlyTs8tIAGHgmy-qA5m_Xc", "{\"role\":\"tool\",\"content\":\"exchanged assertion eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdmMtcmVwb3J0aW5nIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmludGVybmFsLmV4YW1wbGUiLCJleHAiOjE3NjcyMjU2MDB9.q4TnV7bXk2LwZ9pR0sYhF6dJ1aG5uEiO8cM3rTvQ6wN\"}"},
+		},
+		{
+			id:      "terraform-cloud-api-token",
+			match:   []string{"export TF_TOKEN_app_terraform_io=fbWTHJCs5eFRVZ.atlasv1.Hfk1htnZr3dfRKIbAPeW6N9c54fl9W2Fmz9c238OBYbOQjsfVeZdWc45s-4D3q2K", "{\"credentials\":{\"app.terraform.io\":{\"token\":\"msXQyb5HRPrMMQ.atlasv1.mNUJ4o7L_-RfvuZfhMuTfHRLuKpG3tDejyK9pTLdUSl_Vq6wdBNoGaf-TyrN1Djzdd-Jsm\"}}}"},
+			nomatch: []string{"7Tbh35JCAso6J7.atlasv1.-iQdD5veIiTfY02uKTx4ioKi7IOLaIhbbUuYTN_ZEvWVYPknt1z18SGmNFP", "short.atlasv1.Hfk1htnZr3dfRKIbAPeW6N9c54fl9W2Fmz9c238OBYbOQjsfVeZdWc45s-4D3q2K"},
+		},
+		{
 			id:      "twilio-api-key-sid",
 			match:   []string{"export TWILIO_API_KEY_SID=SK3931bdb2a0df3dbe4d58fed8a728e7ec", "{\"api_key_sid\": \"SKa0fa5f6b8a880627df7ffe0297c79bfb\"}"},
 			nomatch: []string{"SKDABE898736A3566F893697B590481194", "SKf309ffea518f32cf21449273d7cee9", "the TASKd9136682575250def91799e2786d3748 list", "clean the DESK421599e3e9c8fe21da80270815fe85df now"},
@@ -248,6 +286,16 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			id:      "url-credentials",
 			match:   []string{"DATABASE_URL=postgres://svc_user:wZ8kQ3vR7pL4mN2x@db.internal:5432/app", "redis://:q8LmPz31vTk@cache.prod.svc:6379/0", "{\"msg\":\"connecting\",\"dsn\":\"mysql://root:Vt5xK8nQ2wZ7@10.0.0.12:3306/orders\"}", "amqps://ingest:R7pL4mN2xT6b@mq.internal:5671/%2Fprod"},
 			nomatch: []string{"https://deploy@github.com/org/repo.git", "postgres://user:password@localhost:5432/db", "postgres://user:content@localhost:5432/db", "https://user:TOKEN@github.com/owner/repo.git", "postgres://user:unterminated%zz@localhost/db", "see http://user:pass@host.example.com for the URL shape", "redis://:@cache.internal:6379", "note: the \"://\" separator splits scheme from authority", "https://status.example.com/healthz", "https://git:ghp_abc123@github.com/org/repo.git", "https://user:REDACTED@github.com/org/repo.git", "postgres://app:$DB_PASSWORD@db:5432/app"},
+		},
+		{
+			id:      "vault-batch-token",
+			match:   []string{"export VAULT_TOKEN=hvb.KpG3tDejyK9pTLdUSl_Vq6wdBNoGaf-TyrN1Djzdd-Jsmdo41LD-iQdD5veIiTfY02uKTx4ioKi7IOLaIhbbUuYTN_ZEvWVYPknt1z18SGmNFPdLIcySo_hlQZbpcUeroBfki2yLt1qc6PCYFQP79YcXeDLgtjFOrVEiHuAPOAJFIuaiduxuRQ4I_QWODAAReCfDLkkR"},
+			nomatch: []string{"hvb.tooshort"},
+		},
+		{
+			id:      "vault-service-token",
+			match:   []string{"export VAULT_TOKEN=hvs.ld4Ki-Hfk1htnZr3dfRKIbAPeW6N9c54fl9W2Fmz9c238OBYbOQjsfVeZdWc45s-4D3q2KyKXcJmNUJ4o7L_-RfvuZfhMuTfHRLu", "{\"auth\":{\"client_token\":\"hvs.nssrJa6yw4IUk6yEu4d-yIVGKpG3tDejyK9pTLdUSl_Vq6wdBNoGaf-TyrN1Djzdd-Jsmdo41LD-iQdD5v\"}}"},
+			nomatch: []string{"hvs.tooshort", "hvs.XXXXXXXXXXXXXXXXXXXXXXXX"},
 		},
 	}
 
