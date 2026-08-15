@@ -292,7 +292,7 @@ func GrafanaCloudAccessPolicyToken(window []byte, trigStart, trigEnd int) (start
 // --- Doppler token ---------------------------------------------------------
 
 // dopplerTokenBodyMin and dopplerTokenBodyMax bound the length of a
-// Doppler token's alphanumeric body, across every one of its six scoped
+// Doppler token's alphanumeric body, across every one of its seven scoped
 // prefixes.
 const (
 	dopplerTokenBodyMin = 40
@@ -307,20 +307,22 @@ const (
 	dopplerLabelMax = 35
 )
 
-// isDopplerLabelChar reports whether c belongs to the alphabet Doppler
-// uses for a service token's optional config/environment label:
-// alphanumeric plus '-' and '_'.
+// isDopplerLabelChar reports whether c belongs to the alphabet Doppler's
+// documented token-format regex uses for a service token's optional
+// config label ([a-z0-9\-_]): lowercase alphanumeric plus '-' and '_'.
 func isDopplerLabelChar(c byte) bool {
-	return isAlnum(c) || c == '-' || c == '_'
+	return isDigit(c) || c >= 'a' && c <= 'z' || c == '-' || c == '_'
 }
 
-// DopplerToken confirms the Doppler token shape: one of six scoped
-// triggers ("dp.st.", "dp.pt.", "dp.ct.", "dp.sa.", "dp.scim.",
-// "dp.audit.") followed by a 40-44 character alphanumeric body. A service
-// token (dp.st.) may additionally carry a config/environment label
-// between the prefix and the body (e.g. "dp.st.dev.<body>"); this is
-// tried first, falling back to a bodyless-label match if the label
-// candidate doesn't resolve to a valid body.
+// DopplerToken confirms the Doppler token shape: one of seven scoped
+// triggers ("dp.st.", "dp.pt.", "dp.ct.", "dp.sa.", "dp.said.",
+// "dp.scim.", "dp.audit.") followed by a 40-44 character alphanumeric
+// body. A service token (dp.st.) may additionally carry a single config
+// label between the prefix and the body (e.g. "dp.st.dev.<body>"), per
+// Doppler's own documented format regex
+// (dp\.st\.(?:[a-z0-9\-_]{2,35}\.)?[a-zA-Z0-9]{40,44}); this is tried
+// first, falling back to a bodyless-label match if the label candidate
+// doesn't resolve to a valid body.
 //
 // https://docs.doppler.com/reference/auth-token-formats
 func DopplerToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {

@@ -96,7 +96,7 @@ finding).
 | `datadog-api-key` | Datadog API key | fast | high | `DD_API_KEY` |
 | `datadog-application-key` | Datadog Application key | fast | high | `DD_APP_KEY` |
 | `dockerhub-pat` | Docker Hub personal access token | fast | high | `dckr_pat_` |
-| `doppler-token` | Doppler token | fast | high | `dp.st.`, `dp.pt.`, `dp.ct.`, `dp.sa.`, `dp.scim.`, `dp.audit.` |
+| `doppler-token` | Doppler token | fast | high | `dp.st.`, `dp.pt.`, `dp.ct.`, `dp.sa.`, `dp.said.`, `dp.scim.`, `dp.audit.` |
 | `gcp-api-key` | GCP API key | fast | high | `AIza` |
 | `generic-api-key-assignment` | Generic API key / access token assignment | balanced | medium | `api_key`, `apikey`, `api-key`, `access_token`, `auth_token`, `client_secret`, `secret_key`, `secret_key_base`, `session_secret`, `private_token` |
 | `generic-bearer-like-token-assignment` | Generic bearer-like token assignment | balanced | low | `token` |

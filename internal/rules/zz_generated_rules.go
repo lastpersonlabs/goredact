@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-2b9db2c1fbeb"
+const Version = "builtin-f22336954dfc"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -228,6 +228,7 @@ func init() {
 				{Literal: "dp.pt.", CaseFold: false},
 				{Literal: "dp.ct.", CaseFold: false},
 				{Literal: "dp.sa.", CaseFold: false},
+				{Literal: "dp.said.", CaseFold: false},
 				{Literal: "dp.scim.", CaseFold: false},
 				{Literal: "dp.audit.", CaseFold: false},
 			},
@@ -235,7 +236,7 @@ func init() {
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
 			MaxLookbehind: 0,
-			MaxLookahead:  80,
+			MaxLookahead:  90,
 		},
 		{
 			ID:   "gcp-api-key",

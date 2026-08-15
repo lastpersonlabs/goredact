@@ -153,7 +153,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "doppler-token",
-			match:   []string{"export DOPPLER_TOKEN=dp.st.dev.E96V5JPpZYKbCzr5H2CPYIxrTrz1Td8XAwES2HY0Bk", "DOPPLER_TOKEN=dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma", "{\"env\":{\"DOPPLER_TOKEN\":\"dp.ct.2El38vn53VQXAyYQ4PKUK88lpsgCM1SSYOUrI65O\"}}"},
+			match:   []string{"export DOPPLER_TOKEN=dp.st.dev.E96V5JPpZYKbCzr5H2CPYIxrTrz1Td8XAwES2HY0Bk", "DOPPLER_TOKEN=dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma", "{\"env\":{\"DOPPLER_TOKEN\":\"dp.ct.2El38vn53VQXAyYQ4PKUK88lpsgCM1SSYOUrI65O\"}}", "DOPPLER_TOKEN=dp.said.zxqUeHDQr0Itcdt1yZul7R81aHY7QSVMQhL8L0JOco"},
 			nomatch: []string{"dp.pt.tooshort", "dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc", "dp.xx.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma"},
 		},
 		{

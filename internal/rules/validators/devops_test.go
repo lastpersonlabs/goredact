@@ -573,6 +573,21 @@ func TestDopplerToken(t *testing.T) {
 			wantEnd:   6 + 40,
 		},
 		{
+			name:      "match for said trigger",
+			window:    "dp.said." + dopplerBody40,
+			trigStart: 0,
+			trigEnd:   8,
+			wantOK:    true,
+			wantEnd:   8 + 40,
+		},
+		{
+			name:      "uppercase label rejected (docs specify lowercase only)",
+			window:    "dp.st.PROD." + dopplerBody40,
+			trigStart: 0,
+			trigEnd:   6,
+			wantOK:    false,
+		},
+		{
 			name:      "body too short rejected",
 			window:    "dp.pt." + dopplerBody39,
 			trigStart: 0,
@@ -609,7 +624,7 @@ func TestDopplerToken(t *testing.T) {
 }
 
 func TestDopplerTokenNeverPanics(t *testing.T) {
-	windows := []string{"", "d", "dp.pt.", "dp.st.dev.", "dp.pt." + dopplerBody40[:5], "dp.pt." + dopplerBody40, "dp.st.dev." + dopplerBody40, "\x00\x00\x00\x00\x00"}
+	windows := []string{"", "d", "dp.pt.", "dp.st.dev.", "dp.said.", "dp.pt." + dopplerBody40[:5], "dp.pt." + dopplerBody40, "dp.st.dev." + dopplerBody40, "dp.said." + dopplerBody40, "\x00\x00\x00\x00\x00"}
 	for _, w := range windows {
 		for trigStart := 0; trigStart <= len(w); trigStart++ {
 			for trigEnd := trigStart; trigEnd <= len(w); trigEnd++ {
