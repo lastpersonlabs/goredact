@@ -1,0 +1,323 @@
+{
+  "rules": [
+    {
+      "id": "circleci-token",
+      "name": "CircleCI personal/project API token",
+      "triggers": [
+        {
+          "literal": "CCIPAT_",
+          "caseFold": false
+        },
+        {
+          "literal": "CCIPRJ_",
+          "caseFold": false
+        }
+      ],
+      "validator": "CircleCIToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 70,
+      "provenance": {
+        "source": "https://circleci.com/changelog/new-format-for-api-access-tokens; https://circleci.com/docs/managing-api-tokens/",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export CIRCLE_TOKEN=CCIPAT_t9WBafchSkTiQvrq4rafRp_4b90c0376d730396770ad17e54c7d6c7d059a2db",
+          "{\"projectApiToken\":\"CCIPRJ_5aCa6zBzxoFWqcJGuwQE_7688c0760c387df4dd4523f92bef162d67f61a43\"}"
+        ],
+        "nomatch": [
+          "CCIPAT_short_4b90c0376d730396770ad17e54c7d6c7d059a2db",
+          "CCIPAT_t9WBafchSkTiQvrq4rafRp_4b90c0376d730396770ad17e54c7d6c7d059a2",
+          "CCIPAT_t9WBafchSkTiQvrq4rafRp-4b90c0376d730396770ad17e54c7d6c7d059a2db"
+        ]
+      }
+    },
+    {
+      "id": "buildkite-api-token",
+      "name": "Buildkite API/agent access token",
+      "triggers": [
+        {
+          "literal": "BUILDKITE_API_TOKEN",
+          "caseFold": true
+        },
+        {
+          "literal": "BUILDKITE_AGENT_TOKEN",
+          "caseFold": true
+        }
+      ],
+      "validator": "BuildkiteAPIToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 60,
+      "provenance": {
+        "source": "https://buildkite.com/docs/apis/managing-api-tokens; https://buildkite.com/docs/agent/v3/tokens",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export BUILDKITE_API_TOKEN=7c21bb00e72ed1eabed3610688adf0d449584ebb",
+          "BUILDKITE_AGENT_TOKEN: \"4a8775d65f4bc1cfbea8d77320d26eb307677293\""
+        ],
+        "nomatch": [
+          "BUILDKITE_API_TOKEN=tooshort",
+          "BUILDKITE_API_TOKEN 7c21bb00e72ed1eabed3610688adf0d449584ebb",
+          "BUILDKITE_API_TOKEN=7C21BB00E72ED1EABED3610688ADF0D449584EBB"
+        ]
+      }
+    },
+    {
+      "id": "datadog-api-key",
+      "name": "Datadog API key",
+      "triggers": [
+        {
+          "literal": "DD_API_KEY",
+          "caseFold": true
+        }
+      ],
+      "validator": "DatadogAPIKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 50,
+      "provenance": {
+        "source": "https://docs.datadoghq.com/agent/guide/environment-variables/",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "DD_API_KEY=af7c06c09c36c278cc2b6013ddcdb1fa datadog-agent start",
+          "dd_api_key: af7c06c09c36c278cc2b6013ddcdb1fa"
+        ],
+        "nomatch": [
+          "DD_API_KEY=tooshort",
+          "dd_api_key=af7c06c09c36c278cc2b6013ddcdb1f",
+          "DD_API_KEY=AF7C06C09C36C278CC2B6013DDCDB1FA"
+        ]
+      }
+    },
+    {
+      "id": "datadog-application-key",
+      "name": "Datadog Application key",
+      "triggers": [
+        {
+          "literal": "DD_APP_KEY",
+          "caseFold": true
+        }
+      ],
+      "validator": "DatadogApplicationKey",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 60,
+      "provenance": {
+        "source": "https://registry.terraform.io/providers/DataDog/datadog/latest/docs",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68e",
+          "dd_app_key: '9498dbc811f8185ac2b5b7d83d991de5bb18e68e'"
+        ],
+        "nomatch": [
+          "DD_APP_KEY=tooshort",
+          "DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68"
+        ]
+      }
+    },
+    {
+      "id": "grafana-service-account-token",
+      "name": "Grafana service-account token",
+      "triggers": [
+        {
+          "literal": "glsa_",
+          "caseFold": false
+        }
+      ],
+      "validator": "GrafanaServiceAccountToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 45,
+      "provenance": {
+        "source": "https://grafana.com/docs/grafana/latest/administration/service-accounts/",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "'Authorization': 'Bearer glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d065813'",
+          "GRAFANA_TOKEN=glsa_hYAFlBFRud6UBH6vN1IeiYwijYiFw8Ku_E888FFC5"
+        ],
+        "nomatch": [
+          "glsa_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_AAAAAAAA",
+          "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d06581",
+          "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7-2d065813"
+        ]
+      }
+    },
+    {
+      "id": "grafana-cloud-access-policy-token",
+      "name": "Grafana Cloud access policy token",
+      "triggers": [
+        {
+          "literal": "glc_",
+          "caseFold": false
+        }
+      ],
+      "validator": "GrafanaCloudAccessPolicyToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 420,
+      "provenance": {
+        "source": "https://grafana.com/blog/2022/11/22/meet-grafana-cloud-access-policies-the-new-cloud-api-keys/",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "GRAFANA_CLOUD_TOKEN=glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ",
+          "{\"token\":\"glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ==\"}"
+        ],
+        "nomatch": [
+          "glc_tooshort",
+          "glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ==="
+        ]
+      }
+    },
+    {
+      "id": "doppler-token",
+      "name": "Doppler token",
+      "triggers": [
+        {
+          "literal": "dp.st.",
+          "caseFold": false
+        },
+        {
+          "literal": "dp.pt.",
+          "caseFold": false
+        },
+        {
+          "literal": "dp.ct.",
+          "caseFold": false
+        },
+        {
+          "literal": "dp.sa.",
+          "caseFold": false
+        },
+        {
+          "literal": "dp.scim.",
+          "caseFold": false
+        },
+        {
+          "literal": "dp.audit.",
+          "caseFold": false
+        }
+      ],
+      "validator": "DopplerToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 80,
+      "provenance": {
+        "source": "https://docs.doppler.com/reference/auth-token-formats",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export DOPPLER_TOKEN=dp.st.dev.E96V5JPpZYKbCzr5H2CPYIxrTrz1Td8XAwES2HY0Bk",
+          "DOPPLER_TOKEN=dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma",
+          "{\"env\":{\"DOPPLER_TOKEN\":\"dp.ct.2El38vn53VQXAyYQ4PKUK88lpsgCM1SSYOUrI65O\"}}"
+        ],
+        "nomatch": [
+          "dp.pt.tooshort",
+          "dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc",
+          "dp.xx.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma"
+        ]
+      }
+    },
+    {
+      "id": "vercel-token",
+      "name": "Vercel access token",
+      "triggers": [
+        {
+          "literal": "vcp_",
+          "caseFold": false
+        },
+        {
+          "literal": "vci_",
+          "caseFold": false
+        },
+        {
+          "literal": "vca_",
+          "caseFold": false
+        },
+        {
+          "literal": "vcr_",
+          "caseFold": false
+        },
+        {
+          "literal": "vck_",
+          "caseFold": false
+        }
+      ],
+      "validator": "VercelToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 85,
+      "provenance": {
+        "source": "https://vercel.com/changelog/new-token-formats-and-secret-scanning",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export VERCEL_TOKEN=vcp_tiiXNZJG8PWIe46dxHIq2gFIpt4MOdHahokWEFbt6quMzOwFgxK7fO1V",
+          "{\"apiKey\":\"vck_Ro7FlIEcfF9XCDS72kuexw3cmaj7C3sksYpS1YAGv310BadLHjBmaQg2NCrFcQHns\"}"
+        ],
+        "nomatch": [
+          "vcp_tooshort",
+          "vcp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      }
+    },
+    {
+      "id": "vercel-legacy-token",
+      "name": "Vercel legacy access token",
+      "triggers": [
+        {
+          "literal": "VERCEL_TOKEN",
+          "caseFold": true
+        },
+        {
+          "literal": "VERCEL_API_TOKEN",
+          "caseFold": true
+        },
+        {
+          "literal": "VERCEL_ACCESS_TOKEN",
+          "caseFold": true
+        }
+      ],
+      "validator": "VercelLegacyToken",
+      "minProfile": "fast",
+      "confidence": "high",
+      "maxLookbehind": 0,
+      "maxLookahead": 40,
+      "provenance": {
+        "source": "https://vercel.com/docs/cli; https://vercel.com/docs/rest-api",
+        "license": "original"
+      },
+      "fixtures": {
+        "match": [
+          "export VERCEL_TOKEN=uNEcIzRFpJA7ZAhnkQlPaSrk",
+          "VERCEL_API_TOKEN: \"whAOs0PHRVc7baApD22pdq3K\""
+        ],
+        "nomatch": [
+          "VERCEL_TOKEN=tooshort",
+          "VERCEL_TOKEN=uNEcIzRFpJA7ZAhnkQlPaSr"
+        ]
+      }
+    }
+  ]
+}

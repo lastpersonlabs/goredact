@@ -10,9 +10,14 @@
 //   azure-app-configuration-secret: https://learn.microsoft.com/en-us/azure/azure-app-configuration/enable-dynamic-configuration-dotnet-core-push-refresh; https://learn.microsoft.com/en-us/azure/service-connector/how-to-integrate-app-configuration (original)
 //   azure-servicebus-sas-key: https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas; https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string (original)
 //   azure-storage-account-key: https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage (original)
+//   buildkite-api-token: https://buildkite.com/docs/apis/managing-api-tokens; https://buildkite.com/docs/agent/v3/tokens (original)
+//   circleci-token: https://circleci.com/changelog/new-format-for-api-access-tokens; https://circleci.com/docs/managing-api-tokens/ (original)
 //   command-line-password-flag: Original project design; no single external specification (original)
 //   cookie-session-token: https://www.rfc-editor.org/rfc/rfc6265 (original)
+//   datadog-api-key: https://docs.datadoghq.com/agent/guide/environment-variables/ (original)
+//   datadog-application-key: https://registry.terraform.io/providers/DataDog/datadog/latest/docs (original)
 //   dockerhub-pat: https://docs.docker.com/security/for-developers/access-tokens/ (original)
+//   doppler-token: https://docs.doppler.com/reference/auth-token-formats (original)
 //   gcp-api-key: https://cloud.google.com/docs/authentication/api-keys (original)
 //   generic-api-key-assignment: Original project design: assignment-style generic credential heuristic; no single external specification (original)
 //   generic-bearer-like-token-assignment: Original project design: assignment-style generic credential heuristic; no single external specification (original)
@@ -25,6 +30,8 @@
 //   gitlab-deploy-token: https://docs.gitlab.com/user/project/deploy_tokens/ (original)
 //   gitlab-pat: https://docs.gitlab.com/user/profile/personal_access_tokens/#create-a-personal-access-token (original)
 //   gitlab-runner-token: https://docs.gitlab.com/ci/runners/new_creation_workflow/#glrt-authentication-tokens (original)
+//   grafana-cloud-access-policy-token: https://grafana.com/blog/2022/11/22/meet-grafana-cloud-access-policies-the-new-cloud-api-keys/ (original)
+//   grafana-service-account-token: https://grafana.com/docs/grafana/latest/administration/service-accounts/ (original)
 //   groq-api-key: https://console.groq.com/docs/quickstart (original)
 //   huggingface-token: https://huggingface.co/docs/hub/security-tokens (original)
 //   jwt: https://www.rfc-editor.org/rfc/rfc7519 (JWT); https://www.rfc-editor.org/rfc/rfc7515#section-3.1 (JWS compact serialization); shape modeled on the betterleaks standalone-JWT rule (original)
@@ -48,6 +55,8 @@
 //   url-credentials: https://www.rfc-editor.org/rfc/rfc3986#section-3.2.1 (original)
 //   vault-batch-token: https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml (original)
 //   vault-service-token: https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml (original)
+//   vercel-legacy-token: https://vercel.com/docs/cli; https://vercel.com/docs/rest-api (original)
+//   vercel-token: https://vercel.com/changelog/new-token-formats-and-secret-scanning (original)
 
 package rules
 
@@ -108,6 +117,16 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			nomatch: []string{"AccountKey=tooshort==", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ!!", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ===extra"},
 		},
 		{
+			id:      "buildkite-api-token",
+			match:   []string{"export BUILDKITE_API_TOKEN=7c21bb00e72ed1eabed3610688adf0d449584ebb", "BUILDKITE_AGENT_TOKEN: \"4a8775d65f4bc1cfbea8d77320d26eb307677293\""},
+			nomatch: []string{"BUILDKITE_API_TOKEN=tooshort", "BUILDKITE_API_TOKEN 7c21bb00e72ed1eabed3610688adf0d449584ebb", "BUILDKITE_API_TOKEN=7C21BB00E72ED1EABED3610688ADF0D449584EBB"},
+		},
+		{
+			id:      "circleci-token",
+			match:   []string{"export CIRCLE_TOKEN=CCIPAT_t9WBafchSkTiQvrq4rafRp_4b90c0376d730396770ad17e54c7d6c7d059a2db", "{\"projectApiToken\":\"CCIPRJ_5aCa6zBzxoFWqcJGuwQE_7688c0760c387df4dd4523f92bef162d67f61a43\"}"},
+			nomatch: []string{"CCIPAT_short_4b90c0376d730396770ad17e54c7d6c7d059a2db", "CCIPAT_t9WBafchSkTiQvrq4rafRp_4b90c0376d730396770ad17e54c7d6c7d059a2", "CCIPAT_t9WBafchSkTiQvrq4rafRp-4b90c0376d730396770ad17e54c7d6c7d059a2db"},
+		},
+		{
 			id:      "command-line-password-flag",
 			match:   []string{"mysql -h db.prod.internal -u app --password=tR8kW3nQ7zXm2 app_db", "vault login --token=hvs.9kQ3vR7wL4mN2xT6bF0jH5cD", "deploy --api-key 'Zp8kQ3vR7wL4mN2xT6bF9jH0' --env prod", "{\"cmd\":\"pg_restore --passwd=Xq7Lm2Vt9zR4 -d app\"}"},
 			nomatch: []string{"pg_dump --password-file /run/secrets/pgpass -h db", "fetch --token-url https://auth.example.com/oauth/token", "mysql --password= --host db.internal", "run.sh --password ${DB_PASSWORD}", "docs: use --api-key <your-key> to authenticate", "login --secret changeme --user svc", "deploy --token ${CLOUDFLARE_TUNNEL_TOKEN:?Set token}", "mysql -u root --password=hunter2 mydb"},
@@ -118,9 +137,24 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			nomatch: []string{"Cookie: theme=dark; lang=en; tz=UTC", "Cookie: sessionid=short1; theme=dark", "Set-Cookie: csrftoken=Qw8kV3nR7wL4mN2xT6bF9jH0cD5yU1aE; Path=/", "GET /cb?next=%2Fdash&token=aK9mQ2vR7wL4mN8pX1sTbF3j HTTP/1.1", "Cookie: session=<session-token>; theme=dark", "Cookie: auth=xxxxxxxxxxxxxxxxxxxx; theme=dark", "Cookie: session=1e084479-84e5-4834-bc8a-fc44c29aaed90ffb05&amp; theme=dark"},
 		},
 		{
+			id:      "datadog-api-key",
+			match:   []string{"DD_API_KEY=af7c06c09c36c278cc2b6013ddcdb1fa datadog-agent start", "dd_api_key: af7c06c09c36c278cc2b6013ddcdb1fa"},
+			nomatch: []string{"DD_API_KEY=tooshort", "dd_api_key=af7c06c09c36c278cc2b6013ddcdb1f", "DD_API_KEY=AF7C06C09C36C278CC2B6013DDCDB1FA"},
+		},
+		{
+			id:      "datadog-application-key",
+			match:   []string{"export DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68e", "dd_app_key: '9498dbc811f8185ac2b5b7d83d991de5bb18e68e'"},
+			nomatch: []string{"DD_APP_KEY=tooshort", "DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68"},
+		},
+		{
 			id:      "dockerhub-pat",
 			match:   []string{"DOCKERHUB_PAT=dckr_pat_lBYwwQKx2h3qd82R5DtSx3oPE2-xPo0csQ6U", "{\"password\": \"dckr_pat_BMjUC6unM5EYWsQJ8jXp5k_KVfOY\"}"},
 			nomatch: []string{"dckr_pat_short12345", "dckr_pat_abcDE12345 lBYwwQKx2h3qd82R5DtSx3oPE2-xPo0csQ6U", "dckr_pat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
+		},
+		{
+			id:      "doppler-token",
+			match:   []string{"export DOPPLER_TOKEN=dp.st.dev.E96V5JPpZYKbCzr5H2CPYIxrTrz1Td8XAwES2HY0Bk", "DOPPLER_TOKEN=dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma", "{\"env\":{\"DOPPLER_TOKEN\":\"dp.ct.2El38vn53VQXAyYQ4PKUK88lpsgCM1SSYOUrI65O\"}}"},
+			nomatch: []string{"dp.pt.tooshort", "dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc", "dp.xx.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma"},
 		},
 		{
 			id:      "gcp-api-key",
@@ -181,6 +215,16 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			id:      "gitlab-runner-token",
 			match:   []string{"CI_RUNNER_TOKEN=glrt-dJc9SE3diMqM_KM3RYy7XNeTwCI_", "{\"token\": \"glrt-EmRFgtLiVRnl7YoMV36D9C\"}"},
 			nomatch: []string{"glrt-short1", "glrt-abcDE12345 dJc9SE3diMqM_KM3RYy7XNeTwCI_", "glrt-XXXXXXXXXXXXXXXXXXXXXXXXXXXX"},
+		},
+		{
+			id:      "grafana-cloud-access-policy-token",
+			match:   []string{"GRAFANA_CLOUD_TOKEN=glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ", "{\"token\":\"glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ==\"}"},
+			nomatch: []string{"glc_tooshort", "glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ==="},
+		},
+		{
+			id:      "grafana-service-account-token",
+			match:   []string{"'Authorization': 'Bearer glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d065813'", "GRAFANA_TOKEN=glsa_hYAFlBFRud6UBH6vN1IeiYwijYiFw8Ku_E888FFC5"},
+			nomatch: []string{"glsa_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_AAAAAAAA", "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d06581", "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7-2d065813"},
 		},
 		{
 			id:      "groq-api-key",
@@ -296,6 +340,16 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 			id:      "vault-service-token",
 			match:   []string{"export VAULT_TOKEN=hvs.ld4Ki-Hfk1htnZr3dfRKIbAPeW6N9c54fl9W2Fmz9c238OBYbOQjsfVeZdWc45s-4D3q2KyKXcJmNUJ4o7L_-RfvuZfhMuTfHRLu", "{\"auth\":{\"client_token\":\"hvs.nssrJa6yw4IUk6yEu4d-yIVGKpG3tDejyK9pTLdUSl_Vq6wdBNoGaf-TyrN1Djzdd-Jsmdo41LD-iQdD5v\"}}"},
 			nomatch: []string{"hvs.tooshort", "hvs.XXXXXXXXXXXXXXXXXXXXXXXX"},
+		},
+		{
+			id:      "vercel-legacy-token",
+			match:   []string{"export VERCEL_TOKEN=uNEcIzRFpJA7ZAhnkQlPaSrk", "VERCEL_API_TOKEN: \"whAOs0PHRVc7baApD22pdq3K\""},
+			nomatch: []string{"VERCEL_TOKEN=tooshort", "VERCEL_TOKEN=uNEcIzRFpJA7ZAhnkQlPaSr"},
+		},
+		{
+			id:      "vercel-token",
+			match:   []string{"export VERCEL_TOKEN=vcp_tiiXNZJG8PWIe46dxHIq2gFIpt4MOdHahokWEFbt6quMzOwFgxK7fO1V", "{\"apiKey\":\"vck_Ro7FlIEcfF9XCDS72kuexw3cmaj7C3sksYpS1YAGv310BadLHjBmaQg2NCrFcQHns\"}"},
+			nomatch: []string{"vcp_tooshort", "vcp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"},
 		},
 	}
 
