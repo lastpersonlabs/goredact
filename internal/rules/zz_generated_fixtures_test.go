@@ -109,7 +109,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "aws-secret-access-key",
-			match:   []string{"AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H", "aws_secret_access_key: bkQfyy/KV5zjR3j1twdTKWTddB+XhkAS1voQG6yy", "aws_secret_access_key = 'fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H'"},
+			match:   []string{"AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H", "aws_secret_access_key: bkQfyy/KV5zjR3j1twdTKWTddB+XhkAS1voQG6yy", "aws_secret_access_key = 'fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H'", "{\"aws_secret_access_key\": \"fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H\"}"},
 			nomatch: []string{"AWS_SECRET_ACCESS_KEY=tooshort", "AWS_SECRET_ACCESS_KEY aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/!", "aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"},
 		},
 		{
@@ -129,7 +129,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "buildkite-api-token",
-			match:   []string{"export BUILDKITE_API_TOKEN=7c21bb00e72ed1eabed3610688adf0d449584ebb", "BUILDKITE_AGENT_TOKEN: \"4a8775d65f4bc1cfbea8d77320d26eb307677293\""},
+			match:   []string{"export BUILDKITE_API_TOKEN=7c21bb00e72ed1eabed3610688adf0d449584ebb", "BUILDKITE_AGENT_TOKEN: \"4a8775d65f4bc1cfbea8d77320d26eb307677293\"", "{\"buildkite_api_token\": \"7c21bb00e72ed1eabed3610688adf0d449584ebb\"}"},
 			nomatch: []string{"BUILDKITE_API_TOKEN=tooshort", "BUILDKITE_API_TOKEN 7c21bb00e72ed1eabed3610688adf0d449584ebb", "BUILDKITE_API_TOKEN=7C21BB00E72ED1EABED3610688ADF0D449584EBB"},
 		},
 		{
@@ -144,7 +144,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "cohere-api-key",
-			match:   []string{"export CO_API_KEY=H2KCBhpcOPYhC8jhRqcRSBueRVzkLJKUT5YsB16V", "COHERE_API_KEY: \"ILZo8C46vo3Ipa56xQ9vaey2pW44QkrEmSX61qMH\""},
+			match:   []string{"export CO_API_KEY=H2KCBhpcOPYhC8jhRqcRSBueRVzkLJKUT5YsB16V", "COHERE_API_KEY: \"ILZo8C46vo3Ipa56xQ9vaey2pW44QkrEmSX61qMH\"", "{\"cohere_api_key\": \"H2KCBhpcOPYhC8jhRqcRSBueRVzkLJKUT5YsB16V\"}"},
 			nomatch: []string{"CO_API_KEY=tooshort", "CO_API_KEY=H2KCBhpcOPYhC8jhRqcRSBueRVzkLJKUT5YsB16"},
 		},
 		{
@@ -164,17 +164,17 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "datadog-api-key",
-			match:   []string{"DD_API_KEY=af7c06c09c36c278cc2b6013ddcdb1fa datadog-agent start", "dd_api_key: af7c06c09c36c278cc2b6013ddcdb1fa"},
+			match:   []string{"DD_API_KEY=af7c06c09c36c278cc2b6013ddcdb1fa datadog-agent start", "dd_api_key: af7c06c09c36c278cc2b6013ddcdb1fa", "{\"dd_api_key\": \"af7c06c09c36c278cc2b6013ddcdb1fa\"}", "DD_API_KEY:\taf7c06c09c36c278cc2b6013ddcdb1fa"},
 			nomatch: []string{"DD_API_KEY=tooshort", "dd_api_key=af7c06c09c36c278cc2b6013ddcdb1f", "DD_API_KEY=AF7C06C09C36C278CC2B6013DDCDB1FA"},
 		},
 		{
 			id:      "datadog-application-key",
-			match:   []string{"export DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68e", "dd_app_key: '9498dbc811f8185ac2b5b7d83d991de5bb18e68e'"},
+			match:   []string{"export DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68e", "dd_app_key: '9498dbc811f8185ac2b5b7d83d991de5bb18e68e'", "{\"dd_app_key\": \"9498dbc811f8185ac2b5b7d83d991de5bb18e68e\"}"},
 			nomatch: []string{"DD_APP_KEY=tooshort", "DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68"},
 		},
 		{
 			id:      "deepgram-api-key",
-			match:   []string{"export DEEPGRAM_API_KEY=08f7t2w36t9v3syfilru1v727m8rh2w5me4p0und", "deepgram_api_key: '2x7c1ir87vpi062xqtlsr2t5x9i3qsh8nwo6x3cw'"},
+			match:   []string{"export DEEPGRAM_API_KEY=08f7t2w36t9v3syfilru1v727m8rh2w5me4p0und", "deepgram_api_key: '2x7c1ir87vpi062xqtlsr2t5x9i3qsh8nwo6x3cw'", "{\"deepgram_api_key\": \"08f7t2w36t9v3syfilru1v727m8rh2w5me4p0und\"}"},
 			nomatch: []string{"DEEPGRAM_API_KEY=tooshort", "DEEPGRAM_API_KEY=08F7T2W36T9V3SYFILRU1V727M8RH2W5ME4P0UND"},
 		},
 		{
@@ -409,7 +409,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "vercel-legacy-token",
-			match:   []string{"export VERCEL_TOKEN=uNEcIzRFpJA7ZAhnkQlPaSrk", "VERCEL_API_TOKEN: \"whAOs0PHRVc7baApD22pdq3K\""},
+			match:   []string{"export VERCEL_TOKEN=uNEcIzRFpJA7ZAhnkQlPaSrk", "VERCEL_API_TOKEN: \"whAOs0PHRVc7baApD22pdq3K\"", "{\"vercel_token\": \"uNEcIzRFpJA7ZAhnkQlPaSrk\"}"},
 			nomatch: []string{"VERCEL_TOKEN=tooshort", "VERCEL_TOKEN=uNEcIzRFpJA7ZAhnkQlPaSr"},
 		},
 		{

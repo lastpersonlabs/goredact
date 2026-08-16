@@ -67,7 +67,8 @@
         "match": [
           "AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H",
           "aws_secret_access_key: bkQfyy/KV5zjR3j1twdTKWTddB+XhkAS1voQG6yy",
-          "aws_secret_access_key = 'fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H'"
+          "aws_secret_access_key = 'fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H'",
+          "{\"aws_secret_access_key\": \"fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H\"}"
         ],
         "nomatch": [
           "AWS_SECRET_ACCESS_KEY=tooshort",

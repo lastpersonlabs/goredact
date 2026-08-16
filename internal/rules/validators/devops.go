@@ -37,6 +37,14 @@ package validators
 // across the prefix-less CI/devops token shapes in this file.
 func consumeAssignedValue(window []byte, trigEnd, length int, pred func(byte) bool) (start, end int, ok bool) {
 	pos := skipSpaces(window, trigEnd)
+	// A JSON-style quoted key ("dd_api_key": ...) leaves its own closing
+	// quote directly after the trigger; skip at most one such quote byte
+	// before looking for the separator. Unquoted keys (YAML, shell, .env)
+	// simply won't have one here, so this is a no-op for them.
+	if pos < len(window) && (window[pos] == '"' || window[pos] == '\'') {
+		pos++
+		pos = skipSpaces(window, pos)
+	}
 	if pos >= len(window) {
 		return 0, 0, false
 	}
