@@ -6,10 +6,11 @@ import "bytes"
 // Anthropic, OpenAI (project-scoped and legacy), Hugging Face, Groq,
 // Cohere, DeepSeek, Deepgram, Cerebras, and Cursor API keys. See
 // validators.go for the shared ValidateFunc contract and low-level byte
-// helpers (isAlnum, allAlnum, isPlaceholder, boundaryOK, consumeByte,
-// consumeDigitRun, consumeAlnumRun) that these validators build on, and
-// devops.go for consumeAssignedValue, reused here for the providers
-// (Cohere, Deepgram) whose key has no prefix of its own.
+// helpers (isAlnum, allAlnum, boundaryOK, consumeByte, consumeDigitRun,
+// consumeAlnumRun) that these validators build on; isPlaceholder itself
+// lives in sourcecontrol.go. devops.go provides consumeAssignedValue,
+// reused here for the providers (Cohere, Deepgram) whose key has no
+// prefix of its own.
 //
 // Google's "AIza..." API key shape is intentionally NOT implemented here;
 // it belongs to the cloud-provider validator set.

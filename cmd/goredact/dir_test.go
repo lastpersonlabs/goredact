@@ -255,6 +255,7 @@ func TestRegularFilesPrunesDefaultDependencyDirectories(t *testing.T) {
 		"assets/logo.PNG",
 		"assets/font.woff2",
 		"documents/report.pdf",
+		"bin/dependency.dll",
 		"go.mod",
 		"go.sum",
 		"go.work",
@@ -302,7 +303,7 @@ func TestRegularFilesPrunesDefaultDependencyDirectories(t *testing.T) {
 		}
 	}
 
-	paths, err := regularFiles(root)
+	paths, _, err := regularFiles(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,14 +331,14 @@ func TestRegularFilesSkipsEmptyFiles(t *testing.T) {
 	if err := os.WriteFile(nonempty, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	paths, err := regularFiles(root)
+	paths, _, err := regularFiles(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(paths) != 1 || paths[0] != nonempty {
 		t.Fatalf("files = %q, want only %q", paths, nonempty)
 	}
-	paths, err = regularFiles(empty)
+	paths, _, err = regularFiles(empty)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -354,12 +355,149 @@ func TestRegularFilesScansExplicitFileInsideExcludedDirectory(t *testing.T) {
 	if err := os.WriteFile(path, []byte("not empty"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	paths, err := regularFiles(path)
+	paths, _, err := regularFiles(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(paths) != 1 || paths[0] != path {
 		t.Fatalf("explicit file = %q, want %q", paths, path)
+	}
+}
+
+func TestRunDirUnreadableSubdirectoryDoesNotAbortScan(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root can read mode-0 directories")
+	}
+	dir := t.TempDir()
+	locked := filepath.Join(dir, "locked")
+	if err := os.Mkdir(locked, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(locked, 0o700) // allow TempDir cleanup
+	secret := "AKIAUJZDEGXDNCF32EPF"
+	if err := os.WriteFile(filepath.Join(dir, "clean.txt"), []byte("key="+secret), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var output, diagnostics bytes.Buffer
+	err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=7", dir}, nil, &output, &diagnostics)
+	var found findingsError
+	if !errors.As(err, &found) || found.code != 7 {
+		t.Fatalf("error = %v, want findings exit 7", err)
+	}
+	if !strings.Contains(diagnostics.String(), "skipped 1 unreadable path(s) while enumerating") {
+		t.Fatalf("diagnostics = %q, want unreadable-path notice", diagnostics.String())
+	}
+	var report scanReport
+	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 || len(report.Findings) != 1 {
+		t.Fatalf("report = %+v, want the readable file still scanned", report)
+	}
+}
+
+func TestRunDirScansSymlinkedRoot(t *testing.T) {
+	dir := t.TempDir()
+	real := filepath.Join(dir, "release-1")
+	if err := os.Mkdir(real, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	secret := "AKIAUJZDEGXDNCF32EPF"
+	if err := os.WriteFile(filepath.Join(real, "leak.txt"), []byte("key="+secret), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "current")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=7", link}, nil, &output, io.Discard)
+	var found findingsError
+	if !errors.As(err, &found) || found.code != 7 {
+		t.Fatalf("error = %v, want findings exit 7", err)
+	}
+	var report scanReport
+	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 || len(report.Findings) != 1 {
+		t.Fatalf("report = %+v, want the symlinked root's file scanned", report)
+	}
+}
+
+func TestRunDirExcludesReportPathThroughSymlinkedRoot(t *testing.T) {
+	dir := t.TempDir()
+	real := filepath.Join(dir, "release-1")
+	if err := os.Mkdir(real, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	secret := "AKIAUJZDEGXDNCF32EPF"
+	if err := os.WriteFile(filepath.Join(real, "leak.txt"), []byte("key="+secret), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "current")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+	reportPath := filepath.Join(link, "findings.json")
+	args := []string{"dir", "-profile=fast", "-exit-code=7", "-report-path=" + reportPath, "-show-secrets", link}
+
+	// First run creates the report inside the symlinked root itself.
+	var found findingsError
+	if err := run(context.Background(), args, nil, io.Discard, io.Discard); !errors.As(err, &found) {
+		t.Fatalf("first run error = %v, want findings exit", err)
+	}
+
+	// A second run over the same symlinked root must not treat its own
+	// prior report (now sitting under the canonicalized root) as a
+	// scannable file: excludePath compares canonicalized paths, so the
+	// report path needs the same "current -> release-1" resolution the
+	// scan root itself gets, or the report ends up scanning (and, with
+	// -show-secrets, re-reporting) its own previous output.
+	if err := run(context.Background(), args, nil, io.Discard, io.Discard); !errors.As(err, &found) {
+		t.Fatalf("second run error = %v, want findings exit", err)
+	}
+	reportBytes, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report scanReport
+	if err := json.Unmarshal(reportBytes, &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 {
+		t.Fatalf("report.FilesScanned = %d, want 1 (report file must be excluded, not rescanned)", report.FilesScanned)
+	}
+	for _, f := range report.Findings {
+		if f.File != "leak.txt" {
+			t.Fatalf("report contains an unexpected finding from %q, report file was not excluded", f.File)
+		}
+	}
+}
+
+func TestRegularFilesSkipsUnreadableSubdirectory(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root can read mode-0 directories")
+	}
+	root := t.TempDir()
+	locked := filepath.Join(root, "locked")
+	if err := os.Mkdir(locked, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(locked, 0o700)
+	readable := filepath.Join(root, "readable.txt")
+	if err := os.WriteFile(readable, []byte("not empty"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	paths, skipped, err := regularFiles(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if skipped != 1 {
+		t.Fatalf("skipped = %d, want 1", skipped)
+	}
+	if len(paths) != 1 || paths[0] != readable {
+		t.Fatalf("paths = %q, want only %q", paths, readable)
 	}
 }
 

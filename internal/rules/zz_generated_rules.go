@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-811fd2b6e788"
+const Version = "builtin-7c8078d704f2"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -278,7 +278,7 @@ func init() {
 			Validate:      validators.DockerHubOAT,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  128,
 		},
 		{
@@ -290,7 +290,7 @@ func init() {
 			Validate:      validators.DockerHubPAT,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  128,
 		},
 		{
@@ -308,7 +308,7 @@ func init() {
 			Validate:      validators.DopplerToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  90,
 		},
 		{
@@ -397,7 +397,7 @@ func init() {
 			Validate:      validators.GitHubAppToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  48,
 		},
 		{
@@ -409,7 +409,7 @@ func init() {
 			Validate:      validators.GitHubFineGrainedPAT,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  96,
 		},
 		{
@@ -421,7 +421,7 @@ func init() {
 			Validate:      validators.GitHubOAuthToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  48,
 		},
 		{
@@ -433,7 +433,7 @@ func init() {
 			Validate:      validators.GitHubPAT,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  64,
 		},
 		{
@@ -445,7 +445,7 @@ func init() {
 			Validate:      validators.GitHubRefreshToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  48,
 		},
 		{
@@ -457,7 +457,7 @@ func init() {
 			Validate:      validators.GitLabDeployToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  64,
 		},
 		{
@@ -469,7 +469,7 @@ func init() {
 			Validate:      validators.GitLabFeedToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  30,
 		},
 		{
@@ -481,7 +481,7 @@ func init() {
 			Validate:      validators.GitLabFeedTokenV2,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  100,
 		},
 		{
@@ -493,7 +493,7 @@ func init() {
 			Validate:      validators.GitLabPAT,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  64,
 		},
 		{
@@ -505,7 +505,7 @@ func init() {
 			Validate:      validators.GitLabPipelineTriggerToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  55,
 		},
 		{
@@ -517,7 +517,7 @@ func init() {
 			Validate:      validators.GitLabRunnerToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  64,
 		},
 		{
@@ -614,7 +614,7 @@ func init() {
 			Validate:      validators.NpmAccessToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  48,
 		},
 		{
@@ -676,7 +676,7 @@ func init() {
 			Validate:      validators.PyPIAPIToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  320,
 		},
 		{
@@ -740,7 +740,7 @@ func init() {
 			Validate:      validators.StripeEphemeralKey,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  170,
 		},
 		{
@@ -755,7 +755,7 @@ func init() {
 			Validate:      validators.StripeSecretKey,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  110,
 		},
 		{
@@ -767,7 +767,7 @@ func init() {
 			Validate:      validators.StripeWebhookSecret,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  80,
 		},
 		{
@@ -827,7 +827,7 @@ func init() {
 			Validate:      validators.VaultBatchToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  330,
 		},
 		{
@@ -839,7 +839,7 @@ func init() {
 			Validate:      validators.VaultServiceToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  170,
 		},
 		{
@@ -869,7 +869,7 @@ func init() {
 			Validate:      validators.VercelToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  85,
 		},
 	})

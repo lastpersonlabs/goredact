@@ -67,7 +67,8 @@
         "match": [
           "AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H",
           "aws_secret_access_key: bkQfyy/KV5zjR3j1twdTKWTddB+XhkAS1voQG6yy",
-          "aws_secret_access_key = 'fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H'"
+          "aws_secret_access_key = 'fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H'",
+          "{\"aws_secret_access_key\": \"fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H\"}"
         ],
         "nomatch": [
           "AWS_SECRET_ACCESS_KEY=tooshort",
@@ -135,7 +136,8 @@
           "AccountKey=tooshort==",
           "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ",
           "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ!!",
-          "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ===extra"
+          "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ===extra",
+          "AccountKey=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
         ]
       }
     },
@@ -211,7 +213,7 @@
       "validator": "VaultServiceToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 170,
       "provenance": {
         "source": "https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml",
@@ -240,7 +242,7 @@
       "validator": "VaultBatchToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 330,
       "provenance": {
         "source": "https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml",

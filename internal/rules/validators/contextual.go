@@ -123,7 +123,7 @@ const authSignatureMinLen = 16
 //
 //   - Bearer / Token (case-insensitive): the value is the following run of
 //     token68 bytes (see isAuthTokenChar). It must be at least
-//     authBearerMinLen bytes and not an entropy.IsPlaceholder value; pure
+//     authBearerMinLen bytes and not an isPlaceholder value; pure
 //     template refs ("${...}") and angle-bracket placeholders ("<token>")
 //     never even parse, since '$', '{', '<' are outside the value
 //     alphabet, leaving an empty (rejected) value.
@@ -168,7 +168,7 @@ func AuthorizationHeader(window []byte, trigStart, trigEnd int) (start, end int,
 		if valEnd-valStart < authBearerMinLen {
 			return 0, 0, false
 		}
-		if entropy.IsPlaceholder(window[valStart:valEnd]) {
+		if isPlaceholder(window[valStart:valEnd]) {
 			return 0, 0, false
 		}
 		if isIndirectAssignmentValue(window[valStart:valEnd]) {
@@ -427,7 +427,7 @@ func cookiePairContextOK(window []byte, nameStart int) bool {
 // ---------------------------------------------------------------------------
 
 // urlPasswordPlaceholders are whole-value (case-insensitive) placeholder
-// passwords rejected on top of entropy.IsPlaceholder. IsPlaceholder
+// passwords rejected on top of isPlaceholder. isPlaceholder
 // already covers several of these ("password" by substring, "xxx"/"***"
 // as repeated single bytes, "secret" as a whole value); the short forms
 // "pass" and "pwd" are the additions that matter, but the full list is
@@ -525,7 +525,7 @@ func URLCredentials(window []byte, trigStart, trigEnd int) (start, end int, ok b
 		return 0, 0, false
 	}
 	pw := window[pwStart:pwEnd]
-	if entropy.IsPlaceholder(pw) {
+	if isPlaceholder(pw) {
 		return 0, 0, false
 	}
 	if entropy.Classify(pw) == entropy.ClassWordlike {
@@ -590,7 +590,7 @@ func isBareCLIValueChar(c byte) bool {
 // backslash-escaped opening quote for JSON-embedded command lines, via
 // the shared detectQuote/findQuotedEnd helpers) or a bare argument run.
 // Placeholder and template-ref values are rejected via
-// entropy.IsPlaceholder. Password flags require only length >=
+// isPlaceholder. Password flags require only length >=
 // cliPasswordMinLen; token/key/secret flags require length >=
 // cliTokenMinLen AND entropy.PresetLooseToken, since their values are
 // machine-generated and should look random. Only the value is redacted.
@@ -638,7 +638,7 @@ func CommandLinePasswordFlag(window []byte, trigStart, trigEnd int) (start, end 
 		return 0, 0, false
 	}
 	val := window[valStart:valEnd]
-	if entropy.IsPlaceholder(val) {
+	if isPlaceholder(val) {
 		return 0, 0, false
 	}
 	if isIndirectAssignmentValue(val) {

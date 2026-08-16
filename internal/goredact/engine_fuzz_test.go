@@ -11,9 +11,18 @@ import (
 // arbitrary inputs and arbitrary read-chunking:
 //
 //  1. no panics on any byte sequence;
-//  2. output is identical regardless of how the reader slices the input;
-//  3. output equals the input with each confirmed (merged) span replaced
-//     by exactly one marker — so confirmed span bytes never appear.
+//  2. output is identical regardless of how the reader slices the input,
+//     for every combination of RecordAligned and MaskStrategy derived from
+//     the fuzz seed — RecordAligned in particular is what makes the
+//     released-span-carried-across-emission path in emitTo reachable at
+//     all (see TestRecordAlignedCarriesReleasedSpanAcrossEmission), so
+//     leaving it always false here would never exercise that path;
+//  3. under MaskFixedMarker specifically, output equals the input with
+//     each confirmed (merged) span replaced by exactly one marker — so
+//     confirmed span bytes never appear. The other two strategies
+//     transform per byte rather than per span, so they're checked instead
+//     for the weaker (but still load-bearing) invariant that no
+//     confirmed secret value appears verbatim in the output.
 func FuzzRedactChunkingEquivalence(f *testing.F) {
 	f.Add([]byte(nil), uint64(0))
 	f.Add([]byte("plain text with no secrets at all"), uint64(1))
@@ -24,13 +33,19 @@ func FuzzRedactChunkingEquivalence(f *testing.F) {
 	f.Add([]byte("ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r"), uint64(6)) // one byte short
 	f.Add(bytes.Repeat([]byte("ghp_A1b2C3d4E5"), 700), uint64(7))       // > one 4096 chunk
 	f.Add([]byte("\x00\xff\n ghp_\xf0 xoxb-"), uint64(8))
+	f.Add([]byte("line one\nline two "+testGHToken+" trailing, no newline"), uint64(9))
 
 	f.Fuzz(func(t *testing.T, data []byte, seed uint64) {
+		recordAligned := seed%2 == 0
+		maskStrategy := MaskStrategy((seed / 2) % 3)
+
 		var findings []Finding
 		e, err := New(Config{
-			ChunkSize:   4096,
-			EnableRules: []string{"github-pat", "slack-bot-token"},
-			OnFinding:   func(fd Finding) { findings = append(findings, fd) },
+			ChunkSize:     4096,
+			EnableRules:   []string{"github-pat", "slack-bot-token"},
+			MaskStrategy:  maskStrategy,
+			RecordAligned: recordAligned,
+			OnFinding:     func(fd Finding) { findings = append(findings, fd) },
 		})
 		if err != nil {
 			t.Fatalf("New: %v", err)
@@ -45,13 +60,12 @@ func FuzzRedactChunkingEquivalence(f *testing.F) {
 		if stats.BytesRead != int64(len(data)) {
 			t.Fatalf("BytesRead = %d, want %d", stats.BytesRead, len(data))
 		}
-		if stats.Findings != len(findings) {
+		if stats.Findings != int64(len(findings)) {
 			t.Fatalf("Stats.Findings = %d, OnFinding count = %d", stats.Findings, len(findings))
 		}
 
-		// Findings must be in input order, non-overlapping, in range; the
-		// output must equal the splice reconstruction (which implies no
-		// confirmed span's bytes survive at their position).
+		// Findings must be in input order, non-overlapping, and in range
+		// regardless of mask strategy or record alignment.
 		var last int64 = -1
 		for _, fd := range findings {
 			if fd.Start < 0 || fd.End > int64(len(data)) || fd.Start >= fd.End || fd.Start < last {
@@ -59,8 +73,19 @@ func FuzzRedactChunkingEquivalence(f *testing.F) {
 			}
 			last = fd.End
 		}
-		if want := spliceExpected(data, findings, DefaultMarker); oneShot.String() != want {
-			t.Fatalf("one-shot output differs from splice reconstruction")
+		if maskStrategy == MaskFixedMarker {
+			// The splice reconstruction only holds for a fixed marker: the
+			// other two strategies substitute per byte, not per span.
+			if want := spliceExpected(data, findings, DefaultMarker); oneShot.String() != want {
+				t.Fatalf("one-shot output differs from splice reconstruction")
+			}
+		} else {
+			out := oneShot.Bytes()
+			for _, fd := range findings {
+				if bytes.Contains(out, data[fd.Start:fd.End]) {
+					t.Fatalf("confirmed secret value leaked into output under mask strategy %v", maskStrategy)
+				}
+			}
 		}
 
 		// Same input through seeded random chunking must be identical.
@@ -107,7 +132,7 @@ func FuzzRedactAllRulesSecurity(f *testing.F) {
 			if err != nil {
 				t.Fatalf("Redact: %v", err)
 			}
-			if stats.BytesRead != int64(len(data)) || stats.Findings != len(findings) {
+			if stats.BytesRead != int64(len(data)) || stats.Findings != int64(len(findings)) {
 				t.Fatalf("stats=%+v input=%d callbacks=%d", stats, len(data), len(findings))
 			}
 			if want := spliceExpected(data, findings, DefaultMarker); !bytes.Equal(out.Bytes(), []byte(want)) {

@@ -55,25 +55,46 @@ var hexHashLens = map[int]bool{32: true, 40: true, 64: true, 96: true, 128: true
 // small constant number of times. Classify(nil) and Classify of an empty
 // slice are both ClassUnknown.
 func Classify(b []byte) Class {
+	class, _, _ := classifyEntropy(b)
+	return class
+}
+
+// classifyEntropy buckets b exactly like Classify, additionally reporting
+// the Shannon entropy of b when computing it was already necessary to
+// reach that classification (the wordlike check below), so a caller that
+// also needs the entropy value (Secretlike) is not forced to recompute
+// Shannon(b) a second time over the same bytes. ok is false when no
+// entropy value was computed as a byproduct — the caller must call
+// Shannon(b) itself if it still needs one.
+func classifyEntropy(b []byte) (class Class, entropy float64, ok bool) {
 	if len(b) == 0 {
-		return ClassUnknown
+		return ClassUnknown, 0, false
 	}
 	if isUUID(b) {
-		return ClassUUID
+		return ClassUUID, 0, false
 	}
 	if isHexHash(b) {
-		return ClassHexHash
+		return ClassHexHash, 0, false
 	}
 	if isAllDigits(b) {
-		return ClassDigits
+		return ClassDigits, 0, false
 	}
-	if isWordlike(b) {
-		return ClassWordlike
+	if wordlike, shannon, computed := isWordlikeEntropy(b); computed {
+		if wordlike {
+			return ClassWordlike, shannon, true
+		}
+		// isWordlikeEntropy only computes an entropy value once b's
+		// bytes are confirmed to lie entirely within [a-z_-] — a strict
+		// subset of isBase64ish's alphabet — so falling below the
+		// wordlike ceiling here always means isBase64ish(b) would also
+		// be true; take that classification directly rather than
+		// re-scanning b to confirm it.
+		return ClassBase64ish, shannon, true
 	}
 	if isBase64ish(b) {
-		return ClassBase64ish
+		return ClassBase64ish, 0, false
 	}
-	return ClassUnknown
+	return ClassUnknown, 0, false
 }
 
 // isHexDigit reports whether c is an ASCII hex digit, any case.
@@ -132,14 +153,21 @@ func isAllDigits(b []byte) bool {
 	return true
 }
 
-// isWordlike reports whether b is mostly lowercase ASCII letters (allowing
-// '_'/'-' separators, disallowing everything else including digits and
-// uppercase) with entropy low enough, relative to that alphabet, to read
-// as a word-like token rather than a random one. Any byte outside
-// [a-z_-] disqualifies b immediately: mixed-case or digit-containing
-// candidates are judged as base64-ish/unknown instead, since those
-// alphabets are the ones real secrets actually use.
-func isWordlike(b []byte) bool {
+// isWordlikeEntropy reports whether b is mostly lowercase ASCII letters
+// (allowing '_'/'-' separators, disallowing everything else including
+// digits and uppercase) with entropy low enough, relative to that
+// alphabet, to read as a word-like token rather than a random one. Any
+// byte outside [a-z_-] disqualifies b immediately: mixed-case or
+// digit-containing candidates are judged as base64-ish/unknown instead,
+// since those alphabets are the ones real secrets actually use.
+//
+// computed reports whether entropy was actually calculated (i.e. b's
+// alphabet and lowercase fraction passed the structural checks that
+// precede the entropy comparison); when computed is false, entropy is 0
+// and wordlike is always false. Callers that need the entropy value
+// regardless of wordlike-ness can reuse it directly instead of calling
+// Shannon(b) again over the same bytes.
+func isWordlikeEntropy(b []byte) (wordlike bool, entropy float64, computed bool) {
 	lower := 0
 	for _, c := range b {
 		switch {
@@ -149,16 +177,17 @@ func isWordlike(b []byte) bool {
 			// separator; does not count toward the lowercase fraction
 			// but does not disqualify either.
 		default:
-			return false
+			return false, 0, false
 		}
 	}
 	if lower == 0 {
-		return false
+		return false, 0, false
 	}
 	if float64(lower)/float64(len(b)) < wordlikeMinLowerFrac {
-		return false
+		return false, 0, false
 	}
-	return Shannon(b) < wordlikeEntropyCeiling
+	entropy = Shannon(b)
+	return entropy < wordlikeEntropyCeiling, entropy, true
 }
 
 // isBase64ish reports whether every byte of b is in the base64/base64url

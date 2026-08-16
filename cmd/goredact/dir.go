@@ -89,12 +89,23 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 	if err != nil {
 		return errors.New("goredact dir: cannot resolve scan path")
 	}
-	paths, err := regularFiles(root)
+	// Resolve a symlinked root (e.g. a "current -> release-N" layout) to
+	// its real target so it can be walked; symlinks nested inside the
+	// tree are deliberately left unresolved and not followed.
+	root, err = filepath.EvalSymlinks(root)
 	if err != nil {
-		return errors.New("goredact dir: cannot enumerate scan path")
+		return fmt.Errorf("goredact dir: cannot enumerate scan path: %w", err)
+	}
+	paths, skippedPaths, err := regularFiles(root)
+	if err != nil {
+		return fmt.Errorf("goredact dir: cannot enumerate scan path: %w", err)
 	}
 	if o.reportPath != "-" {
 		reportPath, resolveErr := filepath.Abs(o.reportPath)
+		if resolveErr != nil {
+			return errors.New("goredact dir: cannot resolve report path")
+		}
+		reportPath, resolveErr = canonicalizeReportPath(reportPath)
 		if resolveErr != nil {
 			return errors.New("goredact dir: cannot resolve report path")
 		}
@@ -123,6 +134,9 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 	}
 	if unreadable > 0 {
 		fmt.Fprintf(stderr, "goredact: skipped %d unreadable file(s)\n", unreadable)
+	}
+	if skippedPaths > 0 {
+		fmt.Fprintf(stderr, "goredact: skipped %d unreadable path(s) while enumerating\n", skippedPaths)
 	}
 	fmt.Fprintf(stderr, "goredact: secrets_found=%d\n", len(report.Findings))
 	if len(report.Findings) > 0 && o.exitCode != 0 {
@@ -302,6 +316,22 @@ func loadSecrets(file *os.File, findings []reportFinding) error {
 	return nil
 }
 
+// canonicalizeReportPath resolves symlinks in reportPath's directory so it
+// compares equal to the canonicalized paths regularFiles returns even
+// when the scan root is reached through a symlink (e.g. "current ->
+// /releases/x", "-report-path current/findings.json"). It resolves the
+// directory rather than the full path because the report file itself
+// commonly does not exist yet on a first run — only its parent directory
+// is guaranteed to.
+func canonicalizeReportPath(reportPath string) (string, error) {
+	dir, base := filepath.Split(reportPath)
+	realDir, err := filepath.EvalSymlinks(filepath.Clean(dir))
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(realDir, base), nil
+}
+
 func excludePath(paths []string, excluded string) []string {
 	kept := paths[:0]
 	for _, path := range paths {
@@ -312,24 +342,35 @@ func excludePath(paths []string, excluded string) []string {
 	return kept
 }
 
-func regularFiles(root string) ([]string, error) {
+// regularFiles enumerates the regular files under root eligible for
+// scanning. A directory or file that cannot be read (permission denied, or
+// deleted mid-walk) is skipped and counted rather than aborting the whole
+// walk, matching docs/CLI_AND_UPLOAD.md's documented behavior for
+// unreadable paths.
+func regularFiles(root string) (paths []string, skipped int, err error) {
 	info, err := os.Lstat(root)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if info.Mode().IsRegular() {
 		if info.Size() == 0 {
-			return nil, nil
+			return nil, 0, nil
 		}
-		return []string{root}, nil
+		return []string{root}, 0, nil
 	}
 	if !info.IsDir() {
-		return nil, errors.New("not a regular file or directory")
+		return nil, 0, errors.New("not a regular file or directory")
 	}
-	var paths []string
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			return walkErr
+			if path == root {
+				return walkErr
+			}
+			skipped++
+			if entry != nil && entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 		rel, relErr := filepath.Rel(root, path)
 		if relErr != nil {
@@ -345,7 +386,8 @@ func regularFiles(root string) ([]string, error) {
 			}
 			info, infoErr := entry.Info()
 			if infoErr != nil {
-				return infoErr
+				skipped++
+				return nil
 			}
 			if info.Size() == 0 {
 				return nil
@@ -355,7 +397,7 @@ func regularFiles(root string) ([]string, error) {
 		return nil
 	})
 	sort.Strings(paths)
-	return paths, err
+	return paths, skipped, err
 }
 
 // These are Gitleaks' default dependency and repository metadata exclusions,
@@ -388,7 +430,7 @@ var defaultExcludedFilePatterns = []*regexp.Regexp{
 	regexp.MustCompile(`gitleaks\.toml`),
 	regexp.MustCompile(`(?i)\.(?:bmp|gif|jpe?g|png|svg|tiff?)$`),
 	regexp.MustCompile(`(?i)\.(?:eot|[ot]tf|woff2?)$`),
-	regexp.MustCompile(`(?i)\.(?:docx?|xlsx?|pdf|bin|socket|vsidx|v2|suo|wsuo|.dll|pdb|exe|gltf)$`),
+	regexp.MustCompile(`(?i)\.(?:docx?|xlsx?|pdf|bin|socket|vsidx|v2|suo|wsuo|dll|pdb|exe|gltf)$`),
 	regexp.MustCompile(`go\.(?:mod|sum|work(?:\.sum)?)$`),
 	regexp.MustCompile(`(?:^|/)vendor/modules\.txt$`),
 	regexp.MustCompile(`(?:^|/)gradlew(?:\.bat)?$`),

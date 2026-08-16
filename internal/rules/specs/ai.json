@@ -195,7 +195,8 @@
       "fixtures": {
         "match": [
           "export CO_API_KEY=H2KCBhpcOPYhC8jhRqcRSBueRVzkLJKUT5YsB16V",
-          "COHERE_API_KEY: \"ILZo8C46vo3Ipa56xQ9vaey2pW44QkrEmSX61qMH\""
+          "COHERE_API_KEY: \"ILZo8C46vo3Ipa56xQ9vaey2pW44QkrEmSX61qMH\"",
+          "{\"cohere_api_key\": \"H2KCBhpcOPYhC8jhRqcRSBueRVzkLJKUT5YsB16V\"}"
         ],
         "nomatch": [
           "CO_API_KEY=tooshort",
@@ -255,7 +256,8 @@
       "fixtures": {
         "match": [
           "export DEEPGRAM_API_KEY=08f7t2w36t9v3syfilru1v727m8rh2w5me4p0und",
-          "deepgram_api_key: '2x7c1ir87vpi062xqtlsr2t5x9i3qsh8nwo6x3cw'"
+          "deepgram_api_key: '2x7c1ir87vpi062xqtlsr2t5x9i3qsh8nwo6x3cw'",
+          "{\"deepgram_api_key\": \"08f7t2w36t9v3syfilru1v727m8rh2w5me4p0und\"}"
         ],
         "nomatch": [
           "DEEPGRAM_API_KEY=tooshort",

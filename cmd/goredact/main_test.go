@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"io"
 	"os"
 	"path/filepath"
@@ -103,3 +104,105 @@ func TestRunMaskFlag(t *testing.T) {
 type failingReader struct{ err error }
 
 func (r *failingReader) Read([]byte) (int, error) { return 0, r.err }
+
+func TestSameFileNameAliasing(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "in.txt")
+	other := filepath.Join(dir, "other.txt")
+	if err := os.WriteFile(in, []byte("content"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if !sameFileName(in, in) {
+		t.Fatal("identical paths should be detected as the same file")
+	}
+	if sameFileName(in, other) {
+		t.Fatal("distinct, non-existent output should not alias the input")
+	}
+
+	symlink := filepath.Join(dir, "sym.txt")
+	if err := os.Symlink(in, symlink); err != nil {
+		t.Fatal(err)
+	}
+	if !sameFileName(in, symlink) {
+		t.Fatal("symlink to input should alias the input")
+	}
+
+	hardlink := filepath.Join(dir, "hard.txt")
+	if err := os.Link(in, hardlink); err != nil {
+		t.Skipf("hardlinks unsupported on this platform: %v", err)
+	}
+	if !sameFileName(in, hardlink) {
+		t.Fatal("hardlink to input should alias the input")
+	}
+}
+
+func TestRunStreamRefusesSymlinkAliasedOutput(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "in.txt")
+	secret := "AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H\n"
+	if err := os.WriteFile(in, []byte(secret), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "out-link")
+	if err := os.Symlink(in, link); err != nil {
+		t.Fatal(err)
+	}
+
+	err := run(context.Background(), []string{"stream", "-input=" + in, "-output=" + link}, nil, io.Discard, io.Discard)
+	if err == nil {
+		t.Fatal("expected an error for symlink-aliased output")
+	}
+	got, readErr := os.ReadFile(in)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(got) != secret {
+		t.Fatalf("input was modified: got %q", got)
+	}
+}
+
+// TestRunHelpFlagIsNotAFailure pins main's handling of -h/-help: run
+// returns flag.ErrHelp (via errors.Is, since flag.ContinueOnError wraps
+// nothing extra around it) rather than an ordinary error, which is what
+// lets main exit 0 without printing a stray "flag: help requested" line
+// alongside the usage flag.Parse already wrote to stderr.
+func TestRunHelpFlagIsNotAFailure(t *testing.T) {
+	for _, args := range [][]string{{"stream", "-h"}, {"stream", "-help"}, {"dir", "-h"}, {"dir", "-help"}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var diagnostics bytes.Buffer
+			err := run(context.Background(), args, nil, io.Discard, &diagnostics)
+			if !errors.Is(err, flag.ErrHelp) {
+				t.Fatalf("run(%v) error = %v, want flag.ErrHelp", args, err)
+			}
+			if !strings.Contains(diagnostics.String(), "Usage") {
+				t.Fatalf("diagnostics = %q, want usage text", diagnostics.String())
+			}
+		})
+	}
+}
+
+// TestRunFailedStatsWriteKeepsOutput pins that a stats-sidecar write
+// failure reports an error but does not delete the already-complete,
+// correctly redacted output file.
+func TestRunFailedStatsWriteKeepsOutput(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "input")
+	out := filepath.Join(dir, "output")
+	if err := os.WriteFile(in, []byte("ordinary text"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	badStatsPath := filepath.Join(dir, "nonexistent-subdir", "stats.json")
+
+	err := run(context.Background(), []string{"stream", "-input=" + in, "-output=" + out, "-stats=" + badStatsPath}, nil, io.Discard, io.Discard)
+	if err == nil {
+		t.Fatal("expected a stats-write error")
+	}
+	got, readErr := os.ReadFile(out)
+	if readErr != nil {
+		t.Fatalf("completed output was removed: %v", readErr)
+	}
+	if string(got) != "ordinary text" {
+		t.Fatalf("output = %q, want the redacted content preserved", got)
+	}
+}

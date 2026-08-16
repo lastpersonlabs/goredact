@@ -19,6 +19,14 @@ go vet ./...
 go test ./...
 ```
 
+`make lint` additionally runs `gofmt -l` and staticcheck, pinning the
+toolchain it builds staticcheck with to match this module's `go.mod`
+directive — so it works even when your locally installed Go predates that
+directive (module commands like `go build`/`go test` already auto-download
+a matching toolchain via `GOTOOLCHAIN=auto`; `go run` of a third-party tool
+does not, since it resolves the toolchain from the tool's own `go.mod`
+instead).
+
 ### Race detector
 
 Concurrency correctness (an immutable `Engine`/`Automaton` used safely across

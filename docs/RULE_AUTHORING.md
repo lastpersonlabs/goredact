@@ -17,6 +17,19 @@ boundaries, and placeholders as applicable. A generic prefix requires
 additional context or entropy validation; do not promote a heuristic rule into
 the fast profile.
 
+For a fixed-literal-prefix token rule (the trigger is the token's own prefix,
+e.g. `ghp_`, `sk_live_`, `hvs.`, not a contextual keyword like a `password`
+assignment), set `maxLookbehind: 1` and reject when the byte immediately
+before the trigger is itself an identifier byte (`precededByIdentByte`, or an
+equivalent check for a validator whose body alphabet includes `-`/`_` and so
+needs a wider preceding-boundary set). This is what keeps the trigger from
+firing on a false match embedded inside a longer identifier or opaque blob
+(e.g. a base64-encoded blob that happens to contain `ghp_` mid-string).
+Contextual rules keyed on an assignment or header (whose "boundary" is
+already the separator/quote grammar around the value, not the trigger
+literal itself) do not need this — see `consumeAssignedValue` and
+`parseAssignmentValue` for that family's own boundary handling.
+
 After changing a rule:
 
 ```sh

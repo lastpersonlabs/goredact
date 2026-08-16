@@ -29,9 +29,13 @@ this and record `strategy: format-preserving`).
 `stream -stats -` writes
 JSON statistics to standard error. Progress is also written to standard error
 and contains only a cumulative byte count. Neither channel includes matched
-content. Output files use mode `0600` and are removed if scanning or writing
-fails. A stream sent to stdout may already have delivered a redacted prefix on
-failure, so callers must not publish it as a completed object.
+content. Output files use mode `0600` and are removed if scanning, mask
+compression, or writing the redacted stream itself fails. Once the redacted
+output is complete, a failure writing the optional `-stats` sidecar is
+reported on standard error with a non-zero exit but does not remove the
+already-correct output file. A stream sent to stdout may already have
+delivered a redacted prefix on failure, so callers must not publish it as a
+completed object.
 
 ## Directory scanning and reports
 
@@ -56,6 +60,16 @@ opened or read (permissions, deletion races) are skipped rather than
 failing the scan; `dir` reports `goredact: skipped N unreadable file(s)`
 on standard error when this happens. Neither kind of skipped file counts
 toward the report's scanned-file total.
+
+A directory that cannot be opened while enumerating the tree (permissions,
+deletion races) is skipped the same way, along with everything beneath it;
+`dir` reports `goredact: skipped N unreadable path(s) while enumerating` on
+standard error when this happens, and the scan still completes and reports
+findings from every path it could read. Neither kind of skip affects the
+exit code, which is driven only by findings. If the scan root itself is a
+symlink (e.g. a `current -> release-N` deployment layout), it is resolved
+to its target before walking; symlinks encountered elsewhere inside the
+tree are never followed.
 
 Directory work is processed by a bounded worker pool and reports remain sorted
 by path regardless of completion order. The command does not write redacted

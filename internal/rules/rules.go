@@ -133,10 +133,15 @@ func Build(opts BuildOptions) (*Set, error) {
 	var active []Rule
 	for _, r := range builtins {
 		known[r.ID] = true
-		if r.MinProfile > opts.Profile {
-			continue
-		}
-		if enable != nil && !enable[r.ID] {
+		if enable != nil {
+			// Explicit enablement is an allowlist: a named rule runs
+			// regardless of the requested profile, rather than being
+			// silently dropped when it sits above the profile's
+			// MinProfile gate.
+			if !enable[r.ID] {
+				continue
+			}
+		} else if r.MinProfile > opts.Profile {
 			continue
 		}
 		if disable[r.ID] {
@@ -168,6 +173,9 @@ func Build(opts BuildOptions) (*Set, error) {
 		}
 		seen[r.ID] = true
 		active = append(active, r)
+	}
+	if len(active) == 0 {
+		return nil, fmt.Errorf("rule set is empty: no rules matched the given Profile, EnableRules, and DisableRules")
 	}
 
 	s := &Set{Rules: active}

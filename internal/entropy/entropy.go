@@ -239,7 +239,11 @@ func Secretlike(b []byte, o Options) bool {
 		return false
 	}
 
-	switch Classify(b) {
+	// classifyEntropy reports Shannon(b) as a byproduct when the wordlike
+	// check already computed it, so the MinBitsPerByte check below can
+	// reuse it instead of scanning b for entropy a second time.
+	class, entropy, entropyComputed := classifyEntropy(b)
+	switch class {
 	case ClassWordlike:
 		// Word-like values are never secretlike, independent of o: the
 		// class itself is defined as "low entropy relative to its
@@ -260,8 +264,13 @@ func Secretlike(b []byte, o Options) bool {
 		}
 	}
 
-	if o.MinBitsPerByte > 0 && Shannon(b) < o.MinBitsPerByte {
-		return false
+	if o.MinBitsPerByte > 0 {
+		if !entropyComputed {
+			entropy = Shannon(b)
+		}
+		if entropy < o.MinBitsPerByte {
+			return false
+		}
 	}
 	return true
 }

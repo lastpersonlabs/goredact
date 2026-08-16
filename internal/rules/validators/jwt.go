@@ -17,11 +17,7 @@
 // alphabet RFC 7515 actually specifies for the two JSON segments.
 package validators
 
-import (
-	"encoding/base64"
-
-	"github.com/lastpersonlabs/goredact/internal/entropy"
-)
+import "encoding/base64"
 
 const (
 	// jwtSegmentMinLen is the minimum length of the header and payload
@@ -44,11 +40,11 @@ func isBase64URLByte(c byte) bool {
 	return isAlnum(c) || c == '-' || c == '_'
 }
 
-// isJWTSignatureByte additionally admits '/' so signatures emitted by
-// non-compliant standard-base64 encoders are still captured whole rather
-// than truncated mid-signature.
+// isJWTSignatureByte additionally admits '/' and '+' so signatures emitted
+// by non-compliant standard-base64 encoders (which map '-'/'_' to
+// '+'/'/') are still captured whole rather than truncated mid-signature.
 func isJWTSignatureByte(c byte) bool {
-	return isBase64URLByte(c) || c == '/'
+	return isBase64URLByte(c) || c == '/' || c == '+'
 }
 
 // JWT confirms a standalone JWS compact serialization: trigger "eyJ"
@@ -64,7 +60,7 @@ func isJWTSignatureByte(c byte) bool {
 // legal because assignments, "ID_TOKEN=eyJ...", are exactly where bare
 // JWTs appear). The byte after the token must not be alphanumeric or
 // further padding. Signatures that are
-// placeholders (entropy.IsPlaceholder: repeated bytes, "xxxx...",
+// placeholders (isPlaceholder: repeated bytes, "xxxx...",
 // keyboard runs) are rejected, so documentation examples with stub
 // signatures never fire. The whole token, header through padding, is
 // redacted.
@@ -122,7 +118,7 @@ func parseJWT(window []byte, trigStart, trigEnd int) (start, end, payStart, payE
 	if pos-sigStart < jwtSignatureMinLen {
 		return 0, 0, 0, 0, false
 	}
-	if entropy.IsPlaceholder(window[sigStart:pos]) {
+	if isPlaceholder(window[sigStart:pos]) {
 		return 0, 0, 0, 0, false
 	}
 	for pad := 0; pad < 2 && pos < len(window) && window[pos] == '='; pad++ {

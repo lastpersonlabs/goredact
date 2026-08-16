@@ -360,8 +360,10 @@ func (r *scanRun) flush(eof bool) error {
 		// Defensive: never release past a queued candidate's window
 		// start. Structurally this never binds — a candidate only queues
 		// while its lookahead extends past bufEnd, which places its
-		// window start beyond bufEnd-window — but the Release contract
-		// (no later Add with Start < limit) depends on it, so enforce it.
+		// window start strictly beyond bufEnd-window (the stronger
+		// Start > releaseLimit, not merely Start >= releaseLimit) — but
+		// the Release contract (no later Add with Start <= limit; see
+		// span.Collector.Release) depends on it, so enforce it.
 		for i := range r.st.pending {
 			c := &r.st.pending[i]
 			if ws := c.trigStart - int64(r.e.rules.Rules[c.rule].MaxLookbehind); ws < releaseLimit {
@@ -404,7 +406,7 @@ func (r *scanRun) recordFindings(released []span.Span) {
 		r.stats.Findings++
 		id := r.e.rules.Rules[s.Rule].ID
 		if r.stats.ByRule == nil {
-			r.stats.ByRule = make(map[string]int)
+			r.stats.ByRule = make(map[string]int64)
 		}
 		r.stats.ByRule[id]++
 		if r.e.cfg.OnFinding != nil {

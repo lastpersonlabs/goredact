@@ -506,6 +506,77 @@ func TestRecordAlignedEmission(t *testing.T) {
 	}
 }
 
+// TestRecordAlignedCarriesReleasedSpanAcrossEmission exercises the one
+// path in emitTo that TestRecordAlignedEmission's secret-free input never
+// reaches: a span released by flush's Collector.Release call whose Start
+// still falls at or past the record-aligned emitLimit. alignToRecord can
+// lower emitLimit below a released (but not yet emitted) span's Start only
+// under RecordAligned, so emitTo must carry that span forward — untested
+// in the repo before this, per ENG-189.
+//
+// A tiny custom rule keeps the window (MaxLookbehind+trigger+MaxLookahead)
+// small so a 4096-byte first chunk lands the release limit deep inside an
+// unbroken (newline-free) record that starts just after the secret,
+// forcing alignToRecord to snap the emission boundary back to the single
+// earlier newline — well before the secret's Start.
+func TestRecordAlignedCarriesReleasedSpanAcrossEmission(t *testing.T) {
+	const chunkSize = 4096
+	rule := CustomRule{
+		ID:            "test-secret",
+		Triggers:      []string{"SECRET"},
+		Confidence:    ConfidenceHigh,
+		MaxLookbehind: 0,
+		MaxLookahead:  10,
+		Validate: func(window []byte, _, trigEnd int) (int, int, bool) {
+			end := trigEnd + 10
+			if end > len(window) {
+				return 0, 0, false
+			}
+			return trigEnd, end, true
+		},
+	}
+
+	prefix := strings.Repeat("a", 10) + "\n" // one completed record: 11 bytes, newline at index 10
+	gap := strings.Repeat("b", 5)            // 5 bytes before the trigger, so Start clears the aligned limit
+	secret := "SECRET0123456789"             // trigger (6) + 10-byte confirmed value
+	head := prefix + gap + secret            // 32 bytes, ending right after the secret
+	padding := strings.Repeat("c", chunkSize-len(head))
+	tail := "\n" + strings.Repeat("d", 50) + "\n"
+	in := head + padding + tail // first chunkSize bytes hold exactly one newline, at index 10
+
+	// Disable every built-in so the tiny custom rule's window (16 bytes)
+	// is the only one that determines MinChunkSize, keeping the arithmetic
+	// above exact for a 4096-byte chunk.
+	builtins := BuiltinRules()
+	disableIDs := make([]string, len(builtins))
+	for i, r := range builtins {
+		disableIDs[i] = r.ID
+	}
+	e := mustEngine(t, Config{ChunkSize: chunkSize, CustomRules: []CustomRule{rule}, DisableRules: disableIDs, RecordAligned: true})
+
+	w := &recordingWriter{}
+	stats, err := e.Redact(context.Background(), w, strings.NewReader(in))
+	if err != nil {
+		t.Fatalf("Redact: %v", err)
+	}
+	if stats.Findings != 1 {
+		t.Fatalf("Findings = %d, want 1", stats.Findings)
+	}
+	if len(w.bounds) < 2 {
+		t.Fatalf("expected the aligned boundary to force multiple emissions, got bounds %v", w.bounds)
+	}
+
+	secretStart := len(prefix) + len(gap) + len("SECRET")
+	want := in[:secretStart] + DefaultMarker + in[secretStart+10:]
+	got := w.buf.String()
+	if got != want {
+		t.Fatalf("output = %q, want %q", got, want)
+	}
+	if strings.Contains(got, "0123456789") {
+		t.Fatal("confirmed secret value leaked into output")
+	}
+}
+
 // TestRedactBoundedMemory scans a 1 GiB synthetic stream through the
 // engine and asserts the heap grows by no more than a few MiB. The engine
 // never opens files — input flows reader -> fixed buffer -> writer only
@@ -549,7 +620,7 @@ func TestRedactBoundedMemory(t *testing.T) {
 	if stats.BytesRead != total {
 		t.Errorf("BytesRead = %d, want %d", stats.BytesRead, total)
 	}
-	wantFindings := int(total / blockSize)
+	wantFindings := total / blockSize
 	if stats.Findings != wantFindings {
 		t.Errorf("Findings = %d, want %d", stats.Findings, wantFindings)
 	}

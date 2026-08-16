@@ -90,9 +90,9 @@ func isAWSSecretChar(c byte) bool {
 }
 
 // skipSpaces returns the offset of the first byte at or after pos that is
-// not an ASCII space, never indexing out of range.
+// not an ASCII space or horizontal tab, never indexing out of range.
 func skipSpaces(window []byte, pos int) int {
-	for pos < len(window) && window[pos] == ' ' {
+	for pos < len(window) && (window[pos] == ' ' || window[pos] == '\t') {
 		pos++
 	}
 	return pos
@@ -100,55 +100,20 @@ func skipSpaces(window []byte, pos int) int {
 
 // AWSSecretAccessKey confirms the shape of a value assigned to an
 // aws_secret_access_key key (the trigger is matched case-insensitively, so
-// this also fires on AWS_SECRET_ACCESS_KEY): optional spaces, a '=' or ':'
-// separator, optional spaces, an optional opening quote, exactly 40
-// characters of [A-Za-z0-9/+=], a matching closing quote if one was opened,
-// and a boundary. Only the 40-character value is reported as the
-// redaction span — the key name itself is never touched. It rejects an
+// this also fires on AWS_SECRET_ACCESS_KEY): optional spaces/tabs, a '='
+// or ':' separator (optionally preceded by a JSON-style closing quote),
+// optional spaces/tabs, an optional opening quote, exactly 40 characters
+// of [A-Za-z0-9/+=], a matching closing quote if one was opened, and a
+// boundary. Only the 40-character value is reported as the redaction
+// span — the key name itself is never touched. It rejects an
 // all-identical value and the well-known AWS documentation placeholder
 // secret.
 func AWSSecretAccessKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
-	pos := skipSpaces(window, trigEnd)
-	if pos >= len(window) {
+	valStart, valEnd, ok := consumeAssignedValue(window, trigEnd, awsSecretValueLen, isAWSSecretChar)
+	if !ok {
 		return 0, 0, false
 	}
-	if window[pos] != '=' && window[pos] != ':' {
-		return 0, 0, false
-	}
-	pos++
-	pos = skipSpaces(window, pos)
-
-	var quote byte
-	if pos < len(window) && (window[pos] == '"' || window[pos] == '\'') {
-		quote = window[pos]
-		pos++
-	}
-
-	valStart := pos
-	valEnd := valStart + awsSecretValueLen
-	if valEnd > len(window) {
-		return 0, 0, false
-	}
-	value := window[valStart:valEnd]
-	for _, c := range value {
-		if !isAWSSecretChar(c) {
-			return 0, 0, false
-		}
-	}
-
-	after := valEnd
-	if quote != 0 {
-		if after >= len(window) || window[after] != quote {
-			return 0, 0, false
-		}
-	} else if after < len(window) && isAWSSecretChar(window[after]) {
-		return 0, 0, false
-	}
-
-	if isPlaceholder(value) {
-		return 0, 0, false
-	}
-	if bytes.Equal(value, awsDocsExampleSecret) {
+	if bytes.Equal(window[valStart:valEnd], awsDocsExampleSecret) {
 		return 0, 0, false
 	}
 	return valStart, valEnd, true
@@ -219,7 +184,8 @@ func isAzureBase64Char(c byte) bool {
 // which already satisfies this boundary). If the base64 run reaches the
 // end of window before the "==" padding can be confirmed, the match is
 // rejected outright rather than guessing at what a truncated window might
-// have contained.
+// have contained. It rejects a placeholder body, mirroring
+// azureShortBase64Secret below.
 func AzureStorageAccountKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 	valStart := trigEnd
 	pos := valStart
@@ -236,12 +202,16 @@ func AzureStorageAccountKey(window []byte, trigStart, trigEnd int) (start, end i
 	if window[pos] != '=' || window[pos+1] != '=' {
 		return 0, 0, false
 	}
+	body := window[valStart:pos]
 	valEnd := pos + 2
 
 	if valEnd < len(window) {
 		if c := window[valEnd]; isAzureBase64Char(c) || c == '=' {
 			return 0, 0, false
 		}
+	}
+	if isPlaceholder(body) {
+		return 0, 0, false
 	}
 	return valStart, valEnd, true
 }

@@ -1,5 +1,7 @@
 package entropy
 
+import "github.com/lastpersonlabs/goredact/internal/ahocorasick"
+
 // substringPlaceholders are lowercase keywords that mark b as a
 // placeholder if they appear ANYWHERE in b (case-insensitively).
 var substringPlaceholders = []string{
@@ -43,6 +45,47 @@ var keyboardRuns = []string{
 	"qazwsx",
 }
 
+// anywhereKeywordAutomaton is a single compiled automaton over every
+// keyword in substringPlaceholders and keyboardRuns (all matched
+// case-insensitively), built once at package init. IsPlaceholder used to
+// check these ~24 keywords with one independent O(len(b)) containsFold
+// scan each; scanning b through this automaton once instead reaches the
+// same true/false outcome (the two source lists are only ever consulted
+// for "does any of these occur anywhere", never for which one matched) in
+// a single O(len(b)) pass.
+var anywhereKeywordAutomaton = mustCompileAnywhereKeywords()
+
+func mustCompileAnywhereKeywords() *ahocorasick.Automaton {
+	patterns := make([]ahocorasick.Pattern, 0, len(substringPlaceholders)+len(keyboardRuns))
+	for _, kw := range substringPlaceholders {
+		patterns = append(patterns, ahocorasick.Pattern{Literal: kw, CaseFold: true})
+	}
+	for _, kw := range keyboardRuns {
+		patterns = append(patterns, ahocorasick.Pattern{Literal: kw, CaseFold: true})
+	}
+	a, err := ahocorasick.Compile(patterns)
+	if err != nil {
+		// substringPlaceholders/keyboardRuns are fixed, non-empty literal
+		// lists baked into this package; a Compile failure here can only
+		// mean a programmer error (e.g. an empty literal added to one of
+		// them), not a runtime data condition.
+		panic("entropy: failed to compile placeholder keyword automaton: " + err.Error())
+	}
+	return a
+}
+
+// containsAnywhereKeyword reports whether any keyword from
+// substringPlaceholders or keyboardRuns occurs anywhere in b,
+// case-insensitively, in one pass over b.
+func containsAnywhereKeyword(b []byte) bool {
+	found := false
+	anywhereKeywordAutomaton.Scan(0, b, func(pattern, end int) bool {
+		found = true
+		return false // first match is enough; stop scanning.
+	})
+	return found
+}
+
 // IsPlaceholder reports whether b is a well-known non-secret stand-in
 // value rather than real secret material: common keyword placeholders
 // ("example", "changeme", "password", ...), angle-bracket tokens
@@ -75,15 +118,8 @@ func IsPlaceholder(b []byte) bool {
 	if isAscendingRun(b) {
 		return true
 	}
-	for _, kw := range keyboardRuns {
-		if containsFold(b, kw) {
-			return true
-		}
-	}
-	for _, kw := range substringPlaceholders {
-		if containsFold(b, kw) {
-			return true
-		}
+	if containsAnywhereKeyword(b) {
+		return true
 	}
 	for _, kw := range wholeValuePlaceholders {
 		if len(b) == len(kw) && matchFoldAt(b, 0, kw) {
@@ -112,18 +148,80 @@ func isAngleBracketToken(b []byte) bool {
 }
 
 // isTemplateRef reports whether b is a template or shell-variable
-// reference rather than a literal secret value: any value starting with
-// '$' ("$GITHUB_TOKEN", "${API_KEY}" — no real secret alphabet includes
-// a leading dollar sign), or a value wrapped in braces ("{token}",
-// "{{ secrets.token }}").
+// reference rather than a literal secret value: "${VAR}", "$(cmd)", a
+// bare "$IDENTIFIER" shell variable, or a value wrapped in braces
+// ("{token}", "{{ secrets.token }}").
+//
+// A leading '$' alone is not sufficient: modular-crypt-format password
+// hashes — "$2b$12$..." (bcrypt), "$argon2id$v=19$..." (argon2), "$6$..."
+// (sha512crypt) — also start with '$', and are exactly the kind of value
+// the contextual "password = ..." rules need to redact, not wave through
+// as a placeholder. IsModularCryptHash distinguishes those from a shell
+// reference by their actual grammar rather than just counting '$' bytes,
+// since a chain of concatenated shell variables ("$user$pass$env") can
+// have just as many '$' separators as a real hash.
 func isTemplateRef(b []byte) bool {
 	if len(b) >= 1 && b[0] == '$' {
-		return true
+		if len(b) >= 3 && b[1] == '{' && b[len(b)-1] == '}' {
+			return true
+		}
+		if len(b) >= 3 && b[1] == '(' && b[len(b)-1] == ')' {
+			return true
+		}
+		return !IsModularCryptHash(b)
 	}
 	if len(b) >= 3 && b[0] == '{' && b[len(b)-1] == '}' {
 		return true
 	}
 	return false
+}
+
+// modularCryptIDs are the known algorithm identifiers that legitimately
+// occupy the first '$'-delimited field of a modular-crypt-format hash.
+var modularCryptIDs = map[string]bool{
+	"1": true, "2": true, "2a": true, "2b": true, "2x": true, "2y": true,
+	"5": true, "6": true, "y": true, "gy": true,
+	"argon2i": true, "argon2d": true, "argon2id": true,
+}
+
+// IsModularCryptHash reports whether b has the modular-crypt-format
+// grammar used by password hashes such as "$2b$12$..." (bcrypt),
+// "$argon2id$v=19$..." (argon2), or "$6$..." (sha512crypt): a leading
+// '$', followed by one of a small set of known algorithm identifiers,
+// followed by at least one more '$'-delimited field.
+//
+// Counting '$' bytes alone is not enough: a value like
+// "$databaseUser$databasePass$environmentName" — three concatenated
+// shell variables — has just as many '$' separators as a real hash, but
+// its first field is not a recognized algorithm identifier. Validating
+// that field against modularCryptIDs is what tells the two apart.
+func IsModularCryptHash(b []byte) bool {
+	if len(b) < 2 || b[0] != '$' {
+		return false
+	}
+	rest := b[1:]
+	sep := -1
+	for i, c := range rest {
+		if c == '$' {
+			sep = i
+			break
+		}
+	}
+	if sep <= 0 || !modularCryptIDs[string(rest[:sep])] {
+		return false
+	}
+	return countByte(rest, '$') >= 2
+}
+
+// countByte returns the number of times c occurs in b.
+func countByte(b []byte, c byte) int {
+	n := 0
+	for _, x := range b {
+		if x == c {
+			n++
+		}
+	}
+	return n
 }
 
 // isAscendingRun reports whether b contains a run of 4 or more
@@ -153,23 +251,6 @@ func lowerASCII(c byte) byte {
 		c = c - 'A' + 'a'
 	}
 	return c
-}
-
-// containsFold reports whether needle (which must already be lowercase
-// ASCII) occurs anywhere in haystack, ignoring ASCII case. Folding
-// during comparison keeps this allocation-free on the per-candidate
-// hot path.
-func containsFold(haystack []byte, needle string) bool {
-	n := len(needle)
-	if n == 0 {
-		return true
-	}
-	for i := 0; i+n <= len(haystack); i++ {
-		if matchFoldAt(haystack, i, needle) {
-			return true
-		}
-	}
-	return false
 }
 
 // matchFoldAt reports whether haystack[pos:pos+len(needle)] equals

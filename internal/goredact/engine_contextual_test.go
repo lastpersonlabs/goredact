@@ -62,7 +62,7 @@ func TestRedactContextualMixedLog(t *testing.T) {
 		if !strings.Contains(out, "Cookie: theme=dark; sessionid="+ctxCookieVal+"; lang=en\n") {
 			t.Errorf("cookie rule fired in fast profile:\n%q", out)
 		}
-		wantByRule := map[string]int{
+		wantByRule := map[string]int64{
 			"authorization-bearer": 2,
 			"url-credentials":      1,
 		}
@@ -80,7 +80,7 @@ func TestRedactContextualMixedLog(t *testing.T) {
 		if !strings.Contains(out, "Cookie: theme=dark; sessionid="+m+"; lang=en\n") {
 			t.Errorf("cookie value not redacted (or cookie structure damaged):\n%q", out)
 		}
-		wantByRule := map[string]int{
+		wantByRule := map[string]int64{
 			"authorization-bearer": 2,
 			"url-credentials":      1,
 			"cookie-session-token": 1,
@@ -89,7 +89,7 @@ func TestRedactContextualMixedLog(t *testing.T) {
 	})
 }
 
-func assertByRule(t *testing.T, got, want map[string]int) {
+func assertByRule(t *testing.T, got, want map[string]int64) {
 	t.Helper()
 	if len(got) != len(want) {
 		t.Errorf("ByRule = %v, want %v", got, want)

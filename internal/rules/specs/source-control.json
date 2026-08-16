@@ -12,7 +12,7 @@
       "validator": "GitHubOAuthToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 48,
       "provenance": {
         "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
@@ -46,7 +46,7 @@
       "validator": "GitHubAppToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 48,
       "provenance": {
         "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
@@ -76,7 +76,7 @@
       "validator": "GitHubRefreshToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 48,
       "provenance": {
         "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
@@ -106,7 +106,7 @@
       "validator": "GitHubFineGrainedPAT",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 96,
       "provenance": {
         "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
@@ -136,7 +136,7 @@
       "validator": "GitLabPAT",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 64,
       "provenance": {
         "source": "https://docs.gitlab.com/user/profile/personal_access_tokens/#create-a-personal-access-token",
@@ -166,7 +166,7 @@
       "validator": "GitLabRunnerToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 64,
       "provenance": {
         "source": "https://docs.gitlab.com/ci/runners/new_creation_workflow/#glrt-authentication-tokens",
@@ -196,7 +196,7 @@
       "validator": "GitLabDeployToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 64,
       "provenance": {
         "source": "https://docs.gitlab.com/user/project/deploy_tokens/",
@@ -226,7 +226,7 @@
       "validator": "GitLabFeedToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 30,
       "provenance": {
         "source": "https://docs.gitlab.com/security/tokens/#token-prefixes; gitleaks gitlab-feed-token rule; GitLab's own app/models/user.rb FEED_TOKEN_PREFIX and client-side secret_detection_patterns.js",
@@ -256,7 +256,7 @@
       "validator": "GitLabFeedTokenV2",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 100,
       "provenance": {
         "source": "GitLab's own lib/gitlab/auth/auth_finders.rb path_dependent_feed_token_regex: /\\A(glft-)(\\h{64})-(\\d+)\\z/ — an HMAC-SHA256 digest of the feed path keyed by the user's real feed token, plus a dash-separated numeric user ID",
@@ -286,7 +286,7 @@
       "validator": "GitLabPipelineTriggerToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 55,
       "provenance": {
         "source": "https://docs.gitlab.com/security/tokens/#token-prefixes; GitLab's own client-side app/assets/javascripts/lib/utils/secret_detection_patterns.js (40-char [0-9a-zA-Z_-] body), cross-checked against gitleaks' gitlab-ptt rule (40-char length agrees, narrower hex-only alphabet)",
@@ -316,7 +316,7 @@
       "validator": "NpmAccessToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 48,
       "provenance": {
         "source": "https://docs.npmjs.com/about-access-tokens",
@@ -347,7 +347,7 @@
       "validator": "PyPIAPIToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 320,
       "provenance": {
         "source": "https://docs.pypi.org/api/secrets/",
@@ -377,7 +377,7 @@
       "validator": "DockerHubPAT",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 128,
       "provenance": {
         "source": "https://docs.docker.com/security/for-developers/access-tokens/",
@@ -407,7 +407,7 @@
       "validator": "DockerHubOAT",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 128,
       "provenance": {
         "source": "Docker's own docs describe organization access tokens as a distinct type (docs.docker.com/security/access-tokens/) but don't publish a byte-level format; prefix and 32-char floor cross-checked between TruffleHog (pkg/detectors/dockerhub/v2/dockerhub.go) and the betterleaks gitleaks fork (config/betterleaks.toml)",

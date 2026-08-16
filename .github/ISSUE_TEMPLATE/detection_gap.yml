@@ -1,0 +1,65 @@
+name: Detection gap (false negative or false positive)
+description: A secret goredact should catch but doesn't, or a non-secret it incorrectly redacts.
+title: "[Detection]: "
+labels: ["detection-gap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a detection gap.
+
+        **⚠️ Do not paste real, live secret values anywhere in this report** —
+        not in the description, sample input, logs, or attached files.
+        Construct a synthetic value that has the same *shape* as the real
+        one (same prefix, length, and character alphabet) but is not itself
+        a working credential. If you're not sure how to do that safely, say
+        so in the report and a maintainer will help; do not paste the real
+        value "just this once."
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of gap
+      options:
+        - False negative — a real secret was not redacted
+        - False positive — a non-secret value was redacted
+    validations:
+      required: true
+  - type: input
+    id: provider
+    attributes:
+      label: Secret/provider type
+      description: e.g. "AWS access key", "Slack bot token", "generic password assignment"
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Synthetic sample input
+      description: >
+        The input line(s) that should (or should not) be redacted, using a
+        synthetic value in the real credential's shape — never the real
+        value.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: profile
+    attributes:
+      label: Detection profile used
+      placeholder: fast, balanced, or deep
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: goredact version or commit
+      placeholder: v0.1.0, or a commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: >
+        Provider documentation for the token format, or other context that
+        would help write a rule/fixture.

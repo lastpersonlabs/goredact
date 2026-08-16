@@ -59,7 +59,8 @@
       "fixtures": {
         "match": [
           "export BUILDKITE_API_TOKEN=7c21bb00e72ed1eabed3610688adf0d449584ebb",
-          "BUILDKITE_AGENT_TOKEN: \"4a8775d65f4bc1cfbea8d77320d26eb307677293\""
+          "BUILDKITE_AGENT_TOKEN: \"4a8775d65f4bc1cfbea8d77320d26eb307677293\"",
+          "{\"buildkite_api_token\": \"7c21bb00e72ed1eabed3610688adf0d449584ebb\"}"
         ],
         "nomatch": [
           "BUILDKITE_API_TOKEN=tooshort",
@@ -89,7 +90,9 @@
       "fixtures": {
         "match": [
           "DD_API_KEY=af7c06c09c36c278cc2b6013ddcdb1fa datadog-agent start",
-          "dd_api_key: af7c06c09c36c278cc2b6013ddcdb1fa"
+          "dd_api_key: af7c06c09c36c278cc2b6013ddcdb1fa",
+          "{\"dd_api_key\": \"af7c06c09c36c278cc2b6013ddcdb1fa\"}",
+          "DD_API_KEY:\taf7c06c09c36c278cc2b6013ddcdb1fa"
         ],
         "nomatch": [
           "DD_API_KEY=tooshort",
@@ -119,7 +122,8 @@
       "fixtures": {
         "match": [
           "export DD_APP_KEY=9498dbc811f8185ac2b5b7d83d991de5bb18e68e",
-          "dd_app_key: '9498dbc811f8185ac2b5b7d83d991de5bb18e68e'"
+          "dd_app_key: '9498dbc811f8185ac2b5b7d83d991de5bb18e68e'",
+          "{\"dd_app_key\": \"9498dbc811f8185ac2b5b7d83d991de5bb18e68e\"}"
         ],
         "nomatch": [
           "DD_APP_KEY=tooshort",
@@ -222,7 +226,7 @@
       "validator": "DopplerToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 90,
       "provenance": {
         "source": "https://docs.doppler.com/reference/auth-token-formats",
@@ -238,7 +242,8 @@
         "nomatch": [
           "dp.pt.tooshort",
           "dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc",
-          "dp.xx.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma"
+          "dp.xx.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma",
+          "dp.pt.dev.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc"
         ]
       }
     },
@@ -270,7 +275,7 @@
       "validator": "VercelToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 85,
       "provenance": {
         "source": "https://vercel.com/changelog/new-token-formats-and-secret-scanning",
@@ -316,7 +321,8 @@
       "fixtures": {
         "match": [
           "export VERCEL_TOKEN=uNEcIzRFpJA7ZAhnkQlPaSrk",
-          "VERCEL_API_TOKEN: \"whAOs0PHRVc7baApD22pdq3K\""
+          "VERCEL_API_TOKEN: \"whAOs0PHRVc7baApD22pdq3K\"",
+          "{\"vercel_token\": \"uNEcIzRFpJA7ZAhnkQlPaSrk\"}"
         ],
         "nomatch": [
           "VERCEL_TOKEN=tooshort",

@@ -43,13 +43,16 @@ type Config struct {
 	// allocation-bounded on the streaming path.
 	MaskStrategy MaskStrategy
 
-	// EnableRules, when non-empty, restricts detection to the listed rule
-	// IDs (an allowlist). Unknown IDs are rejected by New.
+	// EnableRules, when non-empty, restricts detection to exactly the
+	// listed rule IDs (an allowlist), overriding Profile: a named rule
+	// runs even if its MinProfile is more detailed than Profile requests.
+	// Unknown IDs are rejected by New, as is a resulting empty rule set
+	// (e.g. every enabled ID also appearing in DisableRules).
 	EnableRules []string
 
 	// DisableRules removes the listed rule IDs from the active set (a
 	// denylist, applied after EnableRules). Unknown IDs are rejected by
-	// New.
+	// New, as is a resulting empty rule set.
 	DisableRules []string
 
 	// CustomRules adds caller-defined rules to the active set. Custom rule
@@ -59,7 +62,10 @@ type Config struct {
 	// OnFinding, when non-nil, is invoked synchronously for each confirmed
 	// finding during Redact, in input order. The Finding never contains
 	// matched input bytes. The callback must not retain references past
-	// its return and must be fast; it runs on the scanning path.
+	// its return and must be fast; it runs on the scanning path. When one
+	// Engine serves concurrent Redact calls, OnFinding is invoked
+	// concurrently from each call's own goroutine — it must be safe for
+	// concurrent use if the Engine is shared.
 	OnFinding func(Finding)
 
 	// RecordAligned, when true, makes the engine prefer emitting output
@@ -204,6 +210,9 @@ func New(cfg Config) (*Engine, error) {
 // failure, or a *WriteError on destination failure. On error, output
 // already written remains valid redacted output; no unredacted confirmed
 // secret has been emitted.
+//
+// ctx is polled once per read iteration: cancellation cannot interrupt a
+// call already blocked inside src.Read.
 func (e *Engine) Redact(ctx context.Context, dst io.Writer, src io.Reader) (Stats, error) {
 	return e.redact(ctx, dst, src)
 }

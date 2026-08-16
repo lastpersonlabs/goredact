@@ -12,7 +12,7 @@
       "validator": "StripeSecretKey",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 110,
       "provenance": {
         "source": "https://docs.stripe.com/keys",
@@ -39,7 +39,7 @@
       "validator": "StripeWebhookSecret",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 80,
       "provenance": {
         "source": "https://docs.stripe.com/webhooks#verify-official-libraries",
@@ -67,7 +67,7 @@
       "validator": "StripeEphemeralKey",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 170,
       "provenance": {
         "source": "Real (structure-only) fixtures in Stripe's own stripe-ios (github.com/stripe/stripe-ios) and stripe-android SDK repositories; docs.stripe.com/keys was unreachable during development and neither gitleaks nor TruffleHog has a rule for this key type",
@@ -110,7 +110,8 @@
         "nomatch": [
           "xoxa-123-456-abcdefgh0123456789abcd",
           "xoxa-80184514627-048281489325-rppGDZuVz3",
-          "xoxa-80184514627-048281489325-aaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          "xoxa-80184514627-048281489325-aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "xoxp-1234567890-1234567890123-abcdefghijklmnopqrstuvwxy"
         ]
       }
     },
