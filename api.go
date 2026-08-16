@@ -46,9 +46,17 @@ func (p Profile) String() string { return core.Profile(p).String() }
 type Confidence core.Confidence
 
 const (
-	ConfidenceLow    = Confidence(core.ConfidenceLow)
+	// ConfidenceLow marks heuristic detections (e.g. the deep profile's
+	// broad generic-assignment rule) that are expected to over-match.
+	ConfidenceLow = Confidence(core.ConfidenceLow)
+
+	// ConfidenceMedium marks contextual detections confirmed by
+	// surrounding structure and entropy rather than an exact token shape.
 	ConfidenceMedium = Confidence(core.ConfidenceMedium)
-	ConfidenceHigh   = Confidence(core.ConfidenceHigh)
+
+	// ConfidenceHigh marks detections confirmed by an exact, well-known
+	// token shape or structure.
+	ConfidenceHigh = Confidence(core.ConfidenceHigh)
 )
 
 // String returns the confidence name.
@@ -181,6 +189,11 @@ type CustomRule struct {
 	// window[trigStart:trigEnd], and reports the half-open byte range
 	// [start, end) within window to redact. Implementations must not
 	// retain window, log it, or include its contents in any output.
+	//
+	// When one Engine serves concurrent Redact calls, Validate is
+	// invoked concurrently from each call's own goroutine — like
+	// Config.OnFinding, it must be safe for concurrent use if the
+	// Engine is shared. Pure functions of the window are naturally safe.
 	Validate func(window []byte, trigStart, trigEnd int) (start, end int, ok bool)
 }
 
@@ -205,28 +218,30 @@ type Finding struct {
 }
 
 // Stats summarises one Redact call. It never contains matched input bytes.
+// The JSON field names use snake_case, matching the CLI's directory-report
+// schema.
 type Stats struct {
 	// BytesRead is the total number of input bytes consumed.
-	BytesRead int64
+	BytesRead int64 `json:"bytes_read"`
 
 	// BytesWritten is the total number of output bytes produced.
-	BytesWritten int64
+	BytesWritten int64 `json:"bytes_written"`
 
 	// Candidates is the number of trigger/rule pairs submitted to a
 	// validator. It is useful for operational and benchmark telemetry and
 	// never exposes input contents.
-	Candidates int64
+	Candidates int64 `json:"candidates"`
 
 	// Findings is the number of confirmed, redacted secret spans.
-	Findings int64
+	Findings int64 `json:"findings"`
 
 	// RedactedBytes is the total number of input bytes replaced by
 	// redaction markers.
-	RedactedBytes int64
+	RedactedBytes int64 `json:"redacted_bytes"`
 
 	// ByRule maps rule IDs to the number of confirmed findings attributed
 	// to that rule. It is nil when there are no findings.
-	ByRule map[string]int64
+	ByRule map[string]int64 `json:"by_rule,omitempty"`
 }
 
 // RuleInfo describes one built-in or custom detection rule for
@@ -255,24 +270,27 @@ type RuleInfo struct {
 	Custom bool
 }
 
-// Errors returned by this package never contain bytes from the scanned
-// input. Errors that originate in the caller-supplied reader or writer are
-// wrapped in ReadError or WriteError respectively so callers can
-// distinguish I/O failures from configuration or internal failures; the
-// wrapped error is produced by the caller's own io implementation and is
-// returned unmodified.
-
 // ErrInvalidConfig is returned (wrapped, with detail that never includes
 // input data) by New when the configuration is invalid.
 var ErrInvalidConfig = core.ErrInvalidConfig
 
-// ReadError wraps an error returned by the source io.Reader.
+// ReadError wraps an error returned by the source io.Reader, so callers
+// can distinguish source I/O failures from configuration or destination
+// failures (see the package documentation's Errors section). The wrapped
+// error is produced by the caller's own reader and is preserved unmodified
+// for errors.Is/As; goredact itself never puts scanned input bytes in an
+// error.
 type ReadError struct{ Err error }
 
 func (e *ReadError) Error() string { return "goredact: read: " + e.Err.Error() }
 func (e *ReadError) Unwrap() error { return e.Err }
 
-// WriteError wraps an error returned by the destination io.Writer.
+// WriteError wraps an error returned by the destination io.Writer, so
+// callers can distinguish destination I/O failures from configuration or
+// source failures (see the package documentation's Errors section). The
+// wrapped error is produced by the caller's own writer and is preserved
+// unmodified for errors.Is/As; goredact itself never puts scanned input
+// bytes in an error.
 type WriteError struct{ Err error }
 
 func (e *WriteError) Error() string { return "goredact: write: " + e.Err.Error() }
@@ -296,8 +314,9 @@ func New(cfg Config) (*Engine, error) {
 	return &Engine{inner: inner}, nil
 }
 
-// Redact copies src to dst, replacing every confirmed secret with the
-// configured marker, and returns statistics about the scan.
+// Redact copies src to dst, replacing every confirmed secret according to
+// the configured MaskStrategy (by default, one copy of Config.Marker per
+// secret), and returns statistics about the scan.
 //
 // Redact streams: it never buffers more than a bounded window of input and
 // never writes unredacted data to temporary storage. It returns the first

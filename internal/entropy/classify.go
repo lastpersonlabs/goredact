@@ -85,10 +85,10 @@ func classifyEntropy(b []byte) (class Class, entropy float64, ok bool) {
 		}
 		// isWordlikeEntropy only computes an entropy value once b's
 		// bytes are confirmed to lie entirely within [a-z_-] — a strict
-		// subset of isBase64ish's alphabet — so falling below the
-		// wordlike ceiling here always means isBase64ish(b) would also
-		// be true; take that classification directly rather than
-		// re-scanning b to confirm it.
+		// subset of isBase64ish's alphabet — so reaching here (entropy
+		// at or above the wordlike ceiling) always means isBase64ish(b)
+		// would also be true; take that classification directly rather
+		// than re-scanning b to confirm it.
 		return ClassBase64ish, shannon, true
 	}
 	if isBase64ish(b) {

@@ -1,5 +1,9 @@
 # goredact
 
+[![CI](https://github.com/lastpersonlabs/goredact/actions/workflows/ci.yml/badge.svg)](https://github.com/lastpersonlabs/goredact/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/lastpersonlabs/goredact.svg)](https://pkg.go.dev/github.com/lastpersonlabs/goredact)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 `goredact` is a pure-Go, bounded-memory library for detecting and redacting
 secrets in large byte streams. It is designed for agent sessions, logs,
 environment dumps, and upload pipelines where plaintext temporary files are

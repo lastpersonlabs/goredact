@@ -201,8 +201,9 @@ func New(cfg Config) (*Engine, error) {
 	return e, nil
 }
 
-// Redact copies src to dst, replacing every confirmed secret with the
-// configured marker, and returns statistics about the scan.
+// Redact copies src to dst, replacing every confirmed secret according to
+// the configured MaskStrategy (by default, one copy of the marker per
+// secret), and returns statistics about the scan.
 //
 // Redact streams: it never buffers more than a bounded window of input and
 // never writes unredacted data to temporary storage. It returns the first

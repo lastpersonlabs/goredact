@@ -207,6 +207,14 @@ func validateRule(r Rule) error {
 	if r.MaxLookbehind < 0 || r.MaxLookahead < 0 {
 		return fmt.Errorf("rule %q has negative window bounds", r.ID)
 	}
+	if r.Confidence > ConfidenceHigh {
+		// Confidence is a uint8 the collector compares numerically when
+		// choosing a merged span's attribution; an out-of-range value
+		// (e.g. a public Confidence(-1) wrapped through the conversion)
+		// would silently outrank ConfidenceHigh and stringify to
+		// "unknown" in findings.
+		return fmt.Errorf("rule %q has invalid confidence %d", r.ID, r.Confidence)
+	}
 	return nil
 }
 

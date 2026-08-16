@@ -96,7 +96,7 @@
       "validator": "SlackUserToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 100,
       "provenance": {
         "source": "https://api.slack.com/authentication/token-types#user",
@@ -111,7 +111,8 @@
           "xoxa-123-456-abcdefgh0123456789abcd",
           "xoxa-80184514627-048281489325-rppGDZuVz3",
           "xoxa-80184514627-048281489325-aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "xoxp-1234567890-1234567890123-abcdefghijklmnopqrstuvwxy"
+          "xoxp-1234567890-1234567890123-abcdefghijklmnopqrstuvwxy",
+          "QmFyxoxa-80184514627-048281489325-wKi9x7h6AmUfBH7X41zTPDP4k8FFuf"
         ]
       }
     },
@@ -124,7 +125,7 @@
       "validator": "SlackAppToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 120,
       "provenance": {
         "source": "https://api.slack.com/authentication/token-types#app-level",
@@ -138,7 +139,8 @@
         "nomatch": [
           "xapp-1-ABC-123",
           "xapp-AAAAAAAAAAAAAAAAAAAA-BBBBBBBBBBBBBBBBBBBBBB",
-          "xapp------------------------------------------"
+          "xapp------------------------------------------",
+          "Zm9vxapp-1-GPMM82I1LR3-3178108013267-f6c15c0c8e9df469611a11f5125227c3712da86a78c49ea20e32684b27b95e90"
         ]
       }
     },
@@ -206,7 +208,7 @@
       "validator": "LinearAPIKey",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 80,
       "provenance": {
         "source": "https://developers.linear.app/docs/graphql/working-with-the-graphql-api#personal-api-keys",
@@ -220,7 +222,8 @@
         "nomatch": [
           "lin_api_M6mgv4I3ERxy2aV7ygR0ASuT1llqf3",
           "lin_api_FeWaVUqG2KVasfSq8Z0wjCdF-UQUHxZ3g0Aq3idaD",
-          "lin_api_QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+          "lin_api_QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ",
+          "QmFylin_api_FeWaVUqG2KVasfSq8Z0wjCdFUQUHxZ3g0Aq3idaD"
         ]
       }
     },
@@ -250,7 +253,8 @@
         "nomatch": [
           "the client_secret_JcieWVjwiYd7U3MsPkYO2xaCUvet6zYYqy0pJf9CIg9 field",
           "token=secret_iCnEPor6SOvFbGwot3GcKsT5BCUyDSWXbJPhakryLK",
-          "token=ntn_uIF6SUvaLMIyi4Xhg6R1KQ608e9zSv3VzHd9EJw9O3rur"
+          "token=ntn_uIF6SUvaLMIyi4Xhg6R1KQ608e9zSv3VzHd9EJw9O3rur",
+          "blobxntn_LFn3YnrPf6lJOdoQdQqA5zd5SriKEc8WlTo9bsQd2TMY2e"
         ]
       }
     }

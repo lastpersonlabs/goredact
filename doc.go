@@ -21,6 +21,16 @@
 //     concurrent use across goroutines; each Redact call maintains its own
 //     scan state.
 //
+// # Errors
+//
+// Errors returned by this package never contain bytes from the scanned
+// input. Errors that originate in the caller-supplied reader or writer are
+// wrapped in [ReadError] or [WriteError] respectively, so callers can
+// distinguish I/O failures from configuration or internal failures; the
+// wrapped error is produced by the caller's own io implementation and is
+// returned unmodified. Invalid configurations are reported by [New] as
+// errors wrapping [ErrInvalidConfig].
+//
 // # Out of scope for v0.1
 //
 //   - General-purpose PII detection.

@@ -41,6 +41,12 @@ func TestNewRejectsInvalidConfig(t *testing.T) {
 			ID:       "c1",
 			Triggers: []string{"x"},
 		}}}},
+		{"custom rule with out-of-range confidence", Config{CustomRules: []CustomRule{{
+			ID:         "c1",
+			Triggers:   []string{"x"},
+			Confidence: Confidence(255), // e.g. Confidence(-1) wrapped through uint8
+			Validate:   func([]byte, int, int) (int, int, bool) { return 0, 0, false },
+		}}}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

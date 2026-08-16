@@ -158,6 +158,9 @@ func StripeWebhookSecret(window []byte, trigStart, trigEnd int) (start, end int,
 // segment right after the second dash as the final alphanumeric run
 // directly.
 func SlackUserToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	seg1Start := trigEnd
 	pos, ok := consumeDigitRun(window, trigEnd, 10, 13)
 	if !ok || isPlaceholder(window[seg1Start:pos]) {
@@ -208,6 +211,9 @@ func SlackUserToken(window []byte, trigStart, trigEnd int) (start, end int, ok b
 // looser digit/dash/token-char envelope rather than pinning every segment
 // length, so it isn't invalidated by minor token-format revisions.
 func SlackAppToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	pos := trigEnd
 	dashes := 0
 	for pos < len(window) && (isAlnum(window[pos]) || window[pos] == '-') {
@@ -312,6 +318,9 @@ func TwilioAPIKeySID(window []byte, trigStart, trigEnd int) (start, end int, ok 
 // followed by 40-60 ASCII alphanumeric characters and a non-alphanumeric
 // byte (or end of window).
 func LinearAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	bodyEnd, ok := consumeAlnumRun(window, trigEnd, 40, 60)
 	if !ok {
 		return 0, 0, false
@@ -336,8 +345,10 @@ func LinearAPIKey(window []byte, trigStart, trigEnd int) (start, end int, ok boo
 //     alphanumeric characters.
 //   - trigger "ntn_" followed by 46-60 ASCII alphanumeric characters.
 //
-// Both forms require a non-alphanumeric byte (or end of window) after the
-// body. Which shape is being validated is determined by trigEnd-trigStart
+// Both forms require a non-identifier byte (or start of window) before
+// the trigger, per the fixed-literal-prefix convention in
+// docs/RULE_AUTHORING.md, and a non-alphanumeric byte (or end of window)
+// after the body. Which shape is being validated is determined by trigEnd-trigStart
 // (7 for "secret_", 4 for "ntn_"), since that's all that distinguishes the
 // two triggers from inside a validator that only sees window-relative
 // offsets.
@@ -364,6 +375,9 @@ func NotionInternalToken(window []byte, trigStart, trigEnd int) (start, end int,
 		return trigStart, bodyEnd, true
 
 	case len("ntn_"):
+		if precededByIdentByte(window, trigStart) {
+			return 0, 0, false
+		}
 		bodyEnd, ok := consumeAlnumRun(window, trigEnd, 46, 60)
 		if !ok {
 			return 0, 0, false

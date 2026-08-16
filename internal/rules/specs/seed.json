@@ -44,7 +44,7 @@
       "validator": "SlackBotToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 96,
       "provenance": {
         "source": "https://api.slack.com/authentication/token-types#bot",
@@ -58,7 +58,8 @@
           "xoxb-123-456-abcdefgh",
           "xoxb-0265423511615-5940781618495-aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "xoxb-99603082462819-48219935181-KdNnFRIBXuDL7DxtpYlSXpfKtHF4",
-          "xoxb-1234567890-1234567890123-k4Jm8nR2pX6sW9vB3fH7aT1q"
+          "xoxb-1234567890-1234567890123-k4Jm8nR2pX6sW9vB3fH7aT1q",
+          "Zm9vxoxb-0265423511615-5940781618495-KmTecQoXsf2o3gyrDO1xkxwnQrS7RP"
         ]
       }
     }

@@ -33,7 +33,7 @@ directory and is used only to compute sanitized per-rule metrics.
 
 ## v0.1.0 release run
 
-On 2026-08-14, the generated 304-fixture matrix passed for fast, balanced,
+On 2026-08-16, the generated 494-fixture matrix passed for fast, balanced,
 and deep profiles across all three placements. All negative fixtures reported
 zero same-rule false positives. The report deliberately exposes partial recall
 for conservative or boundary-sensitive shapes instead of turning the corpus

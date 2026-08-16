@@ -223,6 +223,9 @@ const (
 //
 // https://grafana.com/docs/grafana/latest/administration/service-accounts/
 func GrafanaServiceAccountToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	bodyEnd := trigEnd + grafanaSAKeyBodyLen
 	if bodyEnd > len(window) {
 		return 0, 0, false
@@ -277,6 +280,9 @@ func isGrafanaCloudTokenChar(c byte) bool {
 //
 // https://grafana.com/docs/grafana-cloud/account-management/authentication-and-permissions/access-policies/
 func GrafanaCloudAccessPolicyToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	pos := trigEnd
 	for pos < len(window) && isGrafanaCloudTokenChar(window[pos]) {
 		pos++

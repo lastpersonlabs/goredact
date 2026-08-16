@@ -27,6 +27,14 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      - name: Generated files are fresh
+        run: |
+          go generate ./...
+          if ! git diff --exit-code; then
+            echo "Generated files are stale. Run 'go generate ./...' and commit the result." >&2
+            exit 1
+          fi
+
       - name: Test (race detector)
         run: go test -race ./...
 

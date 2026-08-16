@@ -68,7 +68,10 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 	fs.IntVar(&o.exitCode, "exit-code", 1, "exit code when findings are present (0 disables)")
 	fs.BoolVar(&o.showSecrets, "show-secrets", false, "include matched secret values in the report (unsafe)")
 	if err := fs.Parse(args); err != nil {
-		return err
+		if errors.Is(err, flag.ErrHelp) {
+			return err
+		}
+		return errUsage
 	}
 	if fs.NArg() != 1 {
 		return errors.New("goredact dir: exactly one path is required")

@@ -109,6 +109,11 @@ CI artifact, attach it to a public issue, or write it to shared logs. Rotate
 any live credential it contains. File reports are created with mode `0600`,
 but stdout inherits the security properties of its destination.
 
+Secret values are re-read from each file by offset after its scan completes,
+so a file modified concurrently with the scan can yield stale or mismatched
+`secret` fields in the report. Scan quiescent trees when `-show-secrets`
+accuracy matters.
+
 ## Multipart uploads
 
 [`examples/multipartupload`](../examples/multipartupload/upload.go) supplies a
