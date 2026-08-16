@@ -34,8 +34,11 @@ package goredact
 // (the whole merged span becomes one marker) and are never needed for a
 // validation window (windows only reach back `window` bytes), so under
 // buffer pressure the engine discards them, tracking a "gap"
-// (bufBase > emitted) that is later emitted as zero-filled scratch which
-// the Writer skips entirely while replaying the released covering span.
+// (bufBase > emitted) that is later emitted as zero-filled scratch while
+// replaying the released covering span: under MaskFixedMarker the Writer
+// never reads those bytes, and under the preserving strategies the zero
+// bytes mask to '*', so discarded input can never reach the output either
+// way.
 
 import (
 	"bytes"
@@ -357,17 +360,18 @@ func (r *scanRun) flush(eof bool) error {
 	releaseLimit := be
 	if !eof {
 		releaseLimit = be - int64(r.e.window)
-		// Defensive: never release past a queued candidate's window
+		// Defensive: never release at or past a queued candidate's window
 		// start. Structurally this never binds — a candidate only queues
 		// while its lookahead extends past bufEnd, which places its
-		// window start strictly beyond bufEnd-window (the stronger
-		// Start > releaseLimit, not merely Start >= releaseLimit) — but
-		// the Release contract (no later Add with Start <= limit; see
-		// span.Collector.Release) depends on it, so enforce it.
+		// window start strictly beyond bufEnd-window — but the Release
+		// contract (no later Add with Start <= limit; see
+		// span.Collector.Release) depends on it, so enforce it, capping
+		// to ws-1 because a span produced from the candidate may start
+		// exactly at ws.
 		for i := range r.st.pending {
 			c := &r.st.pending[i]
-			if ws := c.trigStart - int64(r.e.rules.Rules[c.rule].MaxLookbehind); ws < releaseLimit {
-				releaseLimit = ws
+			if ws := c.trigStart - int64(r.e.rules.Rules[c.rule].MaxLookbehind); ws <= releaseLimit {
+				releaseLimit = ws - 1
 			}
 		}
 	}
