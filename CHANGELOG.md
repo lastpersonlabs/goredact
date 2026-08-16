@@ -21,6 +21,11 @@ versioning.
 - `scripts/benchmark-betterleaks.zsh` takes an optional GoRedact profile
   argument; `docs/BENCHMARKS.md` adds a cross-profile (`fast`/`balanced`/`deep`)
   one-core comparison against Betterleaks.
+- Public API types (`Config`, `Engine`, `Finding`, `Stats`, `RuleInfo`,
+  `Profile`, `Confidence`, `MaskStrategy`, `ReadError`, `WriteError`) are no
+  longer bare aliases into the internal implementation package, so
+  `go doc`/pkg.go.dev now render their field and method documentation. No
+  public API signature changed.
 
 ## v0.1.0 — 2026-08-14
 
