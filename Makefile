@@ -19,9 +19,22 @@ bin:
 test:
 	go test -race ./...
 
+# Pinned so lint results are reproducible between runs; bump deliberately
+# rather than tracking @latest, which can turn CI red with no repo change.
+STATICCHECK_VERSION := v0.7.0
+
 # gofmt + go vet + staticcheck. The module itself stays dependency-free;
 # staticcheck is fetched on the fly via `go run` and is not a module
 # dependency.
+#
+# `go run pkg@version` selects its build toolchain from the target
+# package's own go.mod, not this module's — since staticcheck's go.mod
+# requires an older Go than this module does, that toolchain then
+# analyzes this module's go.mod-gated syntax and fails with "package
+# requires newer Go version" on any machine whose installed Go predates
+# this module's directive. Pin GOTOOLCHAIN to the version this module
+# already resolves to (`go env GOVERSION`, itself honoring GOTOOLCHAIN=auto)
+# so the staticcheck build always matches.
 lint:
 	@fmt_out="$$(gofmt -l .)"; \
 	if [ -n "$$fmt_out" ]; then \
@@ -31,7 +44,7 @@ lint:
 		exit 1; \
 	fi
 	go vet ./...
-	go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+	GOTOOLCHAIN="$$(go env GOVERSION)" go run honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION) ./...
 
 # Discover every FuzzXxx target across all packages and run each for
 # FUZZTIME (default 10s). Tolerates packages with no fuzz targets.
