@@ -18,6 +18,9 @@ versioning.
   engines across files.
 - Apply Gitleaks-compatible default dependency, generated-file, media, and
   binary path exclusions during recursive directory scans.
+- `scripts/benchmark-betterleaks.zsh` takes an optional GoRedact profile
+  argument; `docs/BENCHMARKS.md` adds a cross-profile (`fast`/`balanced`/`deep`)
+  one-core comparison against Betterleaks.
 
 ## v0.1.0 — 2026-08-14
 
