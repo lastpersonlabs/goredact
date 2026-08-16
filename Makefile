@@ -1,5 +1,10 @@
 .PHONY: bin build test lint fuzz-smoke bench bench-large bench-ci accuracy-secretbench cover
 
+# fuzz-smoke uses bash-only syntax (set -o pipefail, <<< herestrings); pin
+# the recipe shell so it still works when /bin/sh is dash (Debian/Ubuntu
+# default).
+SHELL := bash
+
 FUZZTIME ?= 10s
 
 # Compile all packages.
@@ -7,7 +12,8 @@ build:
 	go build ./...
 
 bin:
-	go build -o ./bin ./... 
+	mkdir -p bin
+	go build -o ./bin/ ./...
 
 # Run the full test suite with the race detector enabled.
 test:
