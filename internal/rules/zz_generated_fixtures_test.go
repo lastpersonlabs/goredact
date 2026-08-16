@@ -125,7 +125,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "azure-storage-account-key",
 			match:   []string{"DefaultEndpointsProtocol=https;AccountName=contosostorage;AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ==;EndpointSuffix=core.windows.net", "AZURE_STORAGE_ACCOUNT_KEY=\"AccountKey=j59fhZ5R1Py4oJe2JbmPTuSgR7cMy+UcU3zr1ZtoLuCr64CxqlIOdNKhiFXiQ2hzT/pLjHX2JiCLhKcIhP6Br1==\""},
-			nomatch: []string{"AccountKey=tooshort==", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ!!", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ===extra"},
+			nomatch: []string{"AccountKey=tooshort==", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ!!", "AccountKey=5suKcNd8Zra9A9sKPxZ9W3qLy7zKUVQDT7S8sTQCBNR3YbDgbleph1QHt61QTC4XATWS8PHp9NHfYjFM5DI4pZ===extra", "AccountKey=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="},
 		},
 		{
 			id:      "buildkite-api-token",

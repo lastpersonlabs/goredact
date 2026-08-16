@@ -184,7 +184,8 @@ func isAzureBase64Char(c byte) bool {
 // which already satisfies this boundary). If the base64 run reaches the
 // end of window before the "==" padding can be confirmed, the match is
 // rejected outright rather than guessing at what a truncated window might
-// have contained.
+// have contained. It rejects a placeholder body, mirroring
+// azureShortBase64Secret below.
 func AzureStorageAccountKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
 	valStart := trigEnd
 	pos := valStart
@@ -201,12 +202,16 @@ func AzureStorageAccountKey(window []byte, trigStart, trigEnd int) (start, end i
 	if window[pos] != '=' || window[pos+1] != '=' {
 		return 0, 0, false
 	}
+	body := window[valStart:pos]
 	valEnd := pos + 2
 
 	if valEnd < len(window) {
 		if c := window[valEnd]; isAzureBase64Char(c) || c == '=' {
 			return 0, 0, false
 		}
+	}
+	if isPlaceholder(body) {
+		return 0, 0, false
 	}
 	return valStart, valEnd, true
 }
