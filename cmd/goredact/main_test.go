@@ -103,3 +103,60 @@ func TestRunMaskFlag(t *testing.T) {
 type failingReader struct{ err error }
 
 func (r *failingReader) Read([]byte) (int, error) { return 0, r.err }
+
+func TestSameFileNameAliasing(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "in.txt")
+	other := filepath.Join(dir, "other.txt")
+	if err := os.WriteFile(in, []byte("content"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if !sameFileName(in, in) {
+		t.Fatal("identical paths should be detected as the same file")
+	}
+	if sameFileName(in, other) {
+		t.Fatal("distinct, non-existent output should not alias the input")
+	}
+
+	symlink := filepath.Join(dir, "sym.txt")
+	if err := os.Symlink(in, symlink); err != nil {
+		t.Fatal(err)
+	}
+	if !sameFileName(in, symlink) {
+		t.Fatal("symlink to input should alias the input")
+	}
+
+	hardlink := filepath.Join(dir, "hard.txt")
+	if err := os.Link(in, hardlink); err != nil {
+		t.Skipf("hardlinks unsupported on this platform: %v", err)
+	}
+	if !sameFileName(in, hardlink) {
+		t.Fatal("hardlink to input should alias the input")
+	}
+}
+
+func TestRunStreamRefusesSymlinkAliasedOutput(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "in.txt")
+	secret := "AWS_SECRET_ACCESS_KEY=fKm/r5kJP1VrT+1FJors/6ILi8IHn5kxsC7tVO/H\n"
+	if err := os.WriteFile(in, []byte(secret), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "out-link")
+	if err := os.Symlink(in, link); err != nil {
+		t.Fatal(err)
+	}
+
+	err := run(context.Background(), []string{"stream", "-input=" + in, "-output=" + link}, nil, io.Discard, io.Discard)
+	if err == nil {
+		t.Fatal("expected an error for symlink-aliased output")
+	}
+	got, readErr := os.ReadFile(in)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(got) != secret {
+		t.Fatalf("input was modified: got %q", got)
+	}
+}

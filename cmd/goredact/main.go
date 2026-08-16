@@ -188,7 +188,19 @@ func sameFileName(a, b string) bool {
 	}
 	aa, errA := filepath.Abs(a)
 	bb, errB := filepath.Abs(b)
-	return errA == nil && errB == nil && aa == bb
+	if errA == nil && errB == nil && aa == bb {
+		return true
+	}
+	aInfo, err := os.Stat(a)
+	if err != nil {
+		return false
+	}
+	bInfo, err := os.Stat(b)
+	if err != nil {
+		// The output file need not exist yet; absence means it cannot alias.
+		return false
+	}
+	return os.SameFile(aInfo, bInfo)
 }
 
 type progressReader struct {
