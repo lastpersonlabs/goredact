@@ -1,5 +1,7 @@
 package entropy
 
+import "github.com/lastpersonlabs/goredact/internal/ahocorasick"
+
 // substringPlaceholders are lowercase keywords that mark b as a
 // placeholder if they appear ANYWHERE in b (case-insensitively).
 var substringPlaceholders = []string{
@@ -43,6 +45,47 @@ var keyboardRuns = []string{
 	"qazwsx",
 }
 
+// anywhereKeywordAutomaton is a single compiled automaton over every
+// keyword in substringPlaceholders and keyboardRuns (all matched
+// case-insensitively), built once at package init. IsPlaceholder used to
+// check these ~24 keywords with one independent O(len(b)) containsFold
+// scan each; scanning b through this automaton once instead reaches the
+// same true/false outcome (the two source lists are only ever consulted
+// for "does any of these occur anywhere", never for which one matched) in
+// a single O(len(b)) pass.
+var anywhereKeywordAutomaton = mustCompileAnywhereKeywords()
+
+func mustCompileAnywhereKeywords() *ahocorasick.Automaton {
+	patterns := make([]ahocorasick.Pattern, 0, len(substringPlaceholders)+len(keyboardRuns))
+	for _, kw := range substringPlaceholders {
+		patterns = append(patterns, ahocorasick.Pattern{Literal: kw, CaseFold: true})
+	}
+	for _, kw := range keyboardRuns {
+		patterns = append(patterns, ahocorasick.Pattern{Literal: kw, CaseFold: true})
+	}
+	a, err := ahocorasick.Compile(patterns)
+	if err != nil {
+		// substringPlaceholders/keyboardRuns are fixed, non-empty literal
+		// lists baked into this package; a Compile failure here can only
+		// mean a programmer error (e.g. an empty literal added to one of
+		// them), not a runtime data condition.
+		panic("entropy: failed to compile placeholder keyword automaton: " + err.Error())
+	}
+	return a
+}
+
+// containsAnywhereKeyword reports whether any keyword from
+// substringPlaceholders or keyboardRuns occurs anywhere in b,
+// case-insensitively, in one pass over b.
+func containsAnywhereKeyword(b []byte) bool {
+	found := false
+	anywhereKeywordAutomaton.Scan(0, b, func(pattern, end int) bool {
+		found = true
+		return false // first match is enough; stop scanning.
+	})
+	return found
+}
+
 // IsPlaceholder reports whether b is a well-known non-secret stand-in
 // value rather than real secret material: common keyword placeholders
 // ("example", "changeme", "password", ...), angle-bracket tokens
@@ -75,15 +118,8 @@ func IsPlaceholder(b []byte) bool {
 	if isAscendingRun(b) {
 		return true
 	}
-	for _, kw := range keyboardRuns {
-		if containsFold(b, kw) {
-			return true
-		}
-	}
-	for _, kw := range substringPlaceholders {
-		if containsFold(b, kw) {
-			return true
-		}
+	if containsAnywhereKeyword(b) {
+		return true
 	}
 	for _, kw := range wholeValuePlaceholders {
 		if len(b) == len(kw) && matchFoldAt(b, 0, kw) {
@@ -179,23 +215,6 @@ func lowerASCII(c byte) byte {
 		c = c - 'A' + 'a'
 	}
 	return c
-}
-
-// containsFold reports whether needle (which must already be lowercase
-// ASCII) occurs anywhere in haystack, ignoring ASCII case. Folding
-// during comparison keeps this allocation-free on the per-candidate
-// hot path.
-func containsFold(haystack []byte, needle string) bool {
-	n := len(needle)
-	if n == 0 {
-		return true
-	}
-	for i := 0; i+n <= len(haystack); i++ {
-		if matchFoldAt(haystack, i, needle) {
-			return true
-		}
-	}
-	return false
 }
 
 // matchFoldAt reports whether haystack[pos:pos+len(needle)] equals
