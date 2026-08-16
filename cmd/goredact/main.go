@@ -170,6 +170,13 @@ func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 		f := outFile
 		outFile = nil
 		if err := f.Close(); err != nil {
+			// Empty the underlying file by path before unlinking the
+			// name: when -output is a symlink or hard link, os.Remove
+			// only detaches this name, and the closed fd can no longer
+			// truncate, so a path-based truncate is what keeps the
+			// incomplete result from remaining reachable through the
+			// target or another link.
+			_ = os.Truncate(o.output, 0)
 			_ = os.Remove(o.output)
 			return errors.New("goredact: cannot finalize output")
 		}
