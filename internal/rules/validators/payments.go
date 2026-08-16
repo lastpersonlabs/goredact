@@ -82,6 +82,9 @@ func precededByIdentByte(window []byte, trigStart int) bool {
 // they authenticate against Stripe's test-mode API — so they are redacted
 // identically to live-mode keys.
 func StripeSecretKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	bodyEnd, ok := consumeAlnumRun(window, trigEnd, 24, 99)
 	if !ok {
 		return 0, 0, false
@@ -107,6 +110,9 @@ func StripeSecretKey(window []byte, trigStart, trigEnd int) (start, end int, ok 
 // a real key's decoded contents) fixtures in Stripe's own stripe-ios and
 // stripe-android SDK repositories.
 func StripeEphemeralKey(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	bodyEnd, ok2 := consumeRun(window, trigEnd, 60, 150, isURLSafeChar)
 	if !ok2 {
 		return 0, 0, false
@@ -124,6 +130,9 @@ func StripeEphemeralKey(window []byte, trigStart, trigEnd int) (start, end int, 
 // "whsec_" followed by 32-64 ASCII alphanumeric characters and a
 // non-alphanumeric byte (or end of window).
 func StripeWebhookSecret(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	bodyEnd, ok := consumeAlnumRun(window, trigEnd, 32, 64)
 	if !ok {
 		return 0, 0, false
@@ -149,16 +158,18 @@ func StripeWebhookSecret(window []byte, trigStart, trigEnd int) (start, end int,
 // segment right after the second dash as the final alphanumeric run
 // directly.
 func SlackUserToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	seg1Start := trigEnd
 	pos, ok := consumeDigitRun(window, trigEnd, 10, 13)
-	if !ok {
+	if !ok || isPlaceholder(window[seg1Start:pos]) {
 		return 0, 0, false
 	}
 	pos, ok = consumeByte(window, pos, '-')
 	if !ok {
 		return 0, 0, false
 	}
+	seg2Start := pos
 	pos, ok = consumeDigitRun(window, pos, 10, 13)
-	if !ok {
+	if !ok || isPlaceholder(window[seg2Start:pos]) {
 		return 0, 0, false
 	}
 	pos, ok = consumeByte(window, pos, '-')
@@ -167,7 +178,8 @@ func SlackUserToken(window []byte, trigStart, trigEnd int) (start, end int, ok b
 	}
 
 	// Three-group shape: another <digits>- before the final segment.
-	if p, ok3 := consumeDigitRun(window, pos, 10, 13); ok3 {
+	seg3Start := pos
+	if p, ok3 := consumeDigitRun(window, seg3Start, 10, 13); ok3 && !isPlaceholder(window[seg3Start:p]) {
 		if p, ok3 = consumeByte(window, p, '-'); ok3 {
 			if segEnd, okSeg := consumeAlnumRun(window, p, 24, 34); okSeg {
 				if boundaryOK(window, segEnd) && !isPlaceholder(window[p:segEnd]) {

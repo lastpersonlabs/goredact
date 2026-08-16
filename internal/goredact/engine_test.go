@@ -620,7 +620,7 @@ func TestRedactBoundedMemory(t *testing.T) {
 	if stats.BytesRead != total {
 		t.Errorf("BytesRead = %d, want %d", stats.BytesRead, total)
 	}
-	wantFindings := int(total / blockSize)
+	wantFindings := total / blockSize
 	if stats.Findings != wantFindings {
 		t.Errorf("Findings = %d, want %d", stats.Findings, wantFindings)
 	}

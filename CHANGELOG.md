@@ -26,6 +26,17 @@ versioning.
   longer bare aliases into the internal implementation package, so
   `go doc`/pkg.go.dev now render their field and method documentation. No
   public API signature changed.
+- **Breaking:** `Stats.Findings` is now `int64` (was `int`) and
+  `Stats.ByRule` is now `map[string]int64` (was `map[string]int`), matching
+  the other counters on `Stats`.
+- Fixed several validator inconsistencies found in review: `SlackUserToken`
+  now rejects placeholder digit segments like `SlackBotToken` already did;
+  `DopplerToken`'s optional config-label grammar is scoped to the `dp.st.`
+  prefix that actually documents one, instead of over-matching all seven
+  scoped prefixes; every fixed-literal-prefix token rule (GitHub, GitLab,
+  npm, PyPI, Docker Hub, Stripe, Vault, Vercel, Doppler) now rejects a
+  trigger embedded inside a longer identifier or blob, matching the
+  convention already used by AWS/GCP/Hugging Face/Groq/OpenAI/Cursor rules.
 
 ## v0.1.0 — 2026-08-14
 

@@ -406,7 +406,7 @@ func (r *scanRun) recordFindings(released []span.Span) {
 		r.stats.Findings++
 		id := r.e.rules.Rules[s.Rule].ID
 		if r.stats.ByRule == nil {
-			r.stats.ByRule = make(map[string]int)
+			r.stats.ByRule = make(map[string]int64)
 		}
 		r.stats.ByRule[id]++
 		if r.e.cfg.OnFinding != nil {

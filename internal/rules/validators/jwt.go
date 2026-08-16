@@ -17,11 +17,7 @@
 // alphabet RFC 7515 actually specifies for the two JSON segments.
 package validators
 
-import (
-	"encoding/base64"
-
-	"github.com/lastpersonlabs/goredact/internal/entropy"
-)
+import "encoding/base64"
 
 const (
 	// jwtSegmentMinLen is the minimum length of the header and payload
@@ -64,7 +60,7 @@ func isJWTSignatureByte(c byte) bool {
 // legal because assignments, "ID_TOKEN=eyJ...", are exactly where bare
 // JWTs appear). The byte after the token must not be alphanumeric or
 // further padding. Signatures that are
-// placeholders (entropy.IsPlaceholder: repeated bytes, "xxxx...",
+// placeholders (isPlaceholder: repeated bytes, "xxxx...",
 // keyboard runs) are rejected, so documentation examples with stub
 // signatures never fire. The whole token, header through padding, is
 // redacted.
@@ -122,7 +118,7 @@ func parseJWT(window []byte, trigStart, trigEnd int) (start, end, payStart, payE
 	if pos-sigStart < jwtSignatureMinLen {
 		return 0, 0, 0, 0, false
 	}
-	if entropy.IsPlaceholder(window[sigStart:pos]) {
+	if isPlaceholder(window[sigStart:pos]) {
 		return 0, 0, 0, 0, false
 	}
 	for pad := 0; pad < 2 && pos < len(window) && window[pos] == '='; pad++ {

@@ -145,7 +145,7 @@ func oneShotOracle(t *testing.T, cfg Config, input []byte) (string, Stats, []Fin
 	if want := spliceExpected(input, findings, marker); out != want {
 		t.Fatalf("one-shot output does not equal input spliced with findings\n got: %q\nwant: %q", out, want)
 	}
-	if stats.Findings != len(findings) {
+	if stats.Findings != int64(len(findings)) {
 		t.Fatalf("Stats.Findings = %d, OnFinding count = %d", stats.Findings, len(findings))
 	}
 	return out, stats, findings
@@ -162,7 +162,7 @@ func TestBoundaryFixtureOneShot(t *testing.T) {
 	if stats.Findings != 8 {
 		t.Errorf("Findings = %d, want 8", stats.Findings)
 	}
-	want := map[string]int{"key-alnum": 5, "key-short": 1, "tok": 2}
+	want := map[string]int64{"key-alnum": 5, "key-short": 1, "tok": 2}
 	for id, n := range want {
 		if stats.ByRule[id] != n {
 			t.Errorf("ByRule[%q] = %d, want %d", id, stats.ByRule[id], n)

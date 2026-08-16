@@ -226,7 +226,7 @@
       "validator": "DopplerToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 90,
       "provenance": {
         "source": "https://docs.doppler.com/reference/auth-token-formats",
@@ -242,7 +242,8 @@
         "nomatch": [
           "dp.pt.tooshort",
           "dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc",
-          "dp.xx.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma"
+          "dp.xx.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma",
+          "dp.pt.dev.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc"
         ]
       }
     },
@@ -274,7 +275,7 @@
       "validator": "VercelToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 85,
       "provenance": {
         "source": "https://vercel.com/changelog/new-token-formats-and-secret-scanning",

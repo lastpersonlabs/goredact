@@ -57,7 +57,7 @@ type Stats struct {
 	Candidates int64
 
 	// Findings is the number of confirmed, redacted secret spans.
-	Findings int
+	Findings int64
 
 	// RedactedBytes is the total number of input bytes replaced by
 	// redaction markers.
@@ -65,5 +65,5 @@ type Stats struct {
 
 	// ByRule maps rule IDs to the number of confirmed findings attributed
 	// to that rule. It is nil when there are no findings.
-	ByRule map[string]int
+	ByRule map[string]int64
 }

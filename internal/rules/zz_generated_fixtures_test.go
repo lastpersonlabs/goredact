@@ -195,7 +195,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "doppler-token",
 			match:   []string{"export DOPPLER_TOKEN=dp.st.dev.E96V5JPpZYKbCzr5H2CPYIxrTrz1Td8XAwES2HY0Bk", "DOPPLER_TOKEN=dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma", "{\"env\":{\"DOPPLER_TOKEN\":\"dp.ct.2El38vn53VQXAyYQ4PKUK88lpsgCM1SSYOUrI65O\"}}", "DOPPLER_TOKEN=dp.said.zxqUeHDQr0Itcdt1yZul7R81aHY7QSVMQhL8L0JOco"},
-			nomatch: []string{"dp.pt.tooshort", "dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc", "dp.xx.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma"},
+			nomatch: []string{"dp.pt.tooshort", "dp.pt.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc", "dp.xx.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgctY0Ma", "dp.pt.dev.aqlb6WIuPUYGz300dACjXFomKnJmIyOsiN0sJgc"},
 		},
 		{
 			id:      "gcp-api-key",
@@ -240,7 +240,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "github-pat",
 			match:   []string{"ghp_16C7e42F292c6912E7710c838347Ae178B4a", "ghp_OhbVrpoiVgRV5IfLBcbfnoGMbJmTPSIAoCLr"},
-			nomatch: []string{"ghp_short", "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "ghp_u8jzPde0IgxLd6GncfBAepfJBd0Kh8oOOL8dA", "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"},
+			nomatch: []string{"ghp_short", "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", "ghp_u8jzPde0IgxLd6GncfBAepfJBd0Kh8oOOL8dA", "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij", "QmFzZTY0ghp_16C7e42F292c6912E7710c838347Ae178B4a"},
 		},
 		{
 			id:      "github-refresh-token",
@@ -360,7 +360,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "slack-user-token",
 			match:   []string{"export SLACK_USER_TOKEN=xoxa-80184514627-048281489325-wKi9x7h6AmUfBH7X41zTPDP4k8FFuf", "{\"token\": \"xoxp-1822782489-63834657871-331509839301-1721a278f64f7fd633dbdde1\"}"},
-			nomatch: []string{"xoxa-123-456-abcdefgh0123456789abcd", "xoxa-80184514627-048281489325-rppGDZuVz3", "xoxa-80184514627-048281489325-aaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			nomatch: []string{"xoxa-123-456-abcdefgh0123456789abcd", "xoxa-80184514627-048281489325-rppGDZuVz3", "xoxa-80184514627-048281489325-aaaaaaaaaaaaaaaaaaaaaaaaaaaa", "xoxp-1234567890-1234567890123-abcdefghijklmnopqrstuvwxy"},
 		},
 		{
 			id:      "stripe-ephemeral-key",

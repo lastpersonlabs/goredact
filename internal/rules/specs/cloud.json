@@ -213,7 +213,7 @@
       "validator": "VaultServiceToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 170,
       "provenance": {
         "source": "https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml",
@@ -242,7 +242,7 @@
       "validator": "VaultBatchToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 330,
       "provenance": {
         "source": "https://github.com/hashicorp/vault/blob/main/vault/token_store.go; https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml",

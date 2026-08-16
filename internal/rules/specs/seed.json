@@ -12,7 +12,7 @@
       "validator": "GitHubPAT",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 64,
       "provenance": {
         "source": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats",
@@ -27,7 +27,8 @@
           "ghp_short",
           "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
           "ghp_u8jzPde0IgxLd6GncfBAepfJBd0Kh8oOOL8dA",
-          "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"
+          "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+          "QmFzZTY0ghp_16C7e42F292c6912E7710c838347Ae178B4a"
         ]
       }
     },

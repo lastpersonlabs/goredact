@@ -35,7 +35,7 @@ type result struct {
 	Allocations      uint64  `json:"allocations"`
 	PeakRSSBytes     uint64  `json:"peak_rss_bytes"`
 	Candidates       int64   `json:"candidates"`
-	Redactions       int     `json:"redactions"`
+	Redactions       int64   `json:"redactions"`
 	RedactedBytes    int64   `json:"redacted_bytes"`
 	CompressionRatio float64 `json:"compression_ratio"`
 }
@@ -192,7 +192,7 @@ func runMatch(s benchcorpus.Scenario, size int64, p redact.Profile) result {
 	return makeResult(s, size, p.String(), "raw", "match", wall, cpu, alloc, malloc, rss, candidates, 0, 0, 1)
 }
 
-func makeResult(s benchcorpus.Scenario, size int64, profile, mode, phase string, wall, cpu time.Duration, alloc, malloc, rss uint64, candidates int64, findings int, redacted int64, ratio float64) result {
+func makeResult(s benchcorpus.Scenario, size int64, profile, mode, phase string, wall, cpu time.Duration, alloc, malloc, rss uint64, candidates int64, findings int64, redacted int64, ratio float64) result {
 	throughput := float64(size) / (1024 * 1024) / wall.Seconds()
 	return result{Scenario: string(s), Size: size, Profile: profile, Mode: mode, Phase: phase, WallSeconds: wall.Seconds(), CPUSeconds: cpu.Seconds(), MiBPerSecond: throughput, AllocBytes: alloc, Allocations: malloc, PeakRSSBytes: rss, Candidates: candidates, Redactions: findings, RedactedBytes: redacted, CompressionRatio: ratio}
 }

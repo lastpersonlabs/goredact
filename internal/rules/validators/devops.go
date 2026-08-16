@@ -25,6 +25,8 @@
 // a well-documented env var to key off.
 package validators
 
+import "bytes"
+
 // consumeAssignedValue confirms the shape of a value assigned to a
 // trigger key name (matched by the caller's trigger literal, so the
 // trigger itself is never part of the returned span): optional spaces, a
@@ -322,24 +324,36 @@ func isDopplerLabelChar(c byte) bool {
 	return isDigit(c) || c >= 'a' && c <= 'z' || c == '-' || c == '_'
 }
 
+// dopplerServiceTokenPrefix is the one Doppler trigger, of the seven
+// scoped prefixes this rule matches, whose documented format regex
+// (dp\.st\.(?:[a-z0-9\-_]{2,35}\.)?[a-zA-Z0-9]{40,44}) allows an optional
+// config/environment label between the prefix and the body. The other six
+// prefixes' regexes go straight from prefix to body with no label segment.
+var dopplerServiceTokenPrefix = []byte("dp.st.")
+
 // DopplerToken confirms the Doppler token shape: one of seven scoped
 // triggers ("dp.st.", "dp.pt.", "dp.ct.", "dp.sa.", "dp.said.",
 // "dp.scim.", "dp.audit.") followed by a 40-44 character alphanumeric
-// body. A service token (dp.st.) may additionally carry a single config
-// label between the prefix and the body (e.g. "dp.st.dev.<body>"), per
-// Doppler's own documented format regex
-// (dp\.st\.(?:[a-z0-9\-_]{2,35}\.)?[a-zA-Z0-9]{40,44}); this is tried
-// first, falling back to a bodyless-label match if the label candidate
-// doesn't resolve to a valid body.
+// body. Only a service token (dp.st.) may additionally carry a single
+// config label between the prefix and the body (e.g. "dp.st.dev.<body>"),
+// per Doppler's own documented format regex; the other six prefixes'
+// regexes have no label segment, so this is tried only when the matched
+// trigger is "dp.st.", falling back to a bodyless-label match if the
+// label candidate doesn't resolve to a valid body.
 //
 // https://docs.doppler.com/reference/auth-token-formats
 func DopplerToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
-	labelEnd, labelOK := consumeRun(window, trigEnd, dopplerLabelMin, dopplerLabelMax, isDopplerLabelChar)
-	if labelOK && labelEnd < len(window) && window[labelEnd] == '.' {
-		bodyStart := labelEnd + 1
-		if bodyEnd, ok := consumeRun(window, bodyStart, dopplerTokenBodyMin, dopplerTokenBodyMax, isAlnum); ok {
-			if boundaryOK(window, bodyEnd) && !isPlaceholder(window[bodyStart:bodyEnd]) {
-				return trigStart, bodyEnd, true
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
+	if bytes.Equal(window[trigStart:trigEnd], dopplerServiceTokenPrefix) {
+		labelEnd, labelOK := consumeRun(window, trigEnd, dopplerLabelMin, dopplerLabelMax, isDopplerLabelChar)
+		if labelOK && labelEnd < len(window) && window[labelEnd] == '.' {
+			bodyStart := labelEnd + 1
+			if bodyEnd, ok := consumeRun(window, bodyStart, dopplerTokenBodyMin, dopplerTokenBodyMax, isAlnum); ok {
+				if boundaryOK(window, bodyEnd) && !isPlaceholder(window[bodyStart:bodyEnd]) {
+					return trigStart, bodyEnd, true
+				}
 			}
 		}
 	}
@@ -377,6 +391,9 @@ const (
 //
 // https://vercel.com/changelog/new-token-formats-and-secret-scanning
 func VercelToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	bodyEnd, ok := consumeRun(window, trigEnd, vercelTokenBodyMin, vercelTokenBodyMax, isAlnum)
 	if !ok {
 		return 0, 0, false

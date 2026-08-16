@@ -60,7 +60,7 @@ func FuzzRedactChunkingEquivalence(f *testing.F) {
 		if stats.BytesRead != int64(len(data)) {
 			t.Fatalf("BytesRead = %d, want %d", stats.BytesRead, len(data))
 		}
-		if stats.Findings != len(findings) {
+		if stats.Findings != int64(len(findings)) {
 			t.Fatalf("Stats.Findings = %d, OnFinding count = %d", stats.Findings, len(findings))
 		}
 
@@ -132,7 +132,7 @@ func FuzzRedactAllRulesSecurity(f *testing.F) {
 			if err != nil {
 				t.Fatalf("Redact: %v", err)
 			}
-			if stats.BytesRead != int64(len(data)) || stats.Findings != len(findings) {
+			if stats.BytesRead != int64(len(data)) || stats.Findings != int64(len(findings)) {
 				t.Fatalf("stats=%+v input=%d callbacks=%d", stats, len(data), len(findings))
 			}
 			if want := spliceExpected(data, findings, DefaultMarker); !bytes.Equal(out.Bytes(), []byte(want)) {

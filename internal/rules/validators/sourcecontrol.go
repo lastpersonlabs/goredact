@@ -125,11 +125,16 @@ func isPlaceholder(b []byte) bool {
 
 // fixedAlnumToken confirms that window[trigEnd:] begins with exactly
 // length ASCII alphanumeric characters followed by a non-alphanumeric
-// byte (or end of window), and that the body is not a placeholder. It
-// backs every source-control token format that is prefix + a
-// fixed-length alnum body: GitHub OAuth, App, and refresh tokens, and npm
-// access tokens.
+// byte (or end of window), that the trigger itself is not preceded by an
+// identifier byte (precededByIdentByte — the trigger must start a token,
+// not continue a longer identifier or blob), and that the body is not a
+// placeholder. It backs every source-control token format that is prefix
+// + a fixed-length alnum body: GitHub OAuth, App, and refresh tokens, and
+// npm access tokens.
 func fixedAlnumToken(window []byte, trigStart, trigEnd, length int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	bodyEnd := trigEnd + length
 	if bodyEnd > len(window) {
 		return 0, 0, false
@@ -148,11 +153,15 @@ func fixedAlnumToken(window []byte, trigStart, trigEnd, length int) (start, end 
 }
 
 // runToken confirms that window[trigEnd:] begins with a run of
-// [min, max] isTokenChar bytes, and that the body is not a placeholder.
-// It backs every token format that is prefix + a variable-length
-// token-alphabet body: GitLab PAT/runner/deploy tokens, PyPI API tokens,
-// and Docker Hub PATs.
+// [min, max] isTokenChar bytes, that the trigger itself is not preceded
+// by an identifier byte (precededByIdentByte), and that the body is not a
+// placeholder. It backs every token format that is prefix + a
+// variable-length token-alphabet body: GitLab PAT/runner/deploy tokens,
+// PyPI API tokens, Docker Hub PATs, and HashiCorp Vault tokens.
 func runToken(window []byte, trigStart, trigEnd, min, max int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	bodyEnd, ok := consumeRun(window, trigEnd, min, max, isTokenChar)
 	if !ok {
 		return 0, 0, false
@@ -196,6 +205,9 @@ func GitHubRefreshToken(window []byte, trigStart, trigEnd int) (start, end int, 
 //
 // https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github#githubs-token-formats
 func GitHubFineGrainedPAT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	const part1Len = 22
 	const part2Len = 59
 
@@ -288,6 +300,9 @@ const gitlabFeedTokenV2HexLen = 64
 //
 // https://docs.gitlab.com/security/tokens/#token-prefixes
 func GitLabFeedTokenV2(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	hexEnd := trigEnd + gitlabFeedTokenV2HexLen
 	if hexEnd > len(window) {
 		return 0, 0, false
