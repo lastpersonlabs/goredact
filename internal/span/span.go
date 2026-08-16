@@ -173,11 +173,15 @@ func betterAttrib(a, b attrib) attrib {
 //
 // The engine's contract with Release is: once Release(limit) has been
 // called, the engine will never subsequently Add a span with
-// Start < limit. Under that contract, any merged span with End <= limit
-// can never grow further (a span that could still merge with it would
-// need a Start < limit, i.e. at or before its End), so it is safe to
-// release. Spans with End > limit — including ones that overlap limit —
-// stay held and are never split.
+// Start <= limit. Note the non-strict bound: adjacent spans merge
+// (a.End == b.Start, merge rule 2 above), so a merged span with
+// End == limit could still merge with a future span whose Start == limit
+// — forbidding only Start < limit would not rule that out. Under the
+// Start <= limit contract, any merged span with End <= limit can never
+// grow further (a span that could still merge with it would need a
+// Start <= its End <= limit), so it is safe to release. Spans with
+// End > limit — including ones that overlap limit — stay held and are
+// never split.
 //
 // Release is idempotent in the sense that calling it again with the same
 // or a smaller limit returns no additional spans (dst is returned
