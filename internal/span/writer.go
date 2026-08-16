@@ -170,7 +170,12 @@ func (w *Writer) Emit(off int64, data []byte, spans []Span) error {
 		if s.End <= s.Start {
 			panic("span: Writer.Emit: invalid span, Start must be < End")
 		}
-		if s.Start > end {
+		// The contract places a span in the Emit call whose region
+		// [off, end) contains its Start, so Start == end is already a
+		// violation: admitting it would write a marker here and, while a
+		// straddling span is pending, let the bogus span overwrite
+		// pendingEnd and expose the old span's tail unmasked.
+		if s.Start >= end {
 			panic("span: Writer.Emit: span Start outside the emitted region")
 		}
 

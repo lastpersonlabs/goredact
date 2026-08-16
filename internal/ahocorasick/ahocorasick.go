@@ -129,6 +129,14 @@ func Compile(patterns []Pattern) (*Automaton, error) {
 // within chunk (which may be smaller than the pattern length for
 // boundary-spanning matches). fn returning false stops the scan early.
 // Scan performs no heap allocation.
+//
+// An early stop abandons the rest of the scan outright: other matches
+// ending at the same byte are not delivered, the caller is not told how
+// far into chunk the scan advanced, and the returned State is therefore
+// not meaningful to resume from. Return false only to answer a pure
+// "does any pattern occur?" query (as containsAnywhereKeyword does);
+// resumable streaming callers must always return true (as the engine
+// does).
 func (a *Automaton) Scan(s State, chunk []byte, fn func(pattern int, end int) bool) State {
 	es := uint32(s) & 0xffff
 	fs := uint32(s) >> 16

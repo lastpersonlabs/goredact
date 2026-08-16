@@ -152,14 +152,17 @@ func isAngleBracketToken(b []byte) bool {
 // bare "$IDENTIFIER" shell variable, or a value wrapped in braces
 // ("{token}", "{{ secrets.token }}").
 //
-// A leading '$' alone is not sufficient: modular-crypt-format password
-// hashes — "$2b$12$..." (bcrypt), "$argon2id$v=19$..." (argon2), "$6$..."
-// (sha512crypt) — also start with '$', and are exactly the kind of value
-// the contextual "password = ..." rules need to redact, not wave through
-// as a placeholder. IsModularCryptHash distinguishes those from a shell
-// reference by their actual grammar rather than just counting '$' bytes,
-// since a chain of concatenated shell variables ("$user$pass$env") can
-// have just as many '$' separators as a real hash.
+// A leading '$' alone is not sufficient in either direction:
+// modular-crypt-format password hashes — "$2b$12$..." (bcrypt),
+// "$argon2id$v=19$..." (argon2), "$6$..." (sha512crypt) — also start with
+// '$', and are exactly the kind of value the contextual "password = ..."
+// rules need to redact, not wave through as a placeholder; and an
+// arbitrary secret that merely begins with '$' ("$Xk9!mP2vQ7...") is not
+// a shell reference either. Recognized hashes are checked first
+// (IsModularCryptHash), and the bare-'$' case must then actually have
+// shell-variable grammar — one or more '$IDENTIFIER' groups, covering
+// both "$DB_PASSWORD" and concatenated chains like "$user$pass$env" —
+// to count as a reference.
 func isTemplateRef(b []byte) bool {
 	if len(b) >= 1 && b[0] == '$' {
 		if len(b) >= 3 && b[1] == '{' && b[len(b)-1] == '}' {
@@ -168,7 +171,10 @@ func isTemplateRef(b []byte) bool {
 		if len(b) >= 3 && b[1] == '(' && b[len(b)-1] == ')' {
 			return true
 		}
-		return !IsModularCryptHash(b)
+		if IsModularCryptHash(b) {
+			return false
+		}
+		return isShellVariableChain(b)
 	}
 	if len(b) >= 3 && b[0] == '{' && b[len(b)-1] == '}' {
 		return true
@@ -176,12 +182,50 @@ func isTemplateRef(b []byte) bool {
 	return false
 }
 
+// isShellVariableChain reports whether b consists of one or more
+// '$IDENTIFIER' groups, where IDENTIFIER has shell-variable grammar
+// ([A-Za-z_] followed by any number of [A-Za-z0-9_]): "$DB_PASSWORD",
+// "$user$pass$env". Anything else after a '$' — punctuation, a digit-led
+// field, base64/hex material — is not a variable reference and must stay
+// redactable.
+func isShellVariableChain(b []byte) bool {
+	if len(b) < 2 || b[0] != '$' {
+		return false
+	}
+	i := 0
+	for i < len(b) {
+		if b[i] != '$' || i+1 >= len(b) || !isShellIdentStart(b[i+1]) {
+			return false
+		}
+		i += 2
+		for i < len(b) && isShellIdentByte(b[i]) {
+			i++
+		}
+	}
+	return true
+}
+
+func isShellIdentStart(c byte) bool {
+	return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+func isShellIdentByte(c byte) bool {
+	return isShellIdentStart(c) || (c >= '0' && c <= '9')
+}
+
 // modularCryptIDs are the known algorithm identifiers that legitimately
 // occupy the first '$'-delimited field of a modular-crypt-format hash.
+// Beyond the classic crypt(3) set this includes Apache htpasswd ("apr1"),
+// Solaris/NetBSD ("md5", "sha1"), scrypt ("7", "scrypt"), and the passlib
+// PBKDF2 family — all common in real config files and all values a
+// password-assignment rule must redact rather than treat as references.
 var modularCryptIDs = map[string]bool{
 	"1": true, "2": true, "2a": true, "2b": true, "2x": true, "2y": true,
-	"5": true, "6": true, "y": true, "gy": true,
+	"5": true, "6": true, "7": true, "y": true, "gy": true,
 	"argon2i": true, "argon2d": true, "argon2id": true,
+	"apr1": true, "md5": true, "sha1": true, "scrypt": true,
+	"pbkdf2": true, "pbkdf2-sha1": true, "pbkdf2-sha256": true,
+	"pbkdf2-sha512": true,
 }
 
 // IsModularCryptHash reports whether b has the modular-crypt-format
