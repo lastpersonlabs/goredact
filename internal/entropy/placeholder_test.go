@@ -50,11 +50,45 @@ func TestIsPlaceholder(t *testing.T) {
 		{"bcrypt hash", "$2b$12$LJ3mNIVs1BQpNCoQpFHzC.qXvlyfvOmYFXQiP34XLU7T4TWTfxLGO", false},
 		{"argon2id hash", "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$RdescudvJCsgt3ub7bXwRWJTmaaJObG", false},
 		{"sha512crypt hash", "$6$rounds=5000$saltstring$rZP7Pl9CBGJvbrX2BbfN.T.QaMFxwHUYA0FfWNIWJZucfLpJI9j6TjMPCUsF4Uxm3ZxoNIxYQVMz0oRnHmXPr1", false},
+
+		// Regression: a chain of concatenated shell variables has 2+ '$'
+		// separators just like a real hash, but its first field is not a
+		// recognized crypt algorithm identifier, so it must still be
+		// treated as a placeholder/template reference rather than waved
+		// through as a modular-crypt hash.
+		{"concatenated shell variables, not modular crypt", "$databaseUser$databasePass$environmentName", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := IsPlaceholder([]byte(tc.in)); got != tc.want {
 				t.Errorf("IsPlaceholder(%q) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsModularCryptHash(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{"bcrypt 2b", "$2b$12$LJ3mNIVs1BQpNCoQpFHzC.qXvlyfvOmYFXQiP34XLU7T4TWTfxLGO", true},
+		{"bcrypt 2a", "$2a$10$N9qo8uLOickgx2ZMRZoMy.Mrq4gJXY3M3G8L3D1e3H3fJk9m1e3H3", true},
+		{"argon2id", "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$RdescudvJCsgt3ub7bXwRWJTmaaJObG", true},
+		{"sha512crypt with rounds", "$6$rounds=5000$saltstring$rZP7Pl9CBGJvbrX2BbfN.T.QaMFxwHUYA0FfWNIWJZucfLpJI9j6TjMPCUsF4Uxm3ZxoNIxYQVMz0oRnHmXPr1", true},
+		{"md5crypt", "$1$salt$qJH7.N4xYta3aEG/dfqo/0", true},
+		{"concatenated shell variables", "$databaseUser$databasePass$environmentName", false},
+		{"bare shell variable", "$DB_PASSWORD", false},
+		{"single dollar field, no id", "$", false},
+		{"unrecognized id with two fields", "$unknown$field", false},
+		{"empty", "", false},
+		{"no leading dollar", "2b$12$abc", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := IsModularCryptHash([]byte(tc.in)); got != tc.want {
+				t.Errorf("IsModularCryptHash(%q) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
 	}

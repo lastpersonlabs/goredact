@@ -23,9 +23,11 @@ const (
 	ProfileBalanced
 
 	// ProfileDeep extends ProfileBalanced with more expensive or
-	// lower-confidence detectors and selected decoding. In v0.1 no
-	// built-in rule is deep-only: ProfileDeep and ProfileBalanced select
-	// the identical rule set. See docs/PROFILES.md.
+	// lower-confidence detectors and selected decoding. In v0.1 the only
+	// deep-only built-in rule is a broad, low-confidence generic secret
+	// assignment heuristic (keyed on words like "key", "secret", "auth",
+	// "access", "credential", "creds"); every other rule that runs in
+	// ProfileDeep also runs in ProfileBalanced. See docs/PROFILES.md.
 	ProfileDeep
 )
 

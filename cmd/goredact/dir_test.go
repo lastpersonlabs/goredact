@@ -425,6 +425,56 @@ func TestRunDirScansSymlinkedRoot(t *testing.T) {
 	}
 }
 
+func TestRunDirExcludesReportPathThroughSymlinkedRoot(t *testing.T) {
+	dir := t.TempDir()
+	real := filepath.Join(dir, "release-1")
+	if err := os.Mkdir(real, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	secret := "AKIAUJZDEGXDNCF32EPF"
+	if err := os.WriteFile(filepath.Join(real, "leak.txt"), []byte("key="+secret), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "current")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+	reportPath := filepath.Join(link, "findings.json")
+	args := []string{"dir", "-profile=fast", "-exit-code=7", "-report-path=" + reportPath, "-show-secrets", link}
+
+	// First run creates the report inside the symlinked root itself.
+	var found findingsError
+	if err := run(context.Background(), args, nil, io.Discard, io.Discard); !errors.As(err, &found) {
+		t.Fatalf("first run error = %v, want findings exit", err)
+	}
+
+	// A second run over the same symlinked root must not treat its own
+	// prior report (now sitting under the canonicalized root) as a
+	// scannable file: excludePath compares canonicalized paths, so the
+	// report path needs the same "current -> release-1" resolution the
+	// scan root itself gets, or the report ends up scanning (and, with
+	// -show-secrets, re-reporting) its own previous output.
+	if err := run(context.Background(), args, nil, io.Discard, io.Discard); !errors.As(err, &found) {
+		t.Fatalf("second run error = %v, want findings exit", err)
+	}
+	reportBytes, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report scanReport
+	if err := json.Unmarshal(reportBytes, &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 {
+		t.Fatalf("report.FilesScanned = %d, want 1 (report file must be excluded, not rescanned)", report.FilesScanned)
+	}
+	for _, f := range report.Findings {
+		if f.File != "leak.txt" {
+			t.Fatalf("report contains an unexpected finding from %q, report file was not excluded", f.File)
+		}
+	}
+}
+
 func TestRegularFilesSkipsUnreadableSubdirectory(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("root can read mode-0 directories")

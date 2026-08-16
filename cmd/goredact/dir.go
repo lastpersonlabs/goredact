@@ -105,6 +105,10 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 		if resolveErr != nil {
 			return errors.New("goredact dir: cannot resolve report path")
 		}
+		reportPath, resolveErr = canonicalizeReportPath(reportPath)
+		if resolveErr != nil {
+			return errors.New("goredact dir: cannot resolve report path")
+		}
 		paths = excludePath(paths, reportPath)
 	}
 	report := scanReport{Schema: "goredact/v1", Profile: profile.String(), Findings: []reportFinding{}, ShowsSecrets: o.showSecrets}
@@ -310,6 +314,22 @@ func loadSecrets(file *os.File, findings []reportFinding) error {
 		findings[i].Secret = string(secret)
 	}
 	return nil
+}
+
+// canonicalizeReportPath resolves symlinks in reportPath's directory so it
+// compares equal to the canonicalized paths regularFiles returns even
+// when the scan root is reached through a symlink (e.g. "current ->
+// /releases/x", "-report-path current/findings.json"). It resolves the
+// directory rather than the full path because the report file itself
+// commonly does not exist yet on a first run — only its parent directory
+// is guaranteed to.
+func canonicalizeReportPath(reportPath string) (string, error) {
+	dir, base := filepath.Split(reportPath)
+	realDir, err := filepath.EvalSymlinks(filepath.Clean(dir))
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(realDir, base), nil
 }
 
 func excludePath(paths []string, excluded string) []string {

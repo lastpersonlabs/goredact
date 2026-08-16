@@ -355,20 +355,16 @@ func isIndirectAssignmentValue(value []byte) bool {
 // isModularCryptShape reports whether value (which must start with '$')
 // has the modular-crypt-format grammar used by password hashes such as
 // "$2b$12$..." (bcrypt), "$argon2id$v=19$..." (argon2), or "$6$..."
-// (sha512crypt): 2 or more further '$' field separators after the leading
-// one. A shell/template reference ("$VAR", "${VAR}", "$(cmd)") never has
-// that many, so this is what distinguishes a password hash — exactly the
-// value a password assignment needs to redact — from an indirect
-// reference. Mirrors entropy.isTemplateRef's reasoning for the same
-// shape.
+// (sha512crypt): a leading '$', a recognized algorithm identifier, and at
+// least one more '$'-delimited field. A shell/template reference ("$VAR",
+// "${VAR}", "$(cmd)"), or a chain of concatenated shell variables like
+// "$user$pass$env", never has that grammar, so this is what distinguishes
+// a password hash — exactly the value a password assignment needs to
+// redact — from an indirect reference. Delegates to
+// entropy.IsModularCryptHash, which mirrors this reasoning for
+// entropy.isTemplateRef's use of the same shape.
 func isModularCryptShape(value []byte) bool {
-	count := 0
-	for _, c := range value[1:] {
-		if c == '$' {
-			count++
-		}
-	}
-	return count >= 2
+	return entropy.IsModularCryptHash(value)
 }
 
 // isIdentifierChain reports whether value is a dot-separated chain of two

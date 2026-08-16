@@ -156,11 +156,10 @@ func isAngleBracketToken(b []byte) bool {
 // hashes — "$2b$12$..." (bcrypt), "$argon2id$v=19$..." (argon2), "$6$..."
 // (sha512crypt) — also start with '$', and are exactly the kind of value
 // the contextual "password = ..." rules need to redact, not wave through
-// as a placeholder. Those formats are distinguished by their rigid
-// grammar: 2 or more further '$' field separators after the leading one,
-// which a shell reference never has. Only a value with fewer than 2
-// further '$' bytes (and not itself a "${...}"/"$(...)" wrapper) is
-// treated as a template/variable reference.
+// as a placeholder. IsModularCryptHash distinguishes those from a shell
+// reference by their actual grammar rather than just counting '$' bytes,
+// since a chain of concatenated shell variables ("$user$pass$env") can
+// have just as many '$' separators as a real hash.
 func isTemplateRef(b []byte) bool {
 	if len(b) >= 1 && b[0] == '$' {
 		if len(b) >= 3 && b[1] == '{' && b[len(b)-1] == '}' {
@@ -169,12 +168,49 @@ func isTemplateRef(b []byte) bool {
 		if len(b) >= 3 && b[1] == '(' && b[len(b)-1] == ')' {
 			return true
 		}
-		return countByte(b[1:], '$') < 2
+		return !IsModularCryptHash(b)
 	}
 	if len(b) >= 3 && b[0] == '{' && b[len(b)-1] == '}' {
 		return true
 	}
 	return false
+}
+
+// modularCryptIDs are the known algorithm identifiers that legitimately
+// occupy the first '$'-delimited field of a modular-crypt-format hash.
+var modularCryptIDs = map[string]bool{
+	"1": true, "2": true, "2a": true, "2b": true, "2x": true, "2y": true,
+	"5": true, "6": true, "y": true, "gy": true,
+	"argon2i": true, "argon2d": true, "argon2id": true,
+}
+
+// IsModularCryptHash reports whether b has the modular-crypt-format
+// grammar used by password hashes such as "$2b$12$..." (bcrypt),
+// "$argon2id$v=19$..." (argon2), or "$6$..." (sha512crypt): a leading
+// '$', followed by one of a small set of known algorithm identifiers,
+// followed by at least one more '$'-delimited field.
+//
+// Counting '$' bytes alone is not enough: a value like
+// "$databaseUser$databasePass$environmentName" — three concatenated
+// shell variables — has just as many '$' separators as a real hash, but
+// its first field is not a recognized algorithm identifier. Validating
+// that field against modularCryptIDs is what tells the two apart.
+func IsModularCryptHash(b []byte) bool {
+	if len(b) < 2 || b[0] != '$' {
+		return false
+	}
+	rest := b[1:]
+	sep := -1
+	for i, c := range rest {
+		if c == '$' {
+			sep = i
+			break
+		}
+	}
+	if sep <= 0 || !modularCryptIDs[string(rest[:sep])] {
+		return false
+	}
+	return countByte(rest, '$') >= 2
 }
 
 // countByte returns the number of times c occurs in b.
