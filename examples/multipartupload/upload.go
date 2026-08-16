@@ -69,6 +69,9 @@ func RedactCompressUpload(ctx context.Context, client Client, engine *goredact.E
 	if maxParts == 0 {
 		maxParts = MaxParts
 	}
+	if maxParts < 1 {
+		return goredact.Stats{}, errors.New("multipartupload: invalid part limit")
+	}
 
 	upload, err := client.Begin(ctx)
 	if err != nil {
@@ -96,8 +99,16 @@ func RedactCompressUpload(ctx context.Context, client Client, engine *goredact.E
 		stats, scanErr := engine.Redact(ctx, zw, reader)
 		if scanErr == nil {
 			scanErr = zw.Close()
+			_ = pw.CloseWithError(scanErr)
+		} else {
+			// The scan failed; close the pipe first so the encoder's
+			// flush cannot block on a consumer that stopped reading, then
+			// still close the encoder to release its workspace
+			// (klauspost/compress documents Close as required), keeping
+			// the scan error as the reported failure.
+			_ = pw.CloseWithError(scanErr)
+			_ = zw.Close()
 		}
-		_ = pw.CloseWithError(scanErr)
 		resultCh <- result{stats: stats, err: scanErr}
 	}()
 

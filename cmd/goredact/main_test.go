@@ -182,6 +182,57 @@ func TestRunHelpFlagIsNotAFailure(t *testing.T) {
 	}
 }
 
+// TestRunStreamRefusesAliasedStats pins that -stats may name neither the
+// input file (writeStats would truncate the file being scanned) nor the
+// output file (it would clobber the just-written redacted result).
+func TestRunStreamRefusesAliasedStats(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "in.txt")
+	out := filepath.Join(dir, "out.txt")
+	if err := os.WriteFile(in, []byte("ordinary text"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, stats := range []string{in, out} {
+		err := run(context.Background(), []string{"stream", "-input=" + in, "-output=" + out, "-stats=" + stats}, nil, io.Discard, io.Discard)
+		if err == nil {
+			t.Fatalf("-stats=%s: expected an aliasing error", stats)
+		}
+	}
+	if got, err := os.ReadFile(in); err != nil || string(got) != "ordinary text" {
+		t.Fatalf("input was modified: %q, %v", got, err)
+	}
+}
+
+// TestRunStreamFailureEmptiesSymlinkTarget pins the failure cleanup for a
+// symlinked -output pointing at an unrelated file: the target must not be
+// left holding partial output (it is truncated before the link is
+// removed).
+func TestRunStreamFailureEmptiesSymlinkTarget(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "target.dat")
+	if err := os.WriteFile(target, []byte("precious"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "out-link")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	err := run(context.Background(), []string{"stream", "-output=" + link}, &failingReader{err: errors.New("boom")}, io.Discard, io.Discard)
+	if err == nil {
+		t.Fatal("expected a scan failure")
+	}
+	if _, statErr := os.Lstat(link); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("output link remains: %v", statErr)
+	}
+	got, readErr := os.ReadFile(target)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if len(got) != 0 {
+		t.Fatalf("symlink target holds %q, want empty after failure cleanup", got)
+	}
+}
+
 // TestRunFailedStatsWriteKeepsOutput pins that a stats-sidecar write
 // failure reports an error but does not delete the already-complete,
 // correctly redacted output file.

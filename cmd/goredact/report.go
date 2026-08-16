@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -27,9 +29,8 @@ func writeReport(name, format string, report scanReport, stdout io.Writer) error
 		var err error
 		file, err = os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 		if err != nil {
-			return errors.New("goredact dir: cannot open report output")
+			return fmt.Errorf("goredact dir: cannot open report output: %w", err)
 		}
-		defer file.Close()
 		dst = file
 	}
 	var err error
@@ -44,6 +45,17 @@ func writeReport(name, format string, report scanReport, stdout io.Writer) error
 		err = writeJUnit(dst, report)
 	case "sarif":
 		err = writeSARIF(dst, report)
+	}
+	if file != nil {
+		if closeErr := file.Close(); err == nil && closeErr != nil {
+			err = closeErr
+		}
+		if err != nil {
+			// Never leave a partial report behind — with -show-secrets it
+			// contains secret material (mirrors stream mode's cleanup of
+			// its output file on failure).
+			_ = os.Remove(name)
+		}
 	}
 	if err != nil {
 		return errors.New("goredact dir: cannot write report")
@@ -161,6 +173,15 @@ type sarifRegion struct {
 	ByteLength int64 `json:"byteLength"`
 }
 
+// sarifFileURI renders a report-relative file path as the percent-encoded
+// relative URI SARIF requires: forward slashes regardless of OS, with
+// bytes that are invalid in a URI path (spaces, '#', '%') escaped. Strict
+// consumers (e.g. GitHub code scanning) reject unescaped URIs.
+func sarifFileURI(rel string) string {
+	u := url.URL{Path: filepath.ToSlash(rel)}
+	return u.EscapedPath()
+}
+
 func writeSARIF(dst io.Writer, report scanReport) error {
 	results := make([]sarifResult, 0, len(report.Findings))
 	for _, finding := range report.Findings {
@@ -168,7 +189,7 @@ func writeSARIF(dst io.Writer, report scanReport) error {
 			RuleID: finding.RuleID, Level: sarifLevel(finding.Confidence),
 			Message: sarifMessage{Text: findingMessage(finding, report.ShowsSecrets)},
 			Locations: []sarifLocation{{PhysicalLocation: sarifPhysicalLocation{
-				ArtifactLocation: sarifArtifactLocation{URI: finding.File},
+				ArtifactLocation: sarifArtifactLocation{URI: sarifFileURI(finding.File)},
 				Region:           sarifRegion{ByteOffset: finding.StartByte, ByteLength: finding.EndByte - finding.StartByte},
 			}}},
 		})

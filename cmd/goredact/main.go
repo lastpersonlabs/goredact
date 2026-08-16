@@ -24,6 +24,10 @@ type options struct {
 	progressEvery                       int64
 }
 
+// errUsage marks a flag-parsing failure that flag.Parse has already
+// reported to stderr (message plus usage); main must not print it again.
+var errUsage = errors.New("goredact: invalid arguments")
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -32,6 +36,9 @@ func main() {
 			// flag.Parse already printed usage to stderr; -h/-help is not
 			// a failure and should not also print "flag: help requested".
 			os.Exit(0)
+		}
+		if errors.Is(err, errUsage) {
+			os.Exit(1)
 		}
 		fmt.Fprintln(os.Stderr, err)
 		var findings findingsError
@@ -68,7 +75,10 @@ func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 	fs.BoolVar(&o.zstd, "zstd", false, "stream output as a Zstandard frame")
 	fs.Int64Var(&o.progressEvery, "progress-bytes", 0, "report bytes read at this interval to stderr (0 disables)")
 	if err := fs.Parse(args); err != nil {
-		return err
+		if errors.Is(err, flag.ErrHelp) {
+			return err
+		}
+		return errUsage
 	}
 	if fs.NArg() != 0 {
 		return errors.New("goredact: unexpected positional arguments")
@@ -78,6 +88,13 @@ func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 	}
 	if sameFileName(o.input, o.output) {
 		return errors.New("goredact: input and output files must differ")
+	}
+	// -stats must not alias the input (it would clobber the file being
+	// scanned) or the output (it would clobber the redacted result).
+	if o.stats != "" && o.stats != "-" {
+		if sameFileName(o.stats, o.input) || sameFileName(o.stats, o.output) {
+			return errors.New("goredact: -stats must differ from input and output files")
+		}
 	}
 
 	profile, err := parseProfile(o.profile)
@@ -95,17 +112,30 @@ func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 
 	src, closeInput, err := openInput(o.input, stdin)
 	if err != nil {
-		return errors.New("goredact: cannot open input")
+		// err is an *os.PathError: operation, user-supplied path, and
+		// errno — never scanned content — so surfacing it is safe and
+		// tells the user whether the problem is absence or permissions.
+		return fmt.Errorf("goredact: cannot open input: %w", err)
 	}
 	defer closeInput()
-	dst, closeOutput, err := openOutput(o.output, stdout)
+	dst, outFile, err := openOutput(o.output, stdout)
 	if err != nil {
-		return errors.New("goredact: cannot open output")
+		return fmt.Errorf("goredact: cannot open output: %w", err)
 	}
 	succeeded := false
 	defer func() {
-		closeOutput()
-		if !succeeded && o.output != "-" {
+		if outFile == nil {
+			return
+		}
+		if !succeeded {
+			// Empty the file before unlinking the name: when o.output is
+			// a symlink, os.Remove only removes the link, so truncating
+			// first also honors the "removed on failure" contract for the
+			// link's target instead of leaving partial output behind.
+			_ = outFile.Truncate(0)
+		}
+		_ = outFile.Close()
+		if !succeeded {
 			_ = os.Remove(o.output)
 		}
 	}()
@@ -130,6 +160,18 @@ func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 	if compressor != nil {
 		if err := compressor.Close(); err != nil {
 			return errors.New("goredact: cannot finish compressed output")
+		}
+	}
+	// Close the output before declaring success: a deferred write that
+	// only fails at close (quota, NFS) must count as a failed scan, not
+	// exit 0 with a silently incomplete file. The deferred cleanup treats
+	// the already-closed file as failed and removes it.
+	if outFile != nil {
+		f := outFile
+		outFile = nil
+		if err := f.Close(); err != nil {
+			_ = os.Remove(o.output)
+			return errors.New("goredact: cannot finalize output")
 		}
 	}
 	// The redacted output is already complete and correct at this point:
@@ -179,15 +221,17 @@ func openInput(name string, fallback io.Reader) (io.Reader, func(), error) {
 	return f, func() { _ = f.Close() }, nil
 }
 
-func openOutput(name string, fallback io.Writer) (io.Writer, func(), error) {
+// openOutput opens name for writing, or returns fallback (with a nil
+// *os.File) when name is "-". The caller owns closing the returned file.
+func openOutput(name string, fallback io.Writer) (io.Writer, *os.File, error) {
 	if name == "-" {
-		return fallback, func() {}, nil
+		return fallback, nil, nil
 	}
 	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
-		return nil, func() {}, err
+		return nil, nil, err
 	}
-	return f, func() { _ = f.Close() }, nil
+	return f, f, nil
 }
 
 func sameFileName(a, b string) bool {
@@ -240,7 +284,7 @@ func writeStats(name string, stats goredact.Stats, stderr io.Writer) error {
 		var err error
 		f, err = os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 		if err != nil {
-			return errors.New("goredact: cannot open statistics output")
+			return fmt.Errorf("goredact: cannot open statistics output: %w", err)
 		}
 		defer f.Close()
 		dst = f
