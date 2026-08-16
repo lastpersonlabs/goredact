@@ -8,9 +8,15 @@ const (
 	jwtHeader  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"                           // {"alg":"HS256","typ":"JWT"}
 	jwtPayload = "eyJzdWIiOiJ1c2VyLTQ4MjEiLCJzY29wZSI6InRyYW5zY3JpcHRzOnJlYWQifQ" // synthetic claims
 	jwtSig     = "q4TnV7bXk2LwZ9pR0sYhF6dJ1aG5uEiO8cM3rTvQ6wN"                    // 43 random-looking base64url bytes
+
+	// jwtSigStdBase64 is a signature as a non-compliant standard-base64
+	// encoder (mapping '-'/'_' to '+'/'/') would emit it: same length as
+	// jwtSig, containing both '+' and '/'.
+	jwtSigStdBase64 = "q4TnV7bXk2LwZ9pR0sYhF6dJ1a+G5uEi/8cM3rTvQ6wN"
 )
 
 var jwtFull = jwtHeader + "." + jwtPayload + "." + jwtSig
+var jwtFullStdBase64Sig = jwtHeader + "." + jwtPayload + "." + jwtSigStdBase64
 
 func TestJWT(t *testing.T) {
 	cases := []contextualCase{
@@ -115,6 +121,20 @@ func TestJWT(t *testing.T) {
 			window: jwtFull + "===",
 			trig:   "eyJ",
 			wantOK: false,
+		},
+		{
+			name:    "standard-base64 signature containing + and / redacts in full",
+			window:  jwtFullStdBase64Sig,
+			trig:    "eyJ",
+			wantOK:  true,
+			wantVal: jwtFullStdBase64Sig,
+		},
+		{
+			name:    "standard-base64 signature in prose is not truncated at the +",
+			window:  "exchange returned " + jwtFullStdBase64Sig + " for the session",
+			trig:    "eyJ",
+			wantOK:  true,
+			wantVal: jwtFullStdBase64Sig,
 		},
 	}
 	runContextualCases(t, JWT, cases)

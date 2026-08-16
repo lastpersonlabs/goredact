@@ -44,11 +44,11 @@ func isBase64URLByte(c byte) bool {
 	return isAlnum(c) || c == '-' || c == '_'
 }
 
-// isJWTSignatureByte additionally admits '/' so signatures emitted by
-// non-compliant standard-base64 encoders are still captured whole rather
-// than truncated mid-signature.
+// isJWTSignatureByte additionally admits '/' and '+' so signatures emitted
+// by non-compliant standard-base64 encoders (which map '-'/'_' to
+// '+'/'/') are still captured whole rather than truncated mid-signature.
 func isJWTSignatureByte(c byte) bool {
-	return isBase64URLByte(c) || c == '/'
+	return isBase64URLByte(c) || c == '/' || c == '+'
 }
 
 // JWT confirms a standalone JWS compact serialization: trigger "eyJ"
