@@ -214,8 +214,8 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "generic-password-assignment",
-			match:   []string{"export PASSWORD=Xk9mP2vQ7Rt4Ws8Lb", "password: \"Zt7Qp2Xk9mLwR4vN8\"", "{\"pwd\": \"aZ9kQ2vR7wL4mN8pX1sT6bF3\"}"},
-			nomatch: []string{"password = \"changeme\"", "passwd: \"550e8400-e29b-41d4-a716-446655440000\"", "password = \"configuration\"", "pwd", "$ pwd", "passwd: files systemd", "password=${STORAGE_SECRET_ACCESS_KEY:-fallback}", "password=String(data.get(\"password\"))", "password=op://ExampleVault/Postgres/password", "password=secret123\\nnext", "password = \"correct horse battery staple\"", "password: URLPatternComponentResult", "password = 'trimmed prose, not a credential value. '"},
+			match:   []string{"export PASSWORD=Xk9mP2vQ7Rt4Ws8Lb", "password: \"Zt7Qp2Xk9mLwR4vN8\"", "{\"pwd\": \"aZ9kQ2vR7wL4mN8pX1sT6bF3\"}", "password = $2b$12$LJ3mNIVs1BQpNCoQpFHzC.qXvlyfvOmYFXQiP34XLU7T4TWTfxLGO"},
+			nomatch: []string{"password = \"changeme\"", "passwd: \"550e8400-e29b-41d4-a716-446655440000\"", "password = \"configuration\"", "pwd", "$ pwd", "passwd: files systemd", "password=${STORAGE_SECRET_ACCESS_KEY:-fallback}", "password=String(data.get(\"password\"))", "password=op://ExampleVault/Postgres/password", "password=secret123\\nnext", "password = \"correct horse battery staple\"", "password: URLPatternComponentResult", "password = 'trimmed prose, not a credential value. '", "password = $DB_PASSWORD", "password = ${DB_PASSWORD}", "password = $(cat secret)"},
 		},
 		{
 			id:      "generic-secret-assignment",

@@ -32,6 +32,9 @@ func TestIsPlaceholder(t *testing.T) {
 		{"angle bracket redacted", "<redacted>", true},
 		{"dollar brace template", "${API_KEY}", true},
 		{"double brace template", "{{ secrets.token }}", true},
+		{"bare shell variable", "$DB_PASSWORD", true},
+		{"command substitution", "$(cat secret)", true},
+		{"dollar with one further dollar sign", "$foo$bar", true},
 		{"ascending letters", "abcdefghijklmnop", true},
 		{"ascending digits", "234567890123456", true},
 		{"keyboard qwerty", "qwertyuiopasdfgh", true},
@@ -44,6 +47,9 @@ func TestIsPlaceholder(t *testing.T) {
 		{"long random token", "k3JmQz9XpL2vN7wR5tY8bC1sD4fA6hE0uI", false},
 		{"base64 with slashes not placeholder", "QW1hem9uUzNBY2Nlc3NLZXk3Nzc5", false},
 		{"secret as substring not whole value", "topsecretvaluehere123", false},
+		{"bcrypt hash", "$2b$12$LJ3mNIVs1BQpNCoQpFHzC.qXvlyfvOmYFXQiP34XLU7T4TWTfxLGO", false},
+		{"argon2id hash", "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$RdescudvJCsgt3ub7bXwRWJTmaaJObG", false},
+		{"sha512crypt hash", "$6$rounds=5000$saltstring$rZP7Pl9CBGJvbrX2BbfN.T.QaMFxwHUYA0FfWNIWJZucfLpJI9j6TjMPCUsF4Uxm3ZxoNIxYQVMz0oRnHmXPr1", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

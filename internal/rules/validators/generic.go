@@ -310,7 +310,10 @@ func isIndirectAssignmentValue(value []byte) bool {
 	if len(value) == 0 {
 		return true
 	}
-	if value[0] == '$' || value[0] == '/' || value[0] == '~' || value[0] == '-' || value[0] == '.' || value[0] == ':' {
+	if value[0] == '$' && !isModularCryptShape(value) {
+		return true
+	}
+	if value[0] == '/' || value[0] == '~' || value[0] == '-' || value[0] == '.' || value[0] == ':' {
 		return true
 	}
 	for _, marker := range []string{"\\n", "\\r", "...", "://", "::", "?.", "&amp", "process.env", "os.environ", "os.getenv", "secretparam(", "secrets.string(", "data.get("} {
@@ -349,6 +352,25 @@ func isIndirectAssignmentValue(value []byte) bool {
 	return false
 }
 
+// isModularCryptShape reports whether value (which must start with '$')
+// has the modular-crypt-format grammar used by password hashes such as
+// "$2b$12$..." (bcrypt), "$argon2id$v=19$..." (argon2), or "$6$..."
+// (sha512crypt): 2 or more further '$' field separators after the leading
+// one. A shell/template reference ("$VAR", "${VAR}", "$(cmd)") never has
+// that many, so this is what distinguishes a password hash — exactly the
+// value a password assignment needs to redact — from an indirect
+// reference. Mirrors entropy.isTemplateRef's reasoning for the same
+// shape.
+func isModularCryptShape(value []byte) bool {
+	count := 0
+	for _, c := range value[1:] {
+		if c == '$' {
+			count++
+		}
+	}
+	return count >= 2
+}
+
 // isIdentifierChain reports whether value is a dot-separated chain of two
 // or more source-code identifiers ("this.apiToken", "SyntaxKind.WithKeyword",
 // "k.cfg.DataStreamsKey"): a member expression that names a value rather
@@ -357,6 +379,15 @@ func isIndirectAssignmentValue(value []byte) bool {
 // exempted before the shape check.
 func isIdentifierChain(value []byte) bool {
 	if len(value) >= 3 && value[0] == 'e' && value[1] == 'y' && value[2] == 'J' {
+		return false
+	}
+	// Modular-crypt-format hashes (bcrypt's alphabet includes '.') must
+	// stay matchable for the same reason JWTs are exempted above: a
+	// dot inside the hash body is not a member-expression separator, and
+	// '$' is intentionally accepted as an identifier byte below (for
+	// shell-style "$var.field" chains), which would otherwise make the
+	// hash's own "$"-delimited fields look like chain segments.
+	if len(value) >= 1 && value[0] == '$' && isModularCryptShape(value) {
 		return false
 	}
 	segments := 0

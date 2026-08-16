@@ -112,18 +112,44 @@ func isAngleBracketToken(b []byte) bool {
 }
 
 // isTemplateRef reports whether b is a template or shell-variable
-// reference rather than a literal secret value: any value starting with
-// '$' ("$GITHUB_TOKEN", "${API_KEY}" — no real secret alphabet includes
-// a leading dollar sign), or a value wrapped in braces ("{token}",
-// "{{ secrets.token }}").
+// reference rather than a literal secret value: "${VAR}", "$(cmd)", a
+// bare "$IDENTIFIER" shell variable, or a value wrapped in braces
+// ("{token}", "{{ secrets.token }}").
+//
+// A leading '$' alone is not sufficient: modular-crypt-format password
+// hashes — "$2b$12$..." (bcrypt), "$argon2id$v=19$..." (argon2), "$6$..."
+// (sha512crypt) — also start with '$', and are exactly the kind of value
+// the contextual "password = ..." rules need to redact, not wave through
+// as a placeholder. Those formats are distinguished by their rigid
+// grammar: 2 or more further '$' field separators after the leading one,
+// which a shell reference never has. Only a value with fewer than 2
+// further '$' bytes (and not itself a "${...}"/"$(...)" wrapper) is
+// treated as a template/variable reference.
 func isTemplateRef(b []byte) bool {
 	if len(b) >= 1 && b[0] == '$' {
-		return true
+		if len(b) >= 3 && b[1] == '{' && b[len(b)-1] == '}' {
+			return true
+		}
+		if len(b) >= 3 && b[1] == '(' && b[len(b)-1] == ')' {
+			return true
+		}
+		return countByte(b[1:], '$') < 2
 	}
 	if len(b) >= 3 && b[0] == '{' && b[len(b)-1] == '}' {
 		return true
 	}
 	return false
+}
+
+// countByte returns the number of times c occurs in b.
+func countByte(b []byte, c byte) int {
+	n := 0
+	for _, x := range b {
+		if x == c {
+			n++
+		}
+	}
+	return n
 }
 
 // isAscendingRun reports whether b contains a run of 4 or more
