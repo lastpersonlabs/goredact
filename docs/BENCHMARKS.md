@@ -146,6 +146,76 @@ RUNS=3 zsh ./scripts/benchmark-betterleaks.zsh \
   /tmp/goredact-corpus/corpus-000.log /tmp/goredact "$(command -v betterleaks)"
 ```
 
+The script's optional fourth argument selects GoRedact's profile (`fast`,
+`balanced`, or `deep`; default `balanced`), so the comparison below can be
+repeated per profile:
+
+```sh
+RUNS=3 zsh ./scripts/benchmark-betterleaks.zsh \
+  /tmp/goredact-corpus/corpus-000.log /tmp/goredact "$(command -v betterleaks)" deep
+```
+
+## Cross-profile comparison with Betterleaks
+
+The comparison above only exercised the balanced profile. Betterleaks has no
+profile concept, so this run scanned the same deterministic 512 MiB `quiet`
+corpus (SHA-256 `e71ea70986c32622aa5640effa32f60709c890e6c600f53a479a0bae54e39755`,
+same file as the two comparisons above) once per GoRedact profile against the
+same Betterleaks default rule set, to check whether profile choice changes
+GoRedact's throughput on a representative no-trigger workload.
+
+On 2026-08-15/16, GoRedact at commit `d6024b98e183` and Betterleaks v1.7.4 ran
+under the same protocol as above — one warm-up followed by three measured
+runs per tool, both processes pinned to CPU 0 with `taskset`, `GOMAXPROCS=1`,
+one input file on tmpfs — but on a **4-vCPU cloud sandbox** (Intel Xeon
+@ 2.80GHz, kernel `6.18.5-fc-v20`, a Firecracker microVM, not a dedicated
+benchmark host), so absolute throughput is well below the dedicated-host
+figures above. `/usr/bin/time` was unavailable and this sandbox's zsh build
+reports `TIMEFMT %M` in MiB rather than KiB, so timing came from a small
+Python harness around `os.wait4` instead of the zsh script, using the same
+commands and flags; peak RSS is `ru_maxrss` reported directly by the kernel.
+
+| GoRedact profile | Median wall time | Throughput | Median peak RSS | Betterleaks median wall time (same run) | Betterleaks throughput | Betterleaks median peak RSS | Speed gain |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `fast` | 2.01 s | 254.91 MiB/s | 8,248 KiB | 20.11 s | 25.46 MiB/s | 37,484 KiB | **10.0x faster** |
+| `balanced` | 2.01 s | 254.75 MiB/s | 8,252 KiB | 20.31 s | 25.21 MiB/s | 37,376 KiB | **10.1x faster** |
+| `deep` | 2.02 s | 253.58 MiB/s | 8,188 KiB | 20.17 s | 25.38 MiB/s | 37,916 KiB | **10.0x faster** |
+
+Each row's Betterleaks measurement was captured immediately after that row's
+GoRedact profile, as an independent re-run of the identical Betterleaks
+invocation (Betterleaks reports do not vary by GoRedact profile). All three
+Betterleaks runs agreed within 1%, and pooling all nine measured Betterleaks
+runs gives a median of 20.22 s (25.32 MiB/s), consistent with the per-profile
+figures above. Neither tool reported a secret in any run.
+
+GoRedact's throughput was flat across profiles (within about half a
+percent) on this workload: the `quiet` corpus contains no detector trigger
+literals, so `deep`'s one additional rule and `balanced`'s contextual and
+provider rules add Aho–Corasick automaton states but no extra validator
+work, and the streaming engine's per-byte matching cost dominates regardless
+of rule-set size. This does not show what profile choice costs on inputs
+that do contain candidates — see the `keyword-dense` and `adversarial`
+`tools/benchreport` scenarios in the matrix above for that comparison, which
+does distinguish profiles because those scenarios contain trigger literals
+for the rules profiles add.
+
+As with the other comparisons, this measures baseline scanning throughput on
+one workload, not relative recall or precision, and the absolute numbers are
+specific to this shared/virtualized host; only the profile-to-profile
+relationship (flat across `fast`/`balanced`/`deep`) is expected to transfer
+to other hosts for this no-trigger scenario. Reproduce with:
+
+```sh
+go build -o /tmp/goredact ./cmd/goredact
+go run ./tools/corpusfiles -output /tmp/goredact-corpus -scenario quiet \
+  -files 1 -file-size 536870912
+for profile in fast balanced deep; do
+  RUNS=3 zsh ./scripts/benchmark-betterleaks.zsh \
+    /tmp/goredact-corpus/corpus-000.log /tmp/goredact \
+    "$(command -v betterleaks)" "$profile"
+done
+```
+
 ## Local Codex and Claude session comparison
 
 On 2026-08-14, a local supporting benchmark scanned every JSONL session under

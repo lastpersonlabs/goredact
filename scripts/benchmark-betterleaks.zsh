@@ -1,14 +1,15 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-if (( $# != 3 )); then
-  print -u2 "usage: $0 CORPUS_FILE GOREDACT_BINARY BETTERLEAKS_BINARY"
+if (( $# < 3 || $# > 4 )); then
+  print -u2 "usage: $0 CORPUS_FILE GOREDACT_BINARY BETTERLEAKS_BINARY [GOREDACT_PROFILE]"
   exit 2
 fi
 
 corpus_file=$1
 goredact_binary=$2
 betterleaks_binary=$3
+goredact_profile=${4:-balanced}
 runs=${RUNS:-3}
 
 if [[ ! -f $corpus_file ]]; then
@@ -18,7 +19,7 @@ fi
 
 corpus_dir=${corpus_file:h}
 
-print $'tool\tscenario\tcores\trun\telapsed_s\tuser_s\tsystem_s\tmax_rss_kib'
+print $'tool\tprofile\tscenario\tcores\trun\telapsed_s\tuser_s\tsystem_s\tmax_rss_kib'
 
 for tool in goredact betterleaks; do
   for run in {0..$runs}; do
@@ -27,7 +28,7 @@ for tool in goredact betterleaks; do
     if [[ $tool == goredact ]]; then
       timing=$(
         { time taskset -c 0 env GOMAXPROCS=1 "$goredact_binary" stream \
-            -profile balanced -input "$corpus_file" -output - >/dev/null
+            -profile "$goredact_profile" -input "$corpus_file" -output - >/dev/null
         } 2>&1
       )
     else
@@ -42,7 +43,8 @@ for tool in goredact betterleaks; do
     fi
     # Run zero warms code and filesystem caches; measured output starts at one.
     if (( run > 0 )); then
-      print "$tool\tquiet\t1\t$run\t$timing"
+      row_profile=$([[ $tool == goredact ]] && print $goredact_profile || print "default-rules")
+      print "$tool\t$row_profile\tquiet\t1\t$run\t$timing"
     fi
   done
 done
