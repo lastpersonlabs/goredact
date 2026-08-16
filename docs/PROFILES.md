@@ -103,7 +103,7 @@ finding).
 | `circleci-token` | CircleCI personal/project API token | fast | high | `CCIPAT_`, `CCIPRJ_` |
 | `cohere-api-key` | Cohere API key | fast | high | `CO_API_KEY`, `COHERE_API_KEY` |
 | `command-line-password-flag` | Command-line password/token flag | balanced | medium | `--password`, `--passwd`, `--token`, `--api-key`, `--secret` |
-| `cookie-session-token` | Session/token cookie value | balanced | medium | `cookie:`, `set-cookie:`, `session=`, `sid=`, `token=`, `jwt=`, `auth=` |
+| `cookie-session-token` | Session/token cookie value | balanced | medium | `cookie:`, `set-cookie:`, `session=`, `sessionid=`, `sid=`, `token=`, `jwt=`, `auth=` |
 | `cursor-api-key` | Cursor API key | fast | high | `crsr_` |
 | `datadog-api-key` | Datadog API key | fast | high | `DD_API_KEY` |
 | `datadog-application-key` | Datadog Application key | fast | high | `DD_APP_KEY` |

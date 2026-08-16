@@ -4,3 +4,7 @@
 /bench/results/
 /bin/
 /.secretbench/
+
+# Local tooling output (make bench-ci, make cover)
+/benchmark-ci.json
+/coverage.out

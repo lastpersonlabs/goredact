@@ -174,6 +174,7 @@ const (
 	supabasePayloadServiceRoleSpaced = "eyJyb2xlIjogInNlcnZpY2Vfcm9sZSIsICJpc3MiOiAic3VwYWJhc2UiLCAicmVmIjogImFiY2RlZmdoaWprbG1ub3AiLCAiaWF0IjogMTcwMDAwMDAwMCwgImV4cCI6IDIwMTUzNTY4MDB9" // {"role": "service_role", "iss": "supabase", ...} (spaced JSON)
 	supabasePayloadAnon              = "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoyMDE1MzU2ODAwfQ"                       // {"iss":"supabase",...,"role":"anon",...}
 	supabasePayloadNoRole            = "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MjAxNTM1NjgwMH0"                                          // {"iss":"supabase",...} (no role claim at all)
+	supabasePayloadNestedRole        = "eyJhcHBfbWV0YWRhdGEiOnsicm9sZSI6ImFkbWluIn0sImlzcyI6InN1cGFiYXNlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcwMDAwMDAwMH0"                          // {"app_metadata":{"role":"admin"},...,"role":"service_role",...} (an earlier nested "role" member precedes the top-level claim)
 	supabaseSig1                     = "TsKdOf3JR-kSPIbMXpSE2IlyTs8tIAGHgmy-qA5m_Xc"
 	supabaseSig2                     = "EbrK-izzHh_fuSf8Ubf5ItUGm0ZkL0-HuL6cVkAnoqs"
 )
@@ -183,6 +184,7 @@ var (
 	supabaseServiceRoleTokenSpaced = jwtHeader + "." + supabasePayloadServiceRoleSpaced + "." + supabaseSig2
 	supabaseAnonToken              = jwtHeader + "." + supabasePayloadAnon + "." + supabaseSig2
 	supabaseNoRoleToken            = jwtHeader + "." + supabasePayloadNoRole + "." + supabaseSig1
+	supabaseNestedRoleToken        = jwtHeader + "." + supabasePayloadNestedRole + "." + supabaseSig2
 )
 
 func TestSupabaseServiceRoleKey(t *testing.T) {
@@ -200,6 +202,13 @@ func TestSupabaseServiceRoleKey(t *testing.T) {
 			trig:    "eyJ",
 			wantOK:  true,
 			wantVal: supabaseServiceRoleTokenSpaced,
+		},
+		{
+			name:    "service_role claim found past an earlier nested role member",
+			window:  "key=" + supabaseNestedRoleToken,
+			trig:    "eyJ",
+			wantOK:  true,
+			wantVal: supabaseNestedRoleToken,
 		},
 		{
 			name:   "anon role rejected",

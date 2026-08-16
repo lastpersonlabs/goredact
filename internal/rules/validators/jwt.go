@@ -155,18 +155,28 @@ const (
 // disambiguate Supabase's own key shapes, and forgiving of a payload
 // whose other fields are malformed or reordered.
 func hasServiceRoleClaim(payload []byte) bool {
-	idx := indexLiteral(payload, supabaseServiceRoleClaimKey)
-	if idx < 0 {
-		return false
+	// Every occurrence of `"role"` is examined, not just the first: a
+	// payload can legitimately contain an earlier, unrelated occurrence
+	// (e.g. a nested `"app_metadata":{"role":...}` member) before the
+	// top-level claim.
+	for base := 0; base < len(payload); {
+		idx := indexLiteral(payload[base:], supabaseServiceRoleClaimKey)
+		if idx < 0 {
+			return false
+		}
+		pos := base + idx + len(supabaseServiceRoleClaimKey)
+		base = pos
+		pos = skipSpaces(payload, pos)
+		if pos >= len(payload) || payload[pos] != ':' {
+			continue
+		}
+		pos++
+		pos = skipSpaces(payload, pos)
+		if indexLiteral(payload[pos:], supabaseServiceRoleClaimValue) == 0 {
+			return true
+		}
 	}
-	pos := idx + len(supabaseServiceRoleClaimKey)
-	pos = skipSpaces(payload, pos)
-	if pos >= len(payload) || payload[pos] != ':' {
-		return false
-	}
-	pos++
-	pos = skipSpaces(payload, pos)
-	return indexLiteral(payload[pos:], supabaseServiceRoleClaimValue) == 0
+	return false
 }
 
 // SupabaseServiceRoleKey confirms the same JWS compact-serialization shape
@@ -179,8 +189,10 @@ func SupabaseServiceRoleKey(window []byte, trigStart, trigEnd int) (start, end i
 	if !ok {
 		return 0, 0, false
 	}
-	decoded, err := base64.RawURLEncoding.DecodeString(string(window[payStart:payEnd]))
-	if err != nil || !hasServiceRoleClaim(decoded) {
+	seg := window[payStart:payEnd]
+	decoded := make([]byte, base64.RawURLEncoding.DecodedLen(len(seg)))
+	n, err := base64.RawURLEncoding.Decode(decoded, seg)
+	if err != nil || !hasServiceRoleClaim(decoded[:n]) {
 		return 0, 0, false
 	}
 	return start, end, true

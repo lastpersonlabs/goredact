@@ -143,7 +143,7 @@
       "validator": "GrafanaServiceAccountToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 45,
       "provenance": {
         "source": "https://grafana.com/docs/grafana/latest/administration/service-accounts/",
@@ -157,7 +157,8 @@
         "nomatch": [
           "glsa_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_AAAAAAAA",
           "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d06581",
-          "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7-2d065813"
+          "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7-2d065813",
+          "Xglsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d065813"
         ]
       }
     },
@@ -173,7 +174,7 @@
       "validator": "GrafanaCloudAccessPolicyToken",
       "minProfile": "fast",
       "confidence": "high",
-      "maxLookbehind": 0,
+      "maxLookbehind": 1,
       "maxLookahead": 420,
       "provenance": {
         "source": "https://grafana.com/blog/2022/11/22/meet-grafana-cloud-access-policies-the-new-cloud-api-keys/",
@@ -186,7 +187,8 @@
         ],
         "nomatch": [
           "glc_tooshort",
-          "glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ==="
+          "glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ===",
+          "Xglc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ"
         ]
       }
     },

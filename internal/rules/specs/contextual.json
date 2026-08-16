@@ -58,6 +58,10 @@
           "caseFold": true
         },
         {
+          "literal": "sessionid=",
+          "caseFold": true
+        },
+        {
           "literal": "sid=",
           "caseFold": true
         },
@@ -86,6 +90,8 @@
       "fixtures": {
         "match": [
           "Cookie: theme=dark; sessionid=aK9mQ2vR7wL4mN8pX1sTbF3j; lang=en",
+          "Cookie: token=Zp8kQ3vR7wL4mN2xT6bF9jH0cD5yU1aE; sessionid=aK9mQ2vR7wL4mN8pX1sTbF3j",
+          "Cookie: gw_route=blue; JSESSIONID=xT4bK9mQ2vR7wL0pZ8sN3jH6cY1dF5gA",
           "Set-Cookie: sid=xT4bK9mQ2vR7wL0pZ8sN3jH6cY1dF5gA; Path=/; HttpOnly; Secure",
           "{\"headers\":{\"cookie\":\"gw_route=blue; auth_token=Zp8kQ3vR7wL4mN2xT6bF9jH0cD5yU1aE; region=eu\"}}",
           "{\"line\":\"\\\"cookie: jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.t8ZkQ2vRwLmN4xB7\\\"\"}"

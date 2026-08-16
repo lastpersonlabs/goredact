@@ -154,7 +154,7 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		},
 		{
 			id:      "cookie-session-token",
-			match:   []string{"Cookie: theme=dark; sessionid=aK9mQ2vR7wL4mN8pX1sTbF3j; lang=en", "Set-Cookie: sid=xT4bK9mQ2vR7wL0pZ8sN3jH6cY1dF5gA; Path=/; HttpOnly; Secure", "{\"headers\":{\"cookie\":\"gw_route=blue; auth_token=Zp8kQ3vR7wL4mN2xT6bF9jH0cD5yU1aE; region=eu\"}}", "{\"line\":\"\\\"cookie: jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.t8ZkQ2vRwLmN4xB7\\\"\"}"},
+			match:   []string{"Cookie: theme=dark; sessionid=aK9mQ2vR7wL4mN8pX1sTbF3j; lang=en", "Cookie: token=Zp8kQ3vR7wL4mN2xT6bF9jH0cD5yU1aE; sessionid=aK9mQ2vR7wL4mN8pX1sTbF3j", "Cookie: gw_route=blue; JSESSIONID=xT4bK9mQ2vR7wL0pZ8sN3jH6cY1dF5gA", "Set-Cookie: sid=xT4bK9mQ2vR7wL0pZ8sN3jH6cY1dF5gA; Path=/; HttpOnly; Secure", "{\"headers\":{\"cookie\":\"gw_route=blue; auth_token=Zp8kQ3vR7wL4mN2xT6bF9jH0cD5yU1aE; region=eu\"}}", "{\"line\":\"\\\"cookie: jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.t8ZkQ2vRwLmN4xB7\\\"\"}"},
 			nomatch: []string{"Cookie: theme=dark; lang=en; tz=UTC", "Cookie: sessionid=short1; theme=dark", "Set-Cookie: csrftoken=Qw8kV3nR7wL4mN2xT6bF9jH0cD5yU1aE; Path=/", "GET /cb?next=%2Fdash&token=aK9mQ2vR7wL4mN8pX1sTbF3j HTTP/1.1", "Cookie: session=<session-token>; theme=dark", "Cookie: auth=xxxxxxxxxxxxxxxxxxxx; theme=dark", "Cookie: session=1e084479-84e5-4834-bc8a-fc44c29aaed90ffb05&amp; theme=dark"},
 		},
 		{
@@ -280,12 +280,12 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "grafana-cloud-access-policy-token",
 			match:   []string{"GRAFANA_CLOUD_TOKEN=glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ", "{\"token\":\"glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ==\"}"},
-			nomatch: []string{"glc_tooshort", "glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ==="},
+			nomatch: []string{"glc_tooshort", "glc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ===", "Xglc_BZS9bJBlQtfU/dx9UHdyN05m/hEf3Gw7HdOQy3lyvH19ja5pvfqkcoEVULjZ"},
 		},
 		{
 			id:      "grafana-service-account-token",
 			match:   []string{"'Authorization': 'Bearer glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d065813'", "GRAFANA_TOKEN=glsa_hYAFlBFRud6UBH6vN1IeiYwijYiFw8Ku_E888FFC5"},
-			nomatch: []string{"glsa_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_AAAAAAAA", "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d06581", "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7-2d065813"},
+			nomatch: []string{"glsa_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_AAAAAAAA", "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d06581", "glsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7-2d065813", "Xglsa_Z3aIKXTVKpH1zp8kfsZ8XTVM62Gb02O7_2d065813"},
 		},
 		{
 			id:      "groq-api-key",
@@ -305,12 +305,12 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "linear-api-key",
 			match:   []string{"export LINEAR_API_KEY=lin_api_FeWaVUqG2KVasfSq8Z0wjCdFUQUHxZ3g0Aq3idaD", "{\"linear_api_key\": \"lin_api_MhXnwfocwDNRjI7Sc4sfHBomzPtKTjAjaFO16Hd8Hp1Jf7tSgtRa1eePdjJY\"}"},
-			nomatch: []string{"lin_api_M6mgv4I3ERxy2aV7ygR0ASuT1llqf3", "lin_api_FeWaVUqG2KVasfSq8Z0wjCdF-UQUHxZ3g0Aq3idaD", "lin_api_QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"},
+			nomatch: []string{"lin_api_M6mgv4I3ERxy2aV7ygR0ASuT1llqf3", "lin_api_FeWaVUqG2KVasfSq8Z0wjCdF-UQUHxZ3g0Aq3idaD", "lin_api_QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ", "QmFylin_api_FeWaVUqG2KVasfSq8Z0wjCdFUQUHxZ3g0Aq3idaD"},
 		},
 		{
 			id:      "notion-internal-token",
 			match:   []string{"export NOTION_TOKEN=secret_JcieWVjwiYd7U3MsPkYO2xaCUvet6zYYqy0pJf9CIg9", "{\"notion_secret\": \"secret_lV3G32cGh6dAuJa3pJEeyQVnsZpF2V2r2iY9Uot4wf3\"}", "export NOTION_TOKEN=ntn_LFn3YnrPf6lJOdoQdQqA5zd5SriKEc8WlTo9bsQd2TMY2e", "{\"notion_token\": \"ntn_GPYkWkSsSB1qZRAk3rxvD6mvf155SxzOmzWOoMnQrwuxqr1IoG5opCTycClX\"}"},
-			nomatch: []string{"the client_secret_JcieWVjwiYd7U3MsPkYO2xaCUvet6zYYqy0pJf9CIg9 field", "token=secret_iCnEPor6SOvFbGwot3GcKsT5BCUyDSWXbJPhakryLK", "token=ntn_uIF6SUvaLMIyi4Xhg6R1KQ608e9zSv3VzHd9EJw9O3rur"},
+			nomatch: []string{"the client_secret_JcieWVjwiYd7U3MsPkYO2xaCUvet6zYYqy0pJf9CIg9 field", "token=secret_iCnEPor6SOvFbGwot3GcKsT5BCUyDSWXbJPhakryLK", "token=ntn_uIF6SUvaLMIyi4Xhg6R1KQ608e9zSv3VzHd9EJw9O3rur", "blobxntn_LFn3YnrPf6lJOdoQdQqA5zd5SriKEc8WlTo9bsQd2TMY2e"},
 		},
 		{
 			id:      "npm-access-token",
@@ -350,17 +350,17 @@ func TestGeneratedRuleFixtures(t *testing.T) {
 		{
 			id:      "slack-app-token",
 			match:   []string{"export SLACK_APP_TOKEN=xapp-1-GPMM82I1LR3-3178108013267-f6c15c0c8e9df469611a11f5125227c3712da86a78c49ea20e32684b27b95e90", "{\"app_token\": \"xapp-2-9TGIQHG9JR-4935348740-2d810a485ed03241b4d419b1b673bd4755d05ad7853c1f76eb97706ca828bca0\"}"},
-			nomatch: []string{"xapp-1-ABC-123", "xapp-AAAAAAAAAAAAAAAAAAAA-BBBBBBBBBBBBBBBBBBBBBB", "xapp------------------------------------------"},
+			nomatch: []string{"xapp-1-ABC-123", "xapp-AAAAAAAAAAAAAAAAAAAA-BBBBBBBBBBBBBBBBBBBBBB", "xapp------------------------------------------", "Zm9vxapp-1-GPMM82I1LR3-3178108013267-f6c15c0c8e9df469611a11f5125227c3712da86a78c49ea20e32684b27b95e90"},
 		},
 		{
 			id:      "slack-bot-token",
 			match:   []string{"xoxb-0265423511615-5940781618495-KmTecQoXsf2o3gyrDO1xkxwnQrS7RP"},
-			nomatch: []string{"xoxb-123-456-abcdefgh", "xoxb-0265423511615-5940781618495-aaaaaaaaaaaaaaaaaaaaaaaaaaaa", "xoxb-99603082462819-48219935181-KdNnFRIBXuDL7DxtpYlSXpfKtHF4", "xoxb-1234567890-1234567890123-k4Jm8nR2pX6sW9vB3fH7aT1q"},
+			nomatch: []string{"xoxb-123-456-abcdefgh", "xoxb-0265423511615-5940781618495-aaaaaaaaaaaaaaaaaaaaaaaaaaaa", "xoxb-99603082462819-48219935181-KdNnFRIBXuDL7DxtpYlSXpfKtHF4", "xoxb-1234567890-1234567890123-k4Jm8nR2pX6sW9vB3fH7aT1q", "Zm9vxoxb-0265423511615-5940781618495-KmTecQoXsf2o3gyrDO1xkxwnQrS7RP"},
 		},
 		{
 			id:      "slack-user-token",
 			match:   []string{"export SLACK_USER_TOKEN=xoxa-80184514627-048281489325-wKi9x7h6AmUfBH7X41zTPDP4k8FFuf", "{\"token\": \"xoxp-1822782489-63834657871-331509839301-1721a278f64f7fd633dbdde1\"}"},
-			nomatch: []string{"xoxa-123-456-abcdefgh0123456789abcd", "xoxa-80184514627-048281489325-rppGDZuVz3", "xoxa-80184514627-048281489325-aaaaaaaaaaaaaaaaaaaaaaaaaaaa", "xoxp-1234567890-1234567890123-abcdefghijklmnopqrstuvwxy"},
+			nomatch: []string{"xoxa-123-456-abcdefgh0123456789abcd", "xoxa-80184514627-048281489325-rppGDZuVz3", "xoxa-80184514627-048281489325-aaaaaaaaaaaaaaaaaaaaaaaaaaaa", "xoxp-1234567890-1234567890123-abcdefghijklmnopqrstuvwxy", "QmFyxoxa-80184514627-048281489325-wKi9x7h6AmUfBH7X41zTPDP4k8FFuf"},
 		},
 		{
 			id:      "stripe-ephemeral-key",

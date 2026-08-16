@@ -8,7 +8,7 @@ import "github.com/lastpersonlabs/goredact/internal/rules/validators"
 // hex characters of the SHA-256 digest of the canonical serialization of
 // the generated rule table below (see tools/rulegen), so it changes
 // exactly when the generated rules change.
-const Version = "builtin-7c8078d704f2"
+const Version = "builtin-0c36f2ccd7ad"
 
 func init() {
 	RegisterBuiltins([]Rule{
@@ -198,6 +198,7 @@ func init() {
 				{Literal: "cookie:", CaseFold: true},
 				{Literal: "set-cookie:", CaseFold: true},
 				{Literal: "session=", CaseFold: true},
+				{Literal: "sessionid=", CaseFold: true},
 				{Literal: "sid=", CaseFold: true},
 				{Literal: "token=", CaseFold: true},
 				{Literal: "jwt=", CaseFold: true},
@@ -529,7 +530,7 @@ func init() {
 			Validate:      validators.GrafanaCloudAccessPolicyToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  420,
 		},
 		{
@@ -541,7 +542,7 @@ func init() {
 			Validate:      validators.GrafanaServiceAccountToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  45,
 		},
 		{
@@ -589,7 +590,7 @@ func init() {
 			Validate:      validators.LinearAPIKey,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  80,
 		},
 		{
@@ -700,7 +701,7 @@ func init() {
 			Validate:      validators.SlackAppToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  120,
 		},
 		{
@@ -712,7 +713,7 @@ func init() {
 			Validate:      validators.SlackBotToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  96,
 		},
 		{
@@ -727,7 +728,7 @@ func init() {
 			Validate:      validators.SlackUserToken,
 			MinProfile:    ProfileFast,
 			Confidence:    ConfidenceHigh,
-			MaxLookbehind: 0,
+			MaxLookbehind: 1,
 			MaxLookahead:  100,
 		},
 		{

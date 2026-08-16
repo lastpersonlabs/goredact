@@ -82,11 +82,15 @@ func GitHubPAT(window []byte, trigStart, trigEnd int) (start, end int, ok bool) 
 }
 
 // SlackBotToken confirms the Slack bot token shape: trigger "xoxb-"
-// followed by <10-13 digits>-<10-13 digits>-<24-34 alphanumeric characters>
-// and a non-alphanumeric byte (or end of window). Every segment is checked
+// preceded by a non-identifier byte (or start of window), followed by
+// <10-13 digits>-<10-13 digits>-<24-34 alphanumeric characters> and a
+// non-alphanumeric byte (or end of window). Every segment is checked
 // against isPlaceholder, so fixture shapes like
 // "xoxb-1234567890-..." are rejected along with all-identical segments.
 func SlackBotToken(window []byte, trigStart, trigEnd int) (start, end int, ok bool) {
+	if precededByIdentByte(window, trigStart) {
+		return 0, 0, false
+	}
 	pos := trigEnd
 
 	seg1Start := pos

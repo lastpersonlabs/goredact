@@ -294,9 +294,14 @@ func cookieValueQualifies(val []byte) bool {
 //     (cookieValueQualifies) has its value confirmed. Later qualifying
 //     pairs in the same header are caught by the pair triggers below —
 //     see the file comment for why one validator call cannot return them
-//     all.
-//   - Pair triggers ("session=", "sid=", "token=", "jwt=", "auth=",
-//     trailing '='): the full cookie name is extended backwards over
+//     all. Note the pair triggers fire only when a keyword directly
+//     abuts the '=' ("...token=", "...sid=", "sessionid="), so a
+//     non-first pair whose name buries its keyword elsewhere
+//     ("session_2=") is a known miss; the trigger list carries the
+//     common real-world names rather than every conceivable shape.
+//   - Pair triggers ("session=", "sessionid=", "sid=", "token=",
+//     "jwt=", "auth=", trailing '='): the full cookie name is extended
+//     backwards over
 //     name bytes (so "auth_token=" and "connect.sid=" are judged by
 //     their whole name, and "csrftoken=" is vetoed by its "csrf"
 //     prefix), cookie context is required (see cookiePairContextOK), and
