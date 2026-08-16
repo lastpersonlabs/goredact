@@ -29,9 +29,13 @@ this and record `strategy: format-preserving`).
 `stream -stats -` writes
 JSON statistics to standard error. Progress is also written to standard error
 and contains only a cumulative byte count. Neither channel includes matched
-content. Output files use mode `0600` and are removed if scanning or writing
-fails. A stream sent to stdout may already have delivered a redacted prefix on
-failure, so callers must not publish it as a completed object.
+content. Output files use mode `0600` and are removed if scanning, mask
+compression, or writing the redacted stream itself fails. Once the redacted
+output is complete, a failure writing the optional `-stats` sidecar is
+reported on standard error with a non-zero exit but does not remove the
+already-correct output file. A stream sent to stdout may already have
+delivered a redacted prefix on failure, so callers must not publish it as a
+completed object.
 
 ## Directory scanning and reports
 

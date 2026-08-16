@@ -410,7 +410,7 @@ var defaultExcludedFilePatterns = []*regexp.Regexp{
 	regexp.MustCompile(`gitleaks\.toml`),
 	regexp.MustCompile(`(?i)\.(?:bmp|gif|jpe?g|png|svg|tiff?)$`),
 	regexp.MustCompile(`(?i)\.(?:eot|[ot]tf|woff2?)$`),
-	regexp.MustCompile(`(?i)\.(?:docx?|xlsx?|pdf|bin|socket|vsidx|v2|suo|wsuo|.dll|pdb|exe|gltf)$`),
+	regexp.MustCompile(`(?i)\.(?:docx?|xlsx?|pdf|bin|socket|vsidx|v2|suo|wsuo|dll|pdb|exe|gltf)$`),
 	regexp.MustCompile(`go\.(?:mod|sum|work(?:\.sum)?)$`),
 	regexp.MustCompile(`(?:^|/)vendor/modules\.txt$`),
 	regexp.MustCompile(`(?:^|/)gradlew(?:\.bat)?$`),

@@ -255,6 +255,7 @@ func TestRegularFilesPrunesDefaultDependencyDirectories(t *testing.T) {
 		"assets/logo.PNG",
 		"assets/font.woff2",
 		"documents/report.pdf",
+		"bin/dependency.dll",
 		"go.mod",
 		"go.sum",
 		"go.work",

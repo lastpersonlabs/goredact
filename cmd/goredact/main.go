@@ -28,6 +28,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	if err := run(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			// flag.Parse already printed usage to stderr; -h/-help is not
+			// a failure and should not also print "flag: help requested".
+			os.Exit(0)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		var findings findingsError
 		if errors.As(err, &findings) {
@@ -127,10 +132,13 @@ func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stde
 			return errors.New("goredact: cannot finish compressed output")
 		}
 	}
+	// The redacted output is already complete and correct at this point:
+	// a failure writing the optional stats sidecar below must not delete
+	// it, so succeeded is set before attempting that write.
+	succeeded = true
 	if err := writeStats(o.stats, stats, stderr); err != nil {
 		return err
 	}
-	succeeded = true
 	return nil
 }
 

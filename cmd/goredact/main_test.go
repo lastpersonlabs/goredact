@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"io"
 	"os"
 	"path/filepath"
@@ -158,5 +159,50 @@ func TestRunStreamRefusesSymlinkAliasedOutput(t *testing.T) {
 	}
 	if string(got) != secret {
 		t.Fatalf("input was modified: got %q", got)
+	}
+}
+
+// TestRunHelpFlagIsNotAFailure pins main's handling of -h/-help: run
+// returns flag.ErrHelp (via errors.Is, since flag.ContinueOnError wraps
+// nothing extra around it) rather than an ordinary error, which is what
+// lets main exit 0 without printing a stray "flag: help requested" line
+// alongside the usage flag.Parse already wrote to stderr.
+func TestRunHelpFlagIsNotAFailure(t *testing.T) {
+	for _, args := range [][]string{{"stream", "-h"}, {"stream", "-help"}, {"dir", "-h"}, {"dir", "-help"}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var diagnostics bytes.Buffer
+			err := run(context.Background(), args, nil, io.Discard, &diagnostics)
+			if !errors.Is(err, flag.ErrHelp) {
+				t.Fatalf("run(%v) error = %v, want flag.ErrHelp", args, err)
+			}
+			if !strings.Contains(diagnostics.String(), "Usage") {
+				t.Fatalf("diagnostics = %q, want usage text", diagnostics.String())
+			}
+		})
+	}
+}
+
+// TestRunFailedStatsWriteKeepsOutput pins that a stats-sidecar write
+// failure reports an error but does not delete the already-complete,
+// correctly redacted output file.
+func TestRunFailedStatsWriteKeepsOutput(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "input")
+	out := filepath.Join(dir, "output")
+	if err := os.WriteFile(in, []byte("ordinary text"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	badStatsPath := filepath.Join(dir, "nonexistent-subdir", "stats.json")
+
+	err := run(context.Background(), []string{"stream", "-input=" + in, "-output=" + out, "-stats=" + badStatsPath}, nil, io.Discard, io.Discard)
+	if err == nil {
+		t.Fatal("expected a stats-write error")
+	}
+	got, readErr := os.ReadFile(out)
+	if readErr != nil {
+		t.Fatalf("completed output was removed: %v", readErr)
+	}
+	if string(got) != "ordinary text" {
+		t.Fatalf("output = %q, want the redacted content preserved", got)
 	}
 }
