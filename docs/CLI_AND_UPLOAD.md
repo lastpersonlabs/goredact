@@ -6,32 +6,32 @@ not create plaintext temporary files.
 
 ```sh
 # stdin to stdout
-go run ./cmd/goredact stream -profile balanced \
+go run ./cmd/goredact stream --profile balanced \
   <session.jsonl >session.redacted.jsonl
 
 # file to a streaming zstd frame, with count-only progress and JSON stats
 go run ./cmd/goredact stream \
-  -input session.jsonl \
-  -output session.redacted.jsonl.zst \
-  -profile deep -zstd \
-  -progress-bytes $((64 * 1024 * 1024)) \
-  -stats session.stats.json
+  --input session.jsonl \
+  --output session.redacted.jsonl.zst \
+  --profile deep --zstd \
+  --progress-bytes $((64 * 1024 * 1024)) \
+  --stats session.stats.json
 ```
 
-`stream -mask` selects the replacement strategy: `fixed-marker` (default,
+`stream --mask` selects the replacement strategy: `fixed-marker` (default,
 one `[REDACTED]` per secret), `length-preserving` (`*` per redacted byte,
 so output length equals input length), or `format-preserving`
 (per-character-class substitution that keeps separators and token shapes;
 pipelines whose archive manifests promise shape-stable records should use
 this and record `strategy: format-preserving`).
 
-`stream -input -` and `stream -output -` select standard input and output.
-`stream -stats -` writes
+`stream --input -` and `stream --output -` select standard input and output.
+`stream --stats -` writes
 JSON statistics to standard error. Progress is also written to standard error
 and contains only a cumulative byte count. Neither channel includes matched
 content. Output files use mode `0600` and are removed if scanning, mask
 compression, or writing the redacted stream itself fails. Once the redacted
-output is complete, a failure writing the optional `-stats` sidecar is
+output is complete, a failure writing the optional `--stats` sidecar is
 reported on standard error with a non-zero exit but does not remove the
 already-correct output file. A stream sent to stdout may already have
 delivered a redacted prefix on failure, so callers must not publish it as a
@@ -79,29 +79,29 @@ original file, and matched secret values are never included.
 
 ```sh
 # Human- and machine-readable JSON on stdout.
-goredact dir -report-format json -exit-code 0 ./workspace
+goredact dir --report-format json --exit-code 0 ./workspace
 
 # CI reports. The default exit code is 1 when findings are present.
-goredact dir -report-format sarif -report-path findings.sarif ./workspace
-goredact dir -report-format junit -report-path findings.xml ./workspace
-goredact dir -report-format csv -report-path findings.csv ./workspace
+goredact dir --report-format sarif --report-path findings.sarif ./workspace
+goredact dir --report-format junit --report-path findings.xml ./workspace
+goredact dir --report-format csv --report-path findings.csv ./workspace
 ```
 
 Supported report formats are `json`, `csv`, `junit`, and `sarif`. JSON reports
 also contain the schema identifier, selected profile, file count, and total
-bytes scanned. `-exit-code N` selects the finding exit code from 1 through 125;
-`-exit-code 0` makes findings a successful result. Operational failures still
+bytes scanned. `--exit-code N` selects the finding exit code from 1 through 125;
+`--exit-code 0` makes findings a successful result. Operational failures still
 exit with status 1. If the report already exists inside the scan root, it is
 excluded from the input set. After writing the report, `dir` writes
 `goredact: secrets_found=N` to standard error, including when the count is
 zero; report data on standard output therefore remains machine-readable.
 
-By default, reports deliberately omit matched values. Pass `-show-secrets` to
+By default, reports deliberately omit matched values. Pass `--show-secrets` to
 include the exact secret in every finding:
 
 ```sh
-goredact dir -show-secrets -report-format json \
-  -report-path findings-with-secrets.json ./workspace
+goredact dir --show-secrets --report-format json \
+  --report-path findings-with-secrets.json ./workspace
 ```
 
 Treat such a report as sensitive credential material: do not publish it as a
@@ -111,7 +111,7 @@ but stdout inherits the security properties of its destination.
 
 Secret values are re-read from each file by offset after its scan completes,
 so a file modified concurrently with the scan can yield stale or mismatched
-`secret` fields in the report. Scan quiescent trees when `-show-secrets`
+`secret` fields in the report. Scan quiescent trees when `--show-secrets`
 accuracy matters.
 
 ## Multipart uploads

@@ -20,6 +20,9 @@ Initial release.
   display in JSON/CSV/JUnit/SARIF reports, streaming zstd, and a bounded
   multipart-upload example. Directory scans emit a count-only findings summary
   on standard error.
+- Cobra-based CLI with discoverable command and flag help, conventional long
+  and shorthand flags, version output, typo suggestions, examples, argument
+  validation, and generated shell completion.
 - Add a standalone JWT detection rule (`jwt`, balanced profile): bare
   `header.payload.signature` JWS compact serializations in transcripts,
   logs, and tool output are now caught without needing cookie or header
@@ -27,7 +30,7 @@ Initial release.
 - Add `Config.MaskStrategy` with `MaskFixedMarker` (default, unchanged
   behavior), `MaskLengthPreserving` (`*` fill, output length equals input
   length), and `MaskFormatPreserving` (per-character-class substitution
-  that keeps token shapes), plus a `-mask` flag on `goredact stream`.
+  that keeps token shapes), plus a `--mask` flag on `goredact stream`.
 - Detect `session_secret` and `secret_key_base` assignment families.
 - Make directory scans parallel and deterministic while reusing compiled
   engines across files.

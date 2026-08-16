@@ -7,8 +7,8 @@ source code included in this repository.
 
 The core library under the module root and `internal/` is original and
 stdlib-only. The directory CLI adapts the Gitleaks path-exclusion list recorded
-below, and the reference integrations use the pure-Go dependency also recorded
-below.
+below, and the reference CLI and integrations use the pure-Go dependencies
+also recorded below.
 
 The `licence-check` CI job (`.github/workflows/ci.yml`) enforces this by
 scanning for copyright headers that do not attribute Last Person Labs and by
@@ -104,3 +104,41 @@ SOFTWARE.
 - Notes: pure-Go streaming Zstandard encoder; consumed as a Go module and not
   vendored or adapted. Binary redistributors must preserve the applicable
   copyright notice, conditions, and disclaimer as required by BSD-3-Clause.
+
+### spf13/cobra
+
+- Source URL: https://github.com/spf13/cobra
+- Release: v1.10.1
+- Licence file: https://github.com/spf13/cobra/blob/v1.10.1/LICENSE.txt
+- Licence: Apache-2.0; compatible with this project's MIT licence.
+- Local use: `cmd/goredact`
+- Notes: CLI command hierarchy, help, flag handling, argument validation,
+  version output, command suggestions, and shell-completion generation;
+  consumed as a Go module and not vendored or adapted. Distributions must
+  include a copy of the Apache-2.0 licence and preserve applicable attribution
+  notices.
+
+### spf13/pflag
+
+- Source URL: https://github.com/spf13/pflag
+- Release: v1.0.9
+- Licence file: https://github.com/spf13/pflag/blob/v1.0.9/LICENSE
+- Licence: BSD-3-Clause; compatible with this project's MIT licence.
+- Local use: transitive dependency of `github.com/spf13/cobra` in
+  `cmd/goredact`
+- Notes: POSIX/GNU-style flag parsing; consumed as a Go module and not
+  vendored or adapted. Binary redistributors must reproduce the copyright
+  notice, conditions, and disclaimer in accompanying documentation or other
+  materials.
+
+### inconshreveable/mousetrap
+
+- Source URL: https://github.com/inconshreveable/mousetrap
+- Release: v1.1.0
+- Licence file: https://github.com/inconshreveable/mousetrap/blob/v1.1.0/LICENSE
+- Licence: Apache-2.0; compatible with this project's MIT licence.
+- Local use: transitive dependency of `github.com/spf13/cobra` in
+  `cmd/goredact` on Windows
+- Notes: detects execution from Windows Explorer; consumed as a Go module and
+  not vendored or adapted. Distributions must include a copy of the
+  Apache-2.0 licence and preserve applicable attribution notices.

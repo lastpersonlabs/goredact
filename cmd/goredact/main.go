@@ -12,10 +12,13 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
+	"strconv"
 	"strings"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/lastpersonlabs/goredact"
+	"github.com/spf13/cobra"
 )
 
 type options struct {
@@ -24,21 +27,19 @@ type options struct {
 	progressEvery                       int64
 }
 
-// errUsage marks a flag-parsing failure that flag.Parse has already
-// reported to stderr (message plus usage); main must not print it again.
 var errUsage = errors.New("goredact: invalid arguments")
+
+// version may be set by release builds with
+// -ldflags "-X main.version=v1.2.3". Development builds fall back to the
+// module version recorded by the Go toolchain.
+var version = "dev"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	if err := run(ctx, os.Args[1:], os.Stdin, os.Stdout, os.Stderr); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			// flag.Parse already printed usage to stderr; -h/-help is not
-			// a failure and should not also print "flag: help requested".
-			os.Exit(0)
-		}
 		if errors.Is(err, errUsage) {
-			os.Exit(1)
+			os.Exit(2)
 		}
 		fmt.Fprintln(os.Stderr, err)
 		var findings findingsError
@@ -50,17 +51,116 @@ func main() {
 }
 
 func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	if len(args) == 0 {
-		return errors.New("goredact: command required (use stream or dir)")
+	cmd := newRootCommand(ctx, stdin, stdout, stderr)
+	cmd.SetArgs(normalizeLegacyFlags(args))
+	return cmd.Execute()
+}
+
+// Go's flag package historically accepted long options with one dash. Keep
+// those invocations working while Cobra presents conventional --long flags.
+func normalizeLegacyFlags(args []string) []string {
+	known := []string{"input", "output", "profile", "mask", "stats", "zstd", "progress-bytes", "report-format", "report-path", "exit-code", "show-secrets", "help", "version"}
+	normalized := append([]string(nil), args...)
+	for i, arg := range normalized {
+		if !strings.HasPrefix(arg, "-") || strings.HasPrefix(arg, "--") {
+			continue
+		}
+		name := strings.TrimPrefix(strings.SplitN(arg, "=", 2)[0], "-")
+		for _, candidate := range known {
+			if name == candidate {
+				normalized[i] = "-" + arg
+				break
+			}
+		}
 	}
-	switch args[0] {
-	case "stream":
-		return runStream(ctx, args[1:], stdin, stdout, stderr)
-	case "dir":
-		return runDir(ctx, args[1:], stdout, stderr)
-	default:
-		return errors.New("goredact: unknown command (use stream or dir)")
+	return normalized
+}
+
+func newRootCommand(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer) *cobra.Command {
+	root := &cobra.Command{
+		Use:           "goredact",
+		Short:         "Detect and redact secrets",
+		Long:          "goredact detects and redacts secrets in streams, files, and directory trees.",
+		Version:       buildVersion(),
+		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
+	root.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
+		fmt.Fprint(cmd.ErrOrStderr(), cmd.UsageString())
+		return err
+	})
+	root.SetIn(stdin)
+	root.SetOut(stdout)
+	root.SetErr(stderr)
+
+	stream := &cobra.Command{
+		Use:   "stream",
+		Short: "Redact a stream or file",
+		Long:  "Read bytes from standard input or a file, redact detected secrets, and write the sanitized stream without creating plaintext temporary files.",
+		Example: `  goredact stream < input.log > output.log
+  goredact stream --input input.log --output output.log --profile deep
+  goredact stream --zstd --stats stats.json < input.log > output.log.zst`,
+		Args: usageOnArgError(cobra.NoArgs),
+	}
+	var so options
+	stream.Flags().StringVarP(&so.input, "input", "i", "-", "input file ('-' for stdin)")
+	stream.Flags().StringVarP(&so.output, "output", "o", "-", "output file ('-' for stdout)")
+	stream.Flags().StringVarP(&so.profile, "profile", "p", "balanced", "detection profile: fast, balanced, or deep")
+	stream.Flags().StringVarP(&so.mask, "mask", "m", "fixed-marker", "mask strategy: fixed-marker, length-preserving, or format-preserving")
+	stream.Flags().StringVar(&so.stats, "stats", "", "write JSON statistics to this file ('-' for stderr)")
+	stream.Flags().BoolVar(&so.zstd, "zstd", false, "stream output as a Zstandard frame")
+	stream.Flags().Int64Var(&so.progressEvery, "progress-bytes", 0, "report bytes read at this interval to stderr (0 disables)")
+	stream.RunE = func(_ *cobra.Command, _ []string) error { return runStream(ctx, streamArgs(so), stdin, stdout, stderr) }
+
+	dir := &cobra.Command{
+		Use:   "dir [flags] <path>",
+		Short: "Scan a file or directory",
+		Long:  "Recursively scan a file or directory and write a JSON, CSV, JUnit, or SARIF findings report.",
+		Example: `  goredact dir ./workspace
+  goredact dir --report-format sarif --report-path findings.sarif ./workspace
+  goredact dir --exit-code 0 ./workspace`,
+		Args: usageOnArgError(cobra.ExactArgs(1)),
+	}
+	var d dirOptions
+	dir.Flags().StringVarP(&d.profile, "profile", "p", "balanced", "detection profile: fast, balanced, or deep")
+	dir.Flags().StringVarP(&d.reportFormat, "report-format", "f", "json", "report format: json, csv, junit, or sarif")
+	dir.Flags().StringVarP(&d.reportPath, "report-path", "o", "-", "report file ('-' for stdout)")
+	dir.Flags().IntVar(&d.exitCode, "exit-code", 1, "exit code when findings are present (0 disables)")
+	dir.Flags().BoolVar(&d.showSecrets, "show-secrets", false, "include matched secret values in the report (unsafe)")
+	dir.RunE = func(_ *cobra.Command, args []string) error { return runDir(ctx, dirArgs(d, args[0]), stdout, stderr) }
+
+	root.AddCommand(stream, dir)
+	return root
+}
+
+func usageOnArgError(validate cobra.PositionalArgs) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if err := validate(cmd, args); err != nil {
+			fmt.Fprint(cmd.ErrOrStderr(), cmd.UsageString())
+			return err
+		}
+		return nil
+	}
+}
+
+func streamArgs(o options) []string {
+	return []string{"-input=" + o.input, "-output=" + o.output, "-profile=" + o.profile, "-mask=" + o.mask,
+		"-stats=" + o.stats, "-zstd=" + strconv.FormatBool(o.zstd), "-progress-bytes=" + strconv.FormatInt(o.progressEvery, 10)}
+}
+
+func dirArgs(o dirOptions, path string) []string {
+	return []string{"-profile=" + o.profile, "-report-format=" + o.reportFormat, "-report-path=" + o.reportPath,
+		"-exit-code=" + strconv.Itoa(o.exitCode), "-show-secrets=" + strconv.FormatBool(o.showSecrets), path}
+}
+
+func buildVersion() string {
+	if version != "dev" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return version
 }
 
 func runStream(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {

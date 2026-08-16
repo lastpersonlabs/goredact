@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"flag"
 	"io"
 	"os"
 	"path/filepath"
@@ -162,23 +161,86 @@ func TestRunStreamRefusesSymlinkAliasedOutput(t *testing.T) {
 	}
 }
 
-// TestRunHelpFlagIsNotAFailure pins main's handling of -h/-help: run
-// returns flag.ErrHelp (via errors.Is, since flag.ContinueOnError wraps
-// nothing extra around it) rather than an ordinary error, which is what
-// lets main exit 0 without printing a stray "flag: help requested" line
-// alongside the usage flag.Parse already wrote to stderr.
+// TestRunHelpFlagIsNotAFailure pins Cobra's standard help behavior: help is
+// successful, is written to stdout, and does not pollute stderr.
 func TestRunHelpFlagIsNotAFailure(t *testing.T) {
 	for _, args := range [][]string{{"stream", "-h"}, {"stream", "-help"}, {"dir", "-h"}, {"dir", "-help"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
-			var diagnostics bytes.Buffer
-			err := run(context.Background(), args, nil, io.Discard, &diagnostics)
-			if !errors.Is(err, flag.ErrHelp) {
-				t.Fatalf("run(%v) error = %v, want flag.ErrHelp", args, err)
+			var output, diagnostics bytes.Buffer
+			err := run(context.Background(), args, nil, &output, &diagnostics)
+			if err != nil {
+				t.Fatalf("run(%v) error = %v, want nil", args, err)
 			}
-			if !strings.Contains(diagnostics.String(), "Usage") {
-				t.Fatalf("diagnostics = %q, want usage text", diagnostics.String())
+			if !strings.Contains(output.String(), "Usage:") || diagnostics.Len() != 0 {
+				t.Fatalf("stdout = %q, stderr = %q", output.String(), diagnostics.String())
 			}
 		})
+	}
+}
+
+func TestRootHelpVersionAndCommandSuggestions(t *testing.T) {
+	var output bytes.Buffer
+	if err := run(context.Background(), []string{"--help"}, nil, &output, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Available Commands:", "completion", "stream", "dir"} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("root help omitted %q: %q", want, output.String())
+		}
+	}
+
+	output.Reset()
+	if err := run(context.Background(), []string{"--version"}, nil, &output, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(output.String(), "goredact version ") {
+		t.Fatalf("version output = %q", output.String())
+	}
+
+	err := run(context.Background(), []string{"streem"}, nil, io.Discard, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "stream") {
+		t.Fatalf("unknown-command error = %v, want stream suggestion", err)
+	}
+}
+
+func TestRunSupportsConventionalShorthandFlags(t *testing.T) {
+	var output bytes.Buffer
+	if err := run(context.Background(), []string{"stream", "-p", "fast", "-m", "fixed-marker"}, strings.NewReader("ordinary text"), &output, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if output.String() != "ordinary text" {
+		t.Fatalf("output = %q", output.String())
+	}
+}
+
+func TestInvocationErrorsShowRelevantUsage(t *testing.T) {
+	var diagnostics bytes.Buffer
+	err := run(context.Background(), []string{"dir"}, nil, io.Discard, &diagnostics)
+	if err == nil {
+		t.Fatal("missing path succeeded")
+	}
+	if !strings.Contains(diagnostics.String(), "Usage:\n  goredact dir [flags] <path>") {
+		t.Fatalf("diagnostics = %q, want dir usage", diagnostics.String())
+	}
+
+	diagnostics.Reset()
+	err = run(context.Background(), []string{"stream", "--not-a-flag"}, nil, io.Discard, &diagnostics)
+	if err == nil {
+		t.Fatal("unknown flag succeeded")
+	}
+	if !strings.Contains(diagnostics.String(), "Usage:\n  goredact stream [flags]") {
+		t.Fatalf("diagnostics = %q, want stream usage", diagnostics.String())
+	}
+}
+
+func TestOperationalErrorsDoNotShowUsage(t *testing.T) {
+	var diagnostics bytes.Buffer
+	err := run(context.Background(), []string{"dir", "--exit-code=126", "."}, nil, io.Discard, &diagnostics)
+	if err == nil {
+		t.Fatal("invalid exit code succeeded")
+	}
+	if strings.Contains(diagnostics.String(), "Usage:") {
+		t.Fatalf("operational error printed usage: %q", diagnostics.String())
 	}
 }
 

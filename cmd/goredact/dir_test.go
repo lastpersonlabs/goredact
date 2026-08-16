@@ -501,9 +501,10 @@ func TestRegularFilesSkipsUnreadableSubdirectory(t *testing.T) {
 	}
 }
 
-func TestRunRequiresCommand(t *testing.T) {
-	if err := run(context.Background(), nil, nil, io.Discard, io.Discard); err == nil {
-		t.Fatal("missing command succeeded")
+func TestRunWithoutCommandShowsHelp(t *testing.T) {
+	var output bytes.Buffer
+	if err := run(context.Background(), nil, nil, &output, io.Discard); err != nil || !strings.Contains(output.String(), "Available Commands:") {
+		t.Fatalf("run without command = %v, output %q", err, output.String())
 	}
 	if err := run(context.Background(), []string{"-profile=fast"}, nil, io.Discard, io.Discard); err == nil {
 		t.Fatal("legacy top-level flags succeeded")

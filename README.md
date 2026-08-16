@@ -71,12 +71,14 @@ see the `MaskStrategy` docs for the disclosure trade-offs.
 ```sh
 go get github.com/lastpersonlabs/goredact@v0.1.0
 go install github.com/lastpersonlabs/goredact/cmd/goredact@v0.1.0
-goredact stream -profile balanced < session.jsonl > session.redacted.jsonl
-goredact stream -zstd -stats - < session.jsonl > session.redacted.jsonl.zst
-goredact dir -report-format sarif -report-path findings.sarif ./workspace
+goredact stream --profile balanced < session.jsonl > session.redacted.jsonl
+goredact stream --zstd --stats - < session.jsonl > session.redacted.jsonl.zst
+goredact dir --report-format sarif --report-path findings.sarif ./workspace
 ```
 
-The `stream` command also accepts `-input` and `-output`; it removes incomplete
+Run `goredact --help` to discover commands, `goredact <command> --help` for
+command-specific flags and examples, or `goredact completion --help` to set up
+shell completion. The `stream` command also accepts `--input` and `--output`; it removes incomplete
 output after a failed scan. The `dir` command recursively scans regular files
 and writes JSON, CSV, JUnit, or SARIF findings without including matched secret
 values. By default, progress, statistics, and reports contain metadata and
@@ -84,7 +86,7 @@ counts only. See
 [`docs/CLI_AND_UPLOAD.md`](docs/CLI_AND_UPLOAD.md) for reports, compression, and
 multipart upload integration.
 
-Directory reports omit matched values by default. `dir -show-secrets` includes
+Directory reports omit matched values by default. `dir --show-secrets` includes
 them when explicitly requested; its output must be handled as credential
 material.
 
