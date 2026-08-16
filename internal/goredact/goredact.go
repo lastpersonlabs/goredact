@@ -43,13 +43,16 @@ type Config struct {
 	// allocation-bounded on the streaming path.
 	MaskStrategy MaskStrategy
 
-	// EnableRules, when non-empty, restricts detection to the listed rule
-	// IDs (an allowlist). Unknown IDs are rejected by New.
+	// EnableRules, when non-empty, restricts detection to exactly the
+	// listed rule IDs (an allowlist), overriding Profile: a named rule
+	// runs even if its MinProfile is more detailed than Profile requests.
+	// Unknown IDs are rejected by New, as is a resulting empty rule set
+	// (e.g. every enabled ID also appearing in DisableRules).
 	EnableRules []string
 
 	// DisableRules removes the listed rule IDs from the active set (a
 	// denylist, applied after EnableRules). Unknown IDs are rejected by
-	// New.
+	// New, as is a resulting empty rule set.
 	DisableRules []string
 
 	// CustomRules adds caller-defined rules to the active set. Custom rule
