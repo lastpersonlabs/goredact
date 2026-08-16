@@ -117,6 +117,7 @@ make bench-ci
 - Security reporting: [`SECURITY.md`](SECURITY.md)
 - Versioning: [`docs/VERSIONING.md`](docs/VERSIONING.md)
 - Changes: [`CHANGELOG.md`](CHANGELOG.md)
+- Code of Conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
 
 The core library remains stdlib-only and has no cgo path. The optional
 reference CLI uses the pure-Go `klauspost/compress` module for zstd.

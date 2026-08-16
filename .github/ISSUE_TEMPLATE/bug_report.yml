@@ -1,0 +1,52 @@
+name: Bug report
+description: Something in goredact isn't working as documented.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report.
+
+        **⚠️ Do not paste real, live secret values anywhere in this report** —
+        not in the description, reproduction steps, logs, or attached files.
+        goredact exists to redact secrets; a bug report is not an exception.
+        Use synthetic or clearly-invalidated example values (e.g. a
+        placeholder AWS key like `AKIAIOSFODNN7EXAMPLE`, or a value you've
+        already rotated). If you found a case where a *real* secret leaked
+        through unredacted, please follow the private disclosure process in
+        [SECURITY.md](../../SECURITY.md) instead of filing a public issue.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: >
+        Minimal steps or code to reproduce, using synthetic secret values
+        only (see the warning above).
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: goredact version or commit
+      placeholder: v0.1.0, or a commit SHA
+    validations:
+      required: true
+  - type: input
+    id: go-version
+    attributes:
+      label: Go version
+      placeholder: go version output
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Environment details, logs (with secrets removed), or other context.

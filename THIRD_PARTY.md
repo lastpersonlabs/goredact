@@ -19,8 +19,12 @@ failing the build if this file is missing.
 If a future change vendors or adapts code from another project (for example,
 a small algorithm lifted from a reference implementation, or a generated
 table derived from a third-party corpus), add an entry below **before**
-merging, and keep the copied code's licence header intact in the local file.
-Each entry must record:
+merging, and record the copied code's licence header here, in this file (see
+the Gitleaks entry below for the pattern), rather than embedding it in the
+local source file itself: the `licence-check` CI job scans every file except
+this one and `LICENSE` for non-"Last Person Labs" `Copyright` lines and fails
+the build on a match, so a third-party header left in the local file would
+break CI. Each entry must record:
 
 - **Source URL** — the exact upstream repository/file URL the code was taken
   from.
