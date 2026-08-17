@@ -22,14 +22,28 @@ func validReportFormat(format string) bool {
 	}
 }
 
-func writeReport(name, format string, report scanReport, stdout io.Writer) error {
+// writeReport writes the scan report; name "-" writes to stdout. When
+// writing to a file, inputs names every file the scan enumerated. The
+// report file is opened without O_TRUNC and its identity checked against
+// those inputs before the first byte is written, so a report path that
+// aliases a scanned input — a symlink or hard link swapped in after
+// runDir's pre-scan validation — fails without truncating the input.
+func writeReport(name, format string, report scanReport, inputs []string, stdout io.Writer) error {
 	dst := stdout
 	var file *os.File
 	if name != "-" {
 		var err error
-		file, err = os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+		file, err = os.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0o600)
 		if err != nil {
 			return fmt.Errorf("goredact dir: cannot open report output: %w", err)
+		}
+		if err := refuseInputAlias(file, inputs); err != nil {
+			_ = file.Close()
+			return err
+		}
+		if err := file.Truncate(0); err != nil {
+			_ = file.Close()
+			return errors.New("goredact dir: cannot truncate report output")
 		}
 		dst = file
 	}
@@ -59,6 +73,29 @@ func writeReport(name, format string, report scanReport, stdout io.Writer) error
 	}
 	if err != nil {
 		return errors.New("goredact dir: cannot write report")
+	}
+	return nil
+}
+
+// refuseInputAlias reports an error when the opened report file is the same
+// underlying file as any scanned input. The check runs on the file
+// descriptor itself before any truncation or write, so a report path that
+// was replaced by a symlink or hard link to an input file after runDir's
+// pre-scan validation cannot destroy the input: the open file's inode is
+// compared, and a path-level swap after open cannot redirect it.
+func refuseInputAlias(file *os.File, inputs []string) error {
+	info, err := file.Stat()
+	if err != nil {
+		return errors.New("goredact dir: cannot stat report output")
+	}
+	for _, input := range inputs {
+		inputInfo, statErr := os.Stat(input)
+		if statErr != nil {
+			continue // input vanished mid-scan; nothing left to protect
+		}
+		if os.SameFile(info, inputInfo) {
+			return errors.New("goredact dir: report path aliases a scanned input file")
+		}
 	}
 	return nil
 }

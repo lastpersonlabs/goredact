@@ -450,7 +450,7 @@ func TestRunDirExcludesReportPathThroughSymlinkedRoot(t *testing.T) {
 
 	// A second run over the same symlinked root must not treat its own
 	// prior report (now sitting under the canonicalized root) as a
-	// scannable file: excludePath compares canonicalized paths, so the
+	// scannable file: excludeReportPath compares canonicalized paths, so the
 	// report path needs the same "current -> release-1" resolution the
 	// scan root itself gets, or the report ends up scanning (and, with
 	// -show-secrets, re-reporting) its own previous output.
@@ -509,4 +509,265 @@ func TestRunWithoutCommandShowsHelp(t *testing.T) {
 	if err := run(context.Background(), []string{"-profile=fast"}, nil, io.Discard, io.Discard); err == nil {
 		t.Fatal("legacy top-level flags succeeded")
 	}
+}
+
+// The tests below form the adversarial report-path suite: every alias
+// arrangement must leave a scanned input file's content untouched, and only
+// the report file itself (exact path) may be excluded and overwritten.
+
+const protectedInputContent = "important log content\n"
+
+// seedDirScan writes a log.txt whose content must survive every scan, and
+// returns the scan root and the input's path.
+func seedDirScan(t *testing.T) (root, input string) {
+	t.Helper()
+	root = t.TempDir()
+	input = filepath.Join(root, "log.txt")
+	if err := os.WriteFile(input, []byte(protectedInputContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return root, input
+}
+
+func assertInputPreserved(t *testing.T, input string) {
+	t.Helper()
+	data, err := os.ReadFile(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != protectedInputContent {
+		t.Fatalf("scanned input %s was destroyed: content = %q, want %q", input, data, protectedInputContent)
+	}
+}
+
+func assertAliasRejected(t *testing.T, args []string) {
+	t.Helper()
+	err := run(context.Background(), args, nil, io.Discard, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "aliases") {
+		t.Fatalf("error = %v, want report-path alias rejection", err)
+	}
+}
+
+func TestRunDirReportPathDirectCase(t *testing.T) {
+	// The report file itself, an exact path inside the scan root, is
+	// excluded from scanning and overwritten; every other input survives.
+	root, input := seedDirScan(t)
+	reportPath := filepath.Join(root, "report.json")
+	if err := os.WriteFile(reportPath, []byte("old report"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + reportPath, root}, nil, io.Discard, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	assertInputPreserved(t, input)
+	data, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report scanReport
+	if err := json.Unmarshal(data, &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 {
+		t.Fatalf("report.FilesScanned = %d, want 1 (report file must be excluded from the scan)", report.FilesScanned)
+	}
+}
+
+func TestRunDirReportPathDotDotTraversal(t *testing.T) {
+	// A report path that reaches the report file through ".." normalizes
+	// to the same canonical path and must still be excluded, not scanned.
+	root, input := seedDirScan(t)
+	if err := os.Mkdir(filepath.Join(root, "sub"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	reportPath := filepath.Join(root, "sub", "..", "report.json")
+	if err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + reportPath, root}, nil, io.Discard, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	assertInputPreserved(t, input)
+	data, err := os.ReadFile(filepath.Join(root, "report.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report scanReport
+	if err := json.Unmarshal(data, &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 {
+		t.Fatalf("report.FilesScanned = %d, want 1 (report file must be excluded from the scan)", report.FilesScanned)
+	}
+}
+
+func TestRunDirReportPathDotDotTraversalAlias(t *testing.T) {
+	// "sub/../r.json" normalizes to a symlink that aliases a scanned
+	// input; the alias must be rejected before anything is scanned.
+	root, input := seedDirScan(t)
+	if err := os.Mkdir(filepath.Join(root, "sub"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(input, filepath.Join(root, "r.json")); err != nil {
+		t.Fatal(err)
+	}
+	assertAliasRejected(t, []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + filepath.Join(root, "sub", "..", "r.json"), root})
+	assertInputPreserved(t, input)
+}
+
+func TestRunDirReportPathSymlinkAlias(t *testing.T) {
+	// The reproduction from ENG-195: report.json -> log.txt. The run must
+	// refuse and log.txt must survive byte-for-byte.
+	root, input := seedDirScan(t)
+	if err := os.Symlink(input, filepath.Join(root, "report.json")); err != nil {
+		t.Fatal(err)
+	}
+	assertAliasRejected(t, []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + filepath.Join(root, "report.json"), root})
+	assertInputPreserved(t, input)
+}
+
+func TestRunDirReportPathAbsoluteSymlinkAlias(t *testing.T) {
+	// Same aliasing via an absolute symlink target.
+	root, input := seedDirScan(t)
+	reportPath := filepath.Join(root, "report.json")
+	if err := os.Symlink(input, reportPath); err != nil {
+		t.Fatal(err)
+	}
+	absTarget, err := filepath.Abs(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = os.Remove(reportPath)
+	if err := os.Symlink(absTarget, reportPath); err != nil {
+		t.Fatal(err)
+	}
+	assertAliasRejected(t, []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + reportPath, root})
+	assertInputPreserved(t, input)
+}
+
+func TestRunDirReportPathAliasInSubdirectory(t *testing.T) {
+	// A report alias living in a nested directory (dir mode's only file
+	// output is the report; a secondary-output-style location aliasing the
+	// input must be caught the same way).
+	root, input := seedDirScan(t)
+	sub := filepath.Join(root, "out")
+	if err := os.Mkdir(sub, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(input, filepath.Join(sub, "report.json")); err != nil {
+		t.Fatal(err)
+	}
+	assertAliasRejected(t, []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + filepath.Join(sub, "report.json"), root})
+	assertInputPreserved(t, input)
+}
+
+func TestRunDirReportPathHardlinkAlias(t *testing.T) {
+	root, input := seedDirScan(t)
+	reportPath := filepath.Join(root, "report.json")
+	if err := os.Link(input, reportPath); err != nil {
+		t.Skipf("hardlinks unsupported on this platform: %v", err)
+	}
+	assertAliasRejected(t, []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + reportPath, root})
+	assertInputPreserved(t, input)
+}
+
+func TestRunDirReportPathAliasThroughSymlinkedRoot(t *testing.T) {
+	// Scan root reached through a symlink ("current -> release-1"), with
+	// the report alias also reached through it.
+	dir := t.TempDir()
+	real := filepath.Join(dir, "release-1")
+	if err := os.Mkdir(real, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	input := filepath.Join(real, "log.txt")
+	if err := os.WriteFile(input, []byte(protectedInputContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "current")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("log.txt", filepath.Join(link, "report.json")); err != nil {
+		t.Fatal(err)
+	}
+	assertAliasRejected(t, []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + filepath.Join(link, "report.json"), link})
+	assertInputPreserved(t, input)
+}
+
+func TestRunDirReportPathBrokenSymlink(t *testing.T) {
+	// A report path that is a symlink to a nonexistent file cannot alias
+	// anything: the scan proceeds and the report is created at the
+	// symlink's target, leaving the input untouched.
+	root, input := seedDirScan(t)
+	target := filepath.Join(root, "report-target.json")
+	if err := os.Symlink(target, filepath.Join(root, "report.json")); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + filepath.Join(root, "report.json"), root}, nil, io.Discard, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	assertInputPreserved(t, input)
+	data, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report scanReport
+	if err := json.Unmarshal(data, &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 {
+		t.Fatalf("report.FilesScanned = %d, want 1", report.FilesScanned)
+	}
+}
+
+func TestRunDirReportPathSymlinkToNonInput(t *testing.T) {
+	// A report symlink pointing at a file outside the scan root is not an
+	// input alias: the report is written through it and the input is
+	// untouched.
+	root, input := seedDirScan(t)
+	outside := filepath.Join(t.TempDir(), "findings.json")
+	if err := os.WriteFile(outside, []byte("old"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "report.json")); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(context.Background(), []string{"dir", "-profile=fast", "-exit-code=0", "-report-path=" + filepath.Join(root, "report.json"), root}, nil, io.Discard, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	assertInputPreserved(t, input)
+	data, err := os.ReadFile(outside)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report scanReport
+	if err := json.Unmarshal(data, &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.FilesScanned != 1 {
+		t.Fatalf("report.FilesScanned = %d, want 1", report.FilesScanned)
+	}
+}
+
+func TestWriteReportRefusesAliasCreatedAfterValidation(t *testing.T) {
+	// Simulates the TOCTOU window between runDir's pre-scan validation and
+	// writeReport's open: the report path is replaced with a symlink to a
+	// scanned input after validation. writeReport must detect the alias on
+	// the opened descriptor and fail without truncating the input. A true
+	// thread-interleaved race cannot be reproduced deterministically
+	// without hooking syscalls; this exercises the same defensive check
+	// (open, stat the descriptor, compare identities, only then truncate)
+	// at the exact point the race would be exploited.
+	dir := t.TempDir()
+	input := filepath.Join(dir, "log.txt")
+	if err := os.WriteFile(input, []byte(protectedInputContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reportPath := filepath.Join(dir, "report.json")
+	if err := os.Symlink(input, reportPath); err != nil {
+		t.Fatal(err)
+	}
+	report := scanReport{Schema: "goredact/v1", FilesScanned: 1}
+	err := writeReport(reportPath, "json", report, []string{input}, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "aliases") {
+		t.Fatalf("writeReport error = %v, want alias rejection", err)
+	}
+	assertInputPreserved(t, input)
 }

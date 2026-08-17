@@ -103,6 +103,7 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 	if err != nil {
 		return fmt.Errorf("goredact dir: cannot enumerate scan path: %w", err)
 	}
+	var conflicts []string
 	if o.reportPath != "-" {
 		reportPath, resolveErr := filepath.Abs(o.reportPath)
 		if resolveErr != nil {
@@ -112,7 +113,10 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 		if resolveErr != nil {
 			return errors.New("goredact dir: cannot resolve report path")
 		}
-		paths = excludePath(paths, reportPath)
+		paths, conflicts = excludeReportPath(paths, reportPath)
+		if len(conflicts) > 0 {
+			return fmt.Errorf("goredact dir: report path aliases scanned input file(s): %s", strings.Join(conflicts, ", "))
+		}
 	}
 	report := scanReport{Schema: "goredact/v1", Profile: profile.String(), Findings: []reportFinding{}, ShowsSecrets: o.showSecrets}
 	results, err := scanFiles(ctx, root, paths, profile, o.showSecrets)
@@ -132,7 +136,7 @@ func runDir(ctx context.Context, args []string, stdout, stderr io.Writer) error 
 		report.Findings = append(report.Findings, result.findings...)
 	}
 
-	if err := writeReport(o.reportPath, format, report, stdout); err != nil {
+	if err := writeReport(o.reportPath, format, report, paths, stdout); err != nil {
 		return err
 	}
 	if unreadable > 0 {
@@ -325,7 +329,10 @@ func loadSecrets(file *os.File, findings []reportFinding) error {
 // /releases/x", "-report-path current/findings.json"). It resolves the
 // directory rather than the full path because the report file itself
 // commonly does not exist yet on a first run — only its parent directory
-// is guaranteed to.
+// is guaranteed to. The report file itself is resolved by excludeReportPath
+// instead: os.Stat follows a symlinked or hard-linked report file to its
+// underlying inode, so an alias of a scanned input is caught even though
+// the file component is left unresolved here.
 func canonicalizeReportPath(reportPath string) (string, error) {
 	dir, base := filepath.Split(reportPath)
 	realDir, err := filepath.EvalSymlinks(filepath.Clean(dir))
@@ -335,14 +342,33 @@ func canonicalizeReportPath(reportPath string) (string, error) {
 	return filepath.Join(realDir, base), nil
 }
 
-func excludePath(paths []string, excluded string) []string {
-	kept := paths[:0]
+// excludeReportPath removes the report file itself from the scan list and
+// detects aliases. The report file itself — an exact path match, reached
+// directly or through ".." or a symlinked scan root, which
+// canonicalizeReportPath normalizes — is silently excluded so a report
+// living inside the scan root is never scanned and re-reported. Any other
+// path that names the same underlying file, a symlink or hard link alias,
+// is returned as a conflict: writing the report through the alias would
+// truncate a scanned input file, so the caller must refuse to run. The
+// identity check stats the report path, resolving a symlinked or
+// hard-linked report file to its underlying inode even though
+// canonicalizeReportPath leaves the file component unresolved.
+func excludeReportPath(paths []string, reportPath string) (kept, conflicts []string) {
+	reportInfo, reportErr := os.Stat(reportPath)
+	kept = paths[:0]
 	for _, path := range paths {
-		if path != excluded {
-			kept = append(kept, path)
+		if path == reportPath {
+			continue // the report file itself: excluded from scanning, never a conflict
 		}
+		if reportErr == nil {
+			if info, err := os.Stat(path); err == nil && os.SameFile(reportInfo, info) {
+				conflicts = append(conflicts, path)
+				continue
+			}
+		}
+		kept = append(kept, path)
 	}
-	return kept
+	return kept, conflicts
 }
 
 // regularFiles enumerates the regular files under root eligible for
