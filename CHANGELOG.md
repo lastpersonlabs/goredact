@@ -3,7 +3,7 @@
 All notable changes are documented here. This project follows semantic
 versioning.
 
-## v0.1.0 — 2026-08-16
+## v0.1.0 — 2026-08-17
 
 Initial release.
 
@@ -54,6 +54,17 @@ Initial release.
   Stripe, Vault, Vercel, Doppler) now rejects a trigger embedded inside a
   longer identifier or blob, matching the convention already used by
   AWS/GCP/Hugging Face/Groq/OpenAI/Cursor rules.
+- A panic inside a custom rule's `Validate` no longer propagates out of
+  `Redact`: it is caught and returned as an error naming the rule, the panic
+  value never appears in the error, and output already written remains valid
+  redacted output.
+- The streaming output path retries short writes instead of silently
+  dropping bytes, and rejects destinations that report impossible byte
+  counts or make no progress.
+- `New` rejects custom rules whose validation-window bounds overflow instead
+  of compiling them with wrapped windows.
+- Directory scans reject report paths that alias a scanned input, so a
+  findings report can never overwrite or be overwritten by a file under scan.
 
 Release evidence and known detection limits are documented in `docs/ACCURACY.md`,
 `docs/BENCHMARKS.md`, and `docs/THREAT_MODEL.md`.
