@@ -190,6 +190,14 @@ type CustomRule struct {
 	// [start, end) within window to redact. Implementations must not
 	// retain window, log it, or include its contents in any output.
 	//
+	// A panic inside Validate does not propagate out of Redact: it is
+	// caught and returned as an error naming this rule, so a faulty
+	// validator cannot crash a process that redacts untrusted input.
+	// The panic value never appears in the error (errors never contain
+	// input bytes), the reported span is defensively clamped to window,
+	// and output already written before the panic remains valid redacted
+	// output.
+	//
 	// When one Engine serves concurrent Redact calls, Validate is
 	// invoked concurrently from each call's own goroutine — like
 	// Config.OnFinding, it must be safe for concurrent use if the
@@ -321,9 +329,10 @@ func New(cfg Config) (*Engine, error) {
 // Redact streams: it never buffers more than a bounded window of input and
 // never writes unredacted data to temporary storage. It returns the first
 // error encountered: ctx.Err() on cancellation, a *ReadError on source
-// failure, or a *WriteError on destination failure. On error, output
-// already written remains valid redacted output; no unredacted confirmed
-// secret has been emitted.
+// failure, a *WriteError on destination failure, or an error when a custom
+// rule's Validate panics (see CustomRule). On error, output already
+// written remains valid redacted output; no unredacted confirmed secret
+// has been emitted.
 //
 // ctx is polled once per read iteration: cancellation cannot interrupt a
 // call already blocked inside src.Read.

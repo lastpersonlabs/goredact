@@ -19,7 +19,10 @@ credential-management mechanism.
 - **Input is untrusted.** The scanned stream may be adversarial: crafted to
   cause pathological CPU or memory use, malformed UTF-8, arbitrary binary,
   truncated structures, or keyword floods. The library must remain
-  correct, bounded, and panic-free on any byte sequence.
+  correct, bounded, and panic-free on any byte sequence. The panic-free
+  guarantee covers the engine's own processing of input bytes; a panic
+  inside a caller-supplied `CustomRule.Validate` is caught and returned as
+  an error naming the rule, per the API documentation.
 - **The host process is trusted.** goredact does not defend against a
   compromised process, debugger, or memory scraping.
 - **Callers of the API are trusted** to wire dst/src correctly. Custom-rule

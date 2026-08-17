@@ -3,6 +3,7 @@ package goredact_test
 import (
 	"context"
 	"errors"
+	"io"
 	"os/exec"
 	"strings"
 	"testing"
@@ -48,6 +49,31 @@ func TestModuleRootAPI(t *testing.T) {
 type failingReader struct{ err error }
 
 func (r failingReader) Read([]byte) (int, error) { return 0, r.err }
+
+// chunkedReader hands the engine at most size bytes per Read, forcing a
+// mid-stream scan so output is emitted in several safe prefixes before a
+// trigger in a later chunk is validated.
+type chunkedReader struct {
+	data string
+	at   int
+	size int
+}
+
+func (r *chunkedReader) Read(p []byte) (int, error) {
+	if r.at >= len(r.data) {
+		return 0, io.EOF
+	}
+	n := r.size
+	if rem := len(r.data) - r.at; n > rem {
+		n = rem
+	}
+	if n > len(p) {
+		n = len(p)
+	}
+	copy(p, r.data[r.at:r.at+n])
+	r.at += n
+	return n, nil
+}
 
 type failingWriter struct{ err error }
 
@@ -116,6 +142,47 @@ func TestActiveRulesAndRuleSetVersion(t *testing.T) {
 	}
 	if engine.RuleSetVersion() == "" {
 		t.Fatal("RuleSetVersion is empty")
+	}
+}
+
+// TestCustomRuleValidatePanicIsError pins the documented contract that a
+// panic inside a caller-supplied CustomRule.Validate does not propagate
+// out of Redact: it is caught and returned as an error naming the rule,
+// without leaking the panic value or input bytes, and with no partial
+// output corruption (already-emitted bytes stay a clean prefix of the
+// input).
+func TestCustomRuleValidatePanicIsError(t *testing.T) {
+	const ruleID = "panic-rule"
+	const input = "prefix SECRET suffix"
+	engine, err := goredact.New(goredact.Config{
+		CustomRules: []goredact.CustomRule{{
+			ID:       ruleID,
+			Triggers: []string{"SECRET"},
+			Validate: func(_ []byte, _, _ int) (int, int, bool) {
+				panic("validator exploded: this value must not surface")
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	var output strings.Builder
+	_, err = engine.Redact(context.Background(), &output, &chunkedReader{data: input, size: 4})
+	if err == nil {
+		t.Fatal("Redact succeeded, want an error from the panicking Validate")
+	}
+	if !strings.Contains(err.Error(), ruleID) {
+		t.Errorf("error %q does not name the panicking rule", err)
+	}
+	for _, leaked := range []string{"validator exploded", "SECRET"} {
+		if strings.Contains(err.Error(), leaked) {
+			t.Errorf("error %q leaks %q", err, leaked)
+		}
+	}
+	got := output.String()
+	if !strings.HasPrefix(input, got) || strings.Contains(got, "SECRET") {
+		t.Errorf("output %q is not a clean prefix of the input (partial output corruption)", got)
 	}
 }
 

@@ -48,6 +48,7 @@ import (
 	"io"
 
 	"github.com/lastpersonlabs/goredact/internal/ahocorasick"
+	"github.com/lastpersonlabs/goredact/internal/rules"
 	"github.com/lastpersonlabs/goredact/internal/span"
 )
 
@@ -185,6 +186,11 @@ type scanRun struct {
 	acState  ahocorasick.State
 	scanBase int64
 	scanFn   func(pattern, end int) bool
+
+	// scanErr records the first error produced by a validator (a panic
+	// converted by callValidate) during a Scan callback. run checks it
+	// after each scan and aborts Redact with it.
+	scanErr error
 }
 
 // redact implements Engine.Redact. See the file comment for the
@@ -232,14 +238,21 @@ func (r *scanRun) run(ctx context.Context) error {
 			r.st.buf = buf[:len(buf)+n]
 			r.stats.BytesRead += int64(n)
 			r.scanNew()
-			r.validatePending(false)
+			if r.scanErr != nil {
+				return r.scanErr
+			}
+			if err := r.validatePending(false); err != nil {
+				return err
+			}
 		}
 		switch {
 		case rerr == io.EOF:
 			// Validate the remaining queue against truncated windows
 			// (validators handle short windows safely), then release and
 			// emit everything.
-			r.validatePending(true)
+			if err := r.validatePending(true); err != nil {
+				return err
+			}
 			return r.flush(true)
 		case rerr != nil:
 			// Emit whatever is already safe (best effort — a write
@@ -285,9 +298,17 @@ func (r *scanRun) onTrigger(pattern, end int) bool {
 	}
 	be := r.bufEnd()
 	for _, ri := range r.e.dispatch[pattern] {
+		if r.scanErr != nil {
+			// A validator panicked: stop validating further candidates.
+			// The scan is abandoned with this error, so the early return's
+			// (unresumable) automaton state is never used.
+			return true
+		}
 		c := candidate{rule: ri, trigStart: trigStart, trigEnd: trigEnd}
 		if trigEnd+int64(r.e.rules.Rules[ri].MaxLookahead) <= be {
-			r.validate(c)
+			if err := r.validate(c); err != nil {
+				r.scanErr = err
+			}
 		} else {
 			r.st.pending = append(r.st.pending, c)
 		}
@@ -298,26 +319,31 @@ func (r *scanRun) onTrigger(pattern, end int) bool {
 // validatePending validates every queued candidate whose lookahead window
 // is now fully buffered (or all of them, with truncated windows, at EOF)
 // and compacts the queue in place.
-func (r *scanRun) validatePending(eof bool) {
+func (r *scanRun) validatePending(eof bool) error {
 	if len(r.st.pending) == 0 {
-		return
+		return nil
 	}
 	be := r.bufEnd()
 	kept := r.st.pending[:0]
 	for _, c := range r.st.pending {
 		if eof || c.trigEnd+int64(r.e.rules.Rules[c.rule].MaxLookahead) <= be {
-			r.validate(c)
+			if err := r.validate(c); err != nil {
+				return err
+			}
 		} else {
 			kept = append(kept, c)
 		}
 	}
 	r.st.pending = kept
+	return nil
 }
 
 // validate runs one rule's validator over the candidate's bounded window
 // and adds a confirmed span to the collector. Validators are pure and
-// bounded, so they run synchronously on the scan path.
-func (r *scanRun) validate(c candidate) {
+// bounded, so they run synchronously on the scan path. A panic inside a
+// validator (only possible with caller-supplied custom rules) is converted
+// by callValidate into an error naming the rule, which aborts Redact.
+func (r *scanRun) validate(c candidate) error {
 	r.stats.Candidates++
 	rule := &r.e.rules.Rules[c.rule]
 	wStart := c.trigStart - int64(rule.MaxLookbehind)
@@ -329,9 +355,12 @@ func (r *scanRun) validate(c candidate) {
 		wEnd = be
 	}
 	window := r.st.buf[wStart-r.bufBase : wEnd-r.bufBase]
-	s, en, ok := rule.Validate(window, int(c.trigStart-wStart), int(c.trigEnd-wStart))
+	s, en, ok, err := callValidate(rule, window, int(c.trigStart-wStart), int(c.trigEnd-wStart))
+	if err != nil {
+		return err
+	}
 	if !ok {
-		return
+		return nil
 	}
 	// Clamp defensively: a validator must report a range within its
 	// window, but a buggy custom validator must not crash the engine or
@@ -343,7 +372,7 @@ func (r *scanRun) validate(c candidate) {
 		en = len(window)
 	}
 	if s >= en {
-		return
+		return nil
 	}
 	r.st.coll.Add(span.Span{
 		Start:      wStart + int64(s),
@@ -351,6 +380,21 @@ func (r *scanRun) validate(c candidate) {
 		Rule:       c.rule,
 		Confidence: uint8(rule.Confidence),
 	})
+	return nil
+}
+
+// callValidate invokes rule.Validate, converting a panic into an error that
+// names the rule instead of letting it crash the process. The panic value
+// is deliberately not included in the error: it may be input-derived, and
+// goredact errors never contain input bytes (see errors.go).
+func callValidate(rule *rules.Rule, window []byte, trigStart, trigEnd int) (s, en int, ok bool, err error) {
+	defer func() {
+		if recover() != nil {
+			err = fmt.Errorf("goredact: rule %q: Validate panicked", rule.ID)
+		}
+	}()
+	s, en, ok = rule.Validate(window, trigStart, trigEnd)
+	return s, en, ok, nil
 }
 
 // flush releases every span that can no longer grow, records findings,
