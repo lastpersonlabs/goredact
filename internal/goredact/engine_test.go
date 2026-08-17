@@ -446,6 +446,35 @@ func TestRedactMergedChainLongerThanBuffer(t *testing.T) {
 	}
 }
 
+// TestRedactMaxWindowBoundary exercises a custom rule whose validation
+// window sits exactly at the validation-window limit (16 MiB, matching
+// rules.maxValidationWindow). The engine must accept it with a matching
+// chunk buffer and redact normally — no overflow in the window arithmetic,
+// no slice panic. Boundary for ENG-194: one byte of lookahead over the
+// limit is rejected by New instead (see TestNewRejectsInvalidConfig).
+func TestRedactMaxWindowBoundary(t *testing.T) {
+	const window = 16 << 20 // rules.maxValidationWindow
+	cfg := Config{
+		ChunkSize: 2 * window,
+		CustomRules: []CustomRule{{
+			ID:           "big-window",
+			Triggers:     []string{"SECRET"},
+			MaxLookahead: window - len("SECRET"),
+			Validate:     func(w []byte, ts, te int) (int, int, bool) { return ts, te, true },
+		}},
+	}
+	e := mustEngine(t, cfg)
+
+	in := "prefix SECRET suffix"
+	out, stats := redactAll(t, e, strings.NewReader(in))
+	if out != "prefix [REDACTED] suffix" {
+		t.Fatalf("output = %q, want %q", out, "prefix [REDACTED] suffix")
+	}
+	if stats.Findings != 1 {
+		t.Errorf("Findings = %d, want 1", stats.Findings)
+	}
+}
+
 // recordingWriter captures the cumulative output length after every Write,
 // to observe the engine's emission boundaries.
 type recordingWriter struct {

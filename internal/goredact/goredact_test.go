@@ -2,6 +2,7 @@ package goredact
 
 import (
 	"errors"
+	"math"
 	"strings"
 	"testing"
 )
@@ -46,6 +47,20 @@ func TestNewRejectsInvalidConfig(t *testing.T) {
 			Triggers:   []string{"x"},
 			Confidence: Confidence(255), // e.g. Confidence(-1) wrapped through uint8
 			Validate:   func([]byte, int, int) (int, int, bool) { return 0, 0, false },
+		}}}},
+		// ENG-194: these used to wrap the window sum to a tiny value, be
+		// accepted here, and panic the engine's slice indexing in Redact.
+		{"custom rule with overflowing lookahead", Config{CustomRules: []CustomRule{{
+			ID:           "c1",
+			Triggers:     []string{"x"},
+			MaxLookahead: math.MaxInt,
+			Validate:     func([]byte, int, int) (int, int, bool) { return 0, 0, false },
+		}}}},
+		{"custom rule with overflowing lookbehind", Config{CustomRules: []CustomRule{{
+			ID:            "c1",
+			Triggers:      []string{"x"},
+			MaxLookbehind: math.MaxInt,
+			Validate:      func([]byte, int, int) (int, int, bool) { return 0, 0, false },
 		}}}},
 	}
 	for _, tc := range cases {

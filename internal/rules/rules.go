@@ -189,6 +189,16 @@ func Build(opts BuildOptions) (*Set, error) {
 	return s, nil
 }
 
+// maxValidationWindow is the largest validation window (MaxLookbehind +
+// longest trigger + MaxLookahead) a rule may declare. The streaming engine
+// retains up to Set.MaxWindow() bytes of overlap across chunk boundaries
+// and requires ChunkSize >= 2*window, so lookaround beyond a few tens of
+// MiB is useless for a bounded streaming scanner and merely forces absurd
+// allocations. 16 MiB is ~1000x the largest built-in window (16 KiB) while
+// keeping 2*window, the maxWindow sums in Build, and the engine's int64
+// offset arithmetic (trigEnd + MaxLookahead) far from overflow.
+const maxValidationWindow = 16 << 20 // 16 MiB
+
 func validateRule(r Rule) error {
 	if r.ID == "" {
 		return fmt.Errorf("rule with empty ID")
@@ -206,6 +216,21 @@ func validateRule(r Rule) error {
 	}
 	if r.MaxLookbehind < 0 || r.MaxLookahead < 0 {
 		return fmt.Errorf("rule %q has negative window bounds", r.ID)
+	}
+	// The engine retains MaxLookbehind + trigger length + MaxLookahead
+	// bytes across chunk boundaries (Set.MaxWindow), so the total window
+	// is what must stay bounded. Check it by subtraction: summing
+	// MaxInt-sized bounds first would wrap around to a tiny value and let
+	// an over-limit rule silently through to an engine slice panic.
+	longestTrigger := 0
+	for _, t := range r.Triggers {
+		if n := len(t.Literal); n > longestTrigger {
+			longestTrigger = n
+		}
+	}
+	if remain := maxValidationWindow - r.MaxLookbehind - longestTrigger; r.MaxLookahead > remain {
+		return fmt.Errorf("rule %q validation window (%d + %d + %d bytes) exceeds maximum %d bytes",
+			r.ID, r.MaxLookbehind, longestTrigger, r.MaxLookahead, maxValidationWindow)
 	}
 	if r.Confidence > ConfidenceHigh {
 		// Confidence is a uint8 the collector compares numerically when
