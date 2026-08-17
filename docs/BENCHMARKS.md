@@ -147,12 +147,115 @@ RUNS=3 zsh ./scripts/benchmark-betterleaks.zsh \
 ```
 
 The script's optional fourth argument selects GoRedact's profile (`fast`,
-`balanced`, or `deep`; default `balanced`), so the comparison below can be
-repeated per profile:
+`balanced`, or `deep`; default `balanced`) and its optional fifth argument
+labels the scenario in the reported rows, so the comparison below can be
+repeated per profile and per corpus:
 
 ```sh
 RUNS=3 zsh ./scripts/benchmark-betterleaks.zsh \
-  /tmp/goredact-corpus/corpus-000.log /tmp/goredact "$(command -v betterleaks)" deep
+  /tmp/goredact-corpus/corpus-000.log /tmp/goredact "$(command -v betterleaks)" deep quiet
+```
+
+The scenario argument is a label only. It must match the scenario the corpus
+file was generated with, or the reported rows are mislabelled.
+
+## Candidate-bearing comparison with Betterleaks
+
+The `quiet` comparison above measures the no-candidate path: that corpus
+contains no detector trigger literals, so neither tool confirms a secret and
+neither runs its validation or reporting machinery. That is the cheapest
+possible input for both tools and the least representative of a redaction
+deployment, where the interesting inputs are the ones that do contain
+secrets.
+
+On 2026-08-17, GoRedact v0.1.0 and Betterleaks v1.7.4 were re-run under the
+identical protocol (one warm-up plus three measured runs, `taskset -c 0`,
+`GOMAXPROCS=1`, tmpfs input, same host as above) across three corpus
+scenarios spanning the candidate spectrum. Times are medians of the three
+measured runs; RSS is the peak observed across them.
+
+The `quiet` row was re-measured in this session so that all three rows come
+from one build and one sitting. It reads slightly slower than the
+2026-08-14 row above (0.79 s versus 0.73 s) because that run used commit
+`d71e6383eca4` rather than the v0.1.0 binary; the two are not a regression
+comparison and neither supersedes the other.
+
+| Scenario | Size | GoRedact wall | GoRedact throughput | GoRedact peak RSS | Betterleaks wall | Betterleaks throughput | Betterleaks peak RSS | Ratio |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `quiet` — no triggers | 512 MiB | 0.79 s | 648.10 MiB/s | 10,084 KiB | 4.85 s | 105.57 MiB/s | 41,880 KiB | **6.1x** |
+| `keyword-dense` — triggers, no secrets | 512 MiB | 1.73 s | 295.95 MiB/s | 10,084 KiB | 6.42 s | 79.75 MiB/s | 41,496 KiB | **3.7x** |
+| `confirmed-secret` — a secret per record | 32 MiB | 0.14 s | 228.57 MiB/s | 10,468 KiB | 33.86 s | 0.95 MiB/s | 4,944,472 KiB | **241.9x** |
+
+The `confirmed-secret` corpus is 32 MiB rather than 512 MiB because
+Betterleaks accumulates every finding in memory before writing its report
+(its reporter interface takes the complete findings slice), and 512 MiB of
+that corpus would require tens of gigabytes of resident memory.
+
+What the three rows show:
+
+- GoRedact's peak RSS is flat at roughly 10 MiB across a 16x change in input
+  size and across all three candidate densities. That is the bounded-memory
+  property being measured rather than asserted: memory is a function of
+  `ChunkSize` and the rule-set window, not of input length or finding count.
+- GoRedact's throughput degrades gracefully with candidate density (648 to
+  296 to 229 MiB/s). On `keyword-dense` it validated 28,443,492 trigger
+  candidates and confirmed none of them, at 296 MiB/s, because each
+  validation is bounded by that rule's window (median 86 bytes over the
+  built-in rules).
+- Betterleaks' cost is dominated by confirmed findings, not by bytes. Between
+  `keyword-dense` and `confirmed-secret` its throughput falls by 84x and its
+  peak RSS rises by 119x, because each match triggers a second regex
+  execution for submatches, entropy scoring, context-window extraction, and
+  filter evaluation, and every resulting finding stays resident.
+
+### Detection differences on `confirmed-secret` — read before quoting the ratio
+
+The two tools confirm almost the same number of findings on this corpus but
+they are not the same findings, so this is a cost-per-confirmed-finding
+comparison between different rule sets, not a like-for-like measurement of
+identical work:
+
+| Tool | Findings | Rules that fired |
+| --- | ---: | --- |
+| GoRedact, balanced | 268,435 | `aws-access-key-id` only |
+| Betterleaks, default rules | 268,071 | `github-pat` only |
+
+The corpus record (`internal/benchcorpus/corpus.go`) plants both an AWS
+access key ID and a GitHub personal access token in every record, and the two
+tools are exactly complementary on it. GoRedact confirms the AWS key and
+rejects the planted `ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8` value, whose
+patterned body is caught by the placeholder rejection that all fixed-prefix
+rules apply; a real-shape token such as `ghp_16C7e42F292c6912E7710c838347Ae178B4a`
+is confirmed by `github-pat`. Betterleaks reports the `ghp_` value and does
+not report the AWS key ID at all.
+
+This is a defect in the benchmark corpus, not in either scanner: the
+`ConfirmedSecret` record advertises two confirmable secrets but only one is
+confirmable by GoRedact, so the row understates GoRedact's validate-and-redact
+work per byte. Fixing the record changes the generated corpus and therefore
+requires incrementing `benchcorpus.Seed` and re-recording every stored
+baseline, so it is deliberately left for a separate change.
+
+Neither the ratios nor the finding counts establish relative recall or
+precision. See the accuracy harness in [`ACCURACY.md`](ACCURACY.md) for what
+is and is not measured about detection quality.
+
+Reproduce all three rows:
+
+```sh
+go build -o /tmp/goredact ./cmd/goredact
+for scenario in quiet keyword-dense; do
+  go run ./tools/corpusfiles -output "/tmp/corpus-$scenario" -scenario "$scenario" \
+    -files 1 -file-size 536870912
+  RUNS=3 zsh ./scripts/benchmark-betterleaks.zsh \
+    "/tmp/corpus-$scenario/corpus-000.log" /tmp/goredact \
+    "$(command -v betterleaks)" balanced "$scenario"
+done
+go run ./tools/corpusfiles -output /tmp/corpus-confirmed-secret \
+  -scenario confirmed-secret -files 1 -file-size 33554432
+RUNS=3 zsh ./scripts/benchmark-betterleaks.zsh \
+  /tmp/corpus-confirmed-secret/corpus-000.log /tmp/goredact \
+  "$(command -v betterleaks)" balanced confirmed-secret
 ```
 
 ## Cross-profile comparison with Betterleaks

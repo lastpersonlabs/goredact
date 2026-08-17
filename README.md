@@ -4,40 +4,42 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/lastpersonlabs/goredact.svg)](https://pkg.go.dev/github.com/lastpersonlabs/goredact)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-`goredact` is a pure-Go, bounded-memory library for detecting and redacting
-secrets in large byte streams. It is designed for agent sessions, logs,
-environment dumps, and upload pipelines where plaintext temporary files are
-not acceptable.
+`goredact` is a pure-Go, bounded-memory **redaction filter**: it reads a byte
+stream, writes the same stream back with secrets replaced, and never holds
+more than a fixed window of input. It is built for the data path — agent
+sessions, log shippers, environment dumps, upload pipelines — where plaintext
+must not be buffered whole, spilled to a temporary file, or delayed until a
+scan finishes.
 
-## Motivation
+## What it is, and what it is not
 
-Secret detection often sits directly in the path of high-volume agent output,
-logs, and uploads. A scanner that cannot keep up either becomes a bottleneck or
-forces applications to buffer sensitive data. GoRedact is built to make that
-trade-off unnecessary: it scans and redacts in one pass with bounded memory.
+The distinction that matters is not "faster scanner". It is **filter versus
+auditor**, and the two are complements:
 
-On a reproducible, one-core scan of the same deterministic 512 MiB quiet-log
-corpus, GoRedact's balanced profile delivered:
+| | `goredact` | Gitleaks / Betterleaks |
+| --- | --- | --- |
+| Shape | `Redact(ctx, dst, src)` — bytes in, redacted bytes out | scan a repository, emit a findings report |
+| Output | the sanitized stream itself | JSON/SARIF/CSV findings; `--redact` masks the *report*, never the content |
+| Memory | fixed: `ChunkSize` + rule-set window, independent of input size and finding count | grows with findings; the reporter needs the complete result set |
+| Latency | first output after one rule window of input, then continuous | nothing until the scan completes |
+| Rules | 67 built-in, literal triggers plus bounded Go validators, no regex on the scan path | several hundred regexes, plus decoding, archives, git history, live credential validation |
+| Scope | one stream | repositories, commit history, archives, remote forges |
 
-| Compared with | Speed gain | GoRedact throughput | Other-tool throughput |
-| --- | ---: | ---: | ---: |
-| Gitleaks 8.30.1-1 | **97.6x faster** | 701.37 MiB/s | 7.19 MiB/s |
-| Betterleaks 1.7.4 | **6.2x faster** | 701.37 MiB/s | 113.27 MiB/s |
+**Use `goredact` when** secrets must be removed from data in flight, with a
+latency and memory budget: filtering agent or LLM output before it is
+persisted, sanitizing logs before they leave a host, redacting a body before
+it is uploaded or compressed, or scrubbing a stream inside a request handler.
 
-The advantage also held on a private, candidate-heavy corpus of 976 real
-Codex and Claude session files (627.95 MiB). In a local single-core run,
-GoRedact completed in 0.99 seconds (634.29 MiB/s), versus 27.47 seconds for
-Betterleaks (22.86 MiB/s), making GoRedact **27.8x faster** by median wall
-time. Gitleaks did not complete one pass within three minutes, so GoRedact was
-at least **181x faster** at that cutoff. This local run was subject to sandbox
-CPU throttling and is supporting evidence rather than a dedicated-host release
-benchmark.
+**Use Gitleaks or Betterleaks when** you are auditing artifacts at rest and
+want maximum coverage rather than a byte-output path: pre-commit hooks, CI
+gates, git-history forensics, archive and multi-layer encoding recursion,
+baseline diffing, and checking whether a discovered credential is live.
+GoRedact does none of those things and is not trying to.
 
-These results measure baseline scanning throughput on that workload, not
-relative recall or precision; the tools use different rule sets and behavior.
-See the full [benchmark protocol and results](docs/BENCHMARKS.md), including
-versions, raw wall and CPU times, memory use, host details, session-corpus
-selection, scanner flags, limitations, and reproduction commands.
+Running both is a reasonable posture: `goredact` in the pipeline, a repository
+auditor in CI.
+
+## The shape
 
 ```go
 engine, err := goredact.New(goredact.Config{
@@ -65,6 +67,53 @@ By default each secret is replaced with one `[REDACTED]` marker
 length) or `MaskFormatPreserving` (per-character-class substitution that
 also keeps separators, so token shapes and fixed-width records survive) —
 see the `MaskStrategy` docs for the disclosure trade-offs.
+
+## Performance profile
+
+GoRedact's cost is a function of bytes, not of how many secrets it finds.
+That property, rather than any single multiplier, is the reason it fits the
+data path. One-core, same host, same protocol, against Betterleaks 1.7.4:
+
+| Corpus | GoRedact | Betterleaks | Ratio |
+| --- | ---: | ---: | ---: |
+| No trigger literals, 512 MiB | 648 MiB/s, 10 MiB RSS | 106 MiB/s, 41 MiB RSS | 6.1x |
+| Trigger literals, no secrets, 512 MiB | 296 MiB/s, 10 MiB RSS | 80 MiB/s, 41 MiB RSS | 3.7x |
+| A secret in every record, 32 MiB | 229 MiB/s, 10 MiB RSS | 1 MiB/s, 4,829 MiB RSS | 242x |
+
+Read the shape of the table, not the last number. GoRedact's memory is flat
+at ~10 MiB across a 16x change in input size and every candidate density,
+and its throughput degrades gracefully (648 → 296 → 229 MiB/s) because each
+candidate is validated inside that rule's bounded window. An auditor's cost
+is driven by confirmed findings instead, since each one pays for submatch
+extraction, entropy scoring, context extraction, filtering, and permanent
+residency in the report.
+
+The two tools are **not** doing identical work: on the third corpus they
+confirm nearly the same number of findings but from disjoint rules, and
+neither is a superset of the other. Nothing here measures relative recall or
+precision. Gitleaks 8.30.1-1 numbers, the private 976-file session corpus,
+per-profile runs, host details, scanner flags, the corpus defect behind the
+third row, and every reproduction command are in
+[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+
+### Streaming latency
+
+Output lags input by at most one rule-set window, regardless of how long the
+stream runs — the engine emits every byte it can prove is not part of a
+growing match. Measured on a trickle producer, first output byte arrives
+after 16,566 bytes of input on the balanced profile, and the bound is
+tunable by dropping the rules that need the longest lookahead:
+
+| Active rules | Lag bound |
+| --- | ---: |
+| balanced, all 66 | 16,566 B |
+| minus `pem-private-key`, `putty-private-key` | 8,278 B |
+| minus also `jwt`, `supabase-service-role-key` | 4,393 B |
+| minus also `aws-bedrock-short-lived-api-key` | 774 B |
+
+The default 16 KiB comes entirely from the two private-key block rules; the
+median built-in rule window is 86 bytes. Trade block-key detection for
+latency with `Config.DisableRules` when the stream is interactive.
 
 ## Install and use
 

@@ -3,6 +3,31 @@
 All notable changes are documented here. This project follows semantic
 versioning.
 
+## Unreleased
+
+- Documentation: README repositioned around the filter-versus-auditor
+  distinction, with explicit guidance on when to reach for a repository
+  auditor instead, the measured streaming latency bound, and a benchmark
+  summary that spans the candidate spectrum rather than the no-trigger
+  corpus alone.
+- `scripts/benchmark-betterleaks.zsh` takes an optional fifth argument
+  labelling the corpus scenario in its reported rows, so candidate-bearing
+  comparisons are not mislabelled as `quiet`.
+- `docs/BENCHMARKS.md` records a three-scenario one-core comparison against
+  Betterleaks 1.7.4, including the disjoint-detection caveat and the
+  `confirmed-secret` corpus defect behind it.
+- `THIRD_PARTY.md` records the dependency releases actually required by
+  `go.mod` (`klauspost/compress` v1.19.2, `spf13/cobra` v1.10.2,
+  `spf13/pflag` v1.0.10); the previous entries and their pinned licence-file
+  URLs still named v1.18.0, v1.10.1, and v1.0.9.
+- New `TestThirdPartyRegisterMatchesGoMod`: every module in `go.mod` must
+  have a provenance entry whose recorded release and pinned licence-file URL
+  match the required version.
+- New `TestProfilesDocMatchesBuiltins`: `docs/PROFILES.md`'s rule table,
+  total rule count, and per-profile counts are checked against the compiled
+  `Builtins()` table, so the hand-maintained inventory can no longer drift
+  from the shipped rules unnoticed.
+
 ## v0.1.0 — 2026-08-17
 
 Initial release.

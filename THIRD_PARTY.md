@@ -14,6 +14,13 @@ The `licence-check` CI job (`.github/workflows/ci.yml`) enforces this by
 scanning for copyright headers that do not attribute Last Person Labs and by
 failing the build if this file is missing.
 
+`TestThirdPartyRegisterMatchesGoMod` (`thirdparty_test.go`) enforces the
+other half: every module in `go.mod` — direct or indirect — must have an
+entry below whose recorded release and pinned licence-file URL match the
+required version. Bumping a dependency without updating its entry here is a
+test failure, because a register pinned to a version the project no longer
+ships cannot be re-audited.
+
 ## Recording a new entry
 
 If a future change vendors or adapts code from another project (for example,
@@ -89,8 +96,8 @@ SOFTWARE.
 ### klauspost/compress
 
 - Source URL: https://github.com/klauspost/compress
-- Release: v1.18.0
-- Licence file: https://github.com/klauspost/compress/blob/v1.18.0/LICENSE
+- Release: v1.19.2
+- Licence file: https://github.com/klauspost/compress/blob/v1.19.2/LICENSE
 - Licence: mixed by file. The module's primary terms are BSD-3-Clause;
   `gzhttp/*` is Apache-2.0; `s2/cmd/internal/readahead/*` and
   `s2/cmd/internal/filepathx/*` are MIT; and `snappy/*` plus
@@ -108,8 +115,8 @@ SOFTWARE.
 ### spf13/cobra
 
 - Source URL: https://github.com/spf13/cobra
-- Release: v1.10.1
-- Licence file: https://github.com/spf13/cobra/blob/v1.10.1/LICENSE.txt
+- Release: v1.10.2
+- Licence file: https://github.com/spf13/cobra/blob/v1.10.2/LICENSE.txt
 - Licence: Apache-2.0; compatible with this project's MIT licence.
 - Local use: `cmd/goredact`
 - Notes: CLI command hierarchy, help, flag handling, argument validation,
@@ -121,8 +128,8 @@ SOFTWARE.
 ### spf13/pflag
 
 - Source URL: https://github.com/spf13/pflag
-- Release: v1.0.9
-- Licence file: https://github.com/spf13/pflag/blob/v1.0.9/LICENSE
+- Release: v1.0.10
+- Licence file: https://github.com/spf13/pflag/blob/v1.0.10/LICENSE
 - Licence: BSD-3-Clause; compatible with this project's MIT licence.
 - Local use: transitive dependency of `github.com/spf13/cobra` in
   `cmd/goredact`
