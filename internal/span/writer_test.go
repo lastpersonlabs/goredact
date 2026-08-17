@@ -2,6 +2,7 @@ package span
 
 import (
 	"bytes"
+	"io"
 	"testing"
 )
 
@@ -214,5 +215,158 @@ func TestWriterPropagatesUnderlyingError(t *testing.T) {
 	err := w.Emit(0, []byte("abc"), nil)
 	if err != wantErr {
 		t.Fatalf("got %v, want %v", err, wantErr)
+	}
+}
+
+// oneByteWriter writes at most one byte per Write call: a legal short
+// write (1, nil) whenever len(p) > 1, a full write when len(p) == 1.
+type oneByteWriter struct{ buf bytes.Buffer }
+
+func (w *oneByteWriter) Write(p []byte) (int, error) {
+	w.buf.Write(p[:1])
+	return 1, nil
+}
+
+func TestWriterShortWriteCompletes(t *testing.T) {
+	ow := &oneByteWriter{}
+	w := NewWriter(ow, []byte("[REDACTED]"))
+
+	input := []byte("hello secret world")
+	if err := w.Emit(0, input, []Span{{Start: 6, End: 12}}); err != nil {
+		t.Fatalf("Emit: %v", err)
+	}
+
+	want := "hello [REDACTED] world"
+	if ow.buf.String() != want {
+		t.Fatalf("got %q, want %q", ow.buf.String(), want)
+	}
+	if got := w.BytesWritten(); got != int64(len(want)) {
+		t.Fatalf("BytesWritten() = %d, want %d", got, len(want))
+	}
+}
+
+// TestWriterShortWriteMasked exercises the length-preserving replacement
+// path (which stages through maskBuf) under one-byte-at-a-time short
+// writes, and checks the output is byte-identical to a reference run
+// against a plain buffer.
+func TestWriterShortWriteMasked(t *testing.T) {
+	input := []byte("user:password123:end")
+	spans := []Span{{Start: 5, End: 13}}
+
+	var ref bytes.Buffer
+	refW := NewMaskingWriter(&ref, nil, MaskLengthPreserving)
+	if err := refW.Emit(0, input, spans); err != nil {
+		t.Fatalf("reference Emit: %v", err)
+	}
+
+	ow := &oneByteWriter{}
+	w := NewMaskingWriter(ow, nil, MaskLengthPreserving)
+	if err := w.Emit(0, input, spans); err != nil {
+		t.Fatalf("Emit: %v", err)
+	}
+
+	if !bytes.Equal(ow.buf.Bytes(), ref.Bytes()) {
+		t.Fatalf("short-write output %q != reference %q", ow.buf.String(), ref.String())
+	}
+	if got := w.BytesWritten(); got != refW.BytesWritten() {
+		t.Fatalf("BytesWritten() = %d, want %d", got, refW.BytesWritten())
+	}
+}
+
+type noProgressWriter struct{}
+
+func (noProgressWriter) Write(p []byte) (int, error) { return 0, nil }
+
+func TestWriterZeroWriteReturnsErrShortWrite(t *testing.T) {
+	w := NewWriter(noProgressWriter{}, []byte("#"))
+	err := w.Emit(0, []byte("abc"), nil)
+	if err != io.ErrShortWrite {
+		t.Fatalf("got %v, want io.ErrShortWrite", err)
+	}
+	if got := w.BytesWritten(); got != 0 {
+		t.Fatalf("BytesWritten() = %d, want 0", got)
+	}
+}
+
+// failingWriter returns a scripted sequence of (n, err) results, then
+// (0, nil) once exhausted.
+type failingWriter struct {
+	steps []struct {
+		n   int
+		err error
+	}
+}
+
+func (w *failingWriter) Write(p []byte) (int, error) {
+	if len(w.steps) == 0 {
+		return 0, nil
+	}
+	s := w.steps[0]
+	w.steps = w.steps[1:]
+	return s.n, s.err
+}
+
+func TestWriterErrorAfterPartialWrite(t *testing.T) {
+	wantErr := io.ErrClosedPipe
+	fw := &failingWriter{steps: []struct {
+		n   int
+		err error
+	}{
+		{2, nil},
+		{0, wantErr},
+	}}
+
+	w := NewWriter(fw, []byte("#"))
+	err := w.Emit(0, []byte("hello world"), nil)
+	if err != wantErr {
+		t.Fatalf("got %v, want %v", err, wantErr)
+	}
+	if got := w.BytesWritten(); got != 2 {
+		t.Fatalf("BytesWritten() = %d, want 2", got)
+	}
+}
+
+func TestWriterShortWriteWithErrorCountsBytes(t *testing.T) {
+	wantErr := io.ErrUnexpectedEOF
+	fw := &failingWriter{steps: []struct {
+		n   int
+		err error
+	}{
+		{4, wantErr},
+	}}
+
+	w := NewWriter(fw, []byte("#"))
+	err := w.Emit(0, []byte("hello"), nil)
+	if err != wantErr {
+		t.Fatalf("got %v, want %v", err, wantErr)
+	}
+	if got := w.BytesWritten(); got != 4 {
+		t.Fatalf("BytesWritten() = %d, want 4", got)
+	}
+}
+
+// badCountWriter returns a fixed (impossible) byte count with nil error.
+type badCountWriter struct{ n int }
+
+func (w badCountWriter) Write(p []byte) (int, error) { return w.n, nil }
+
+func TestWriterInvalidWriteCountsRejected(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		n    int
+	}{
+		{"negative", -1},
+		{"overfull", 7}, // len("hello") == 5
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := NewWriter(badCountWriter{n: tc.n}, []byte("#"))
+			err := w.Emit(0, []byte("hello"), nil)
+			if err != errInvalidWriteCount {
+				t.Fatalf("got %v, want errInvalidWriteCount", err)
+			}
+			if got := w.BytesWritten(); got != 0 {
+				t.Fatalf("BytesWritten() = %d, want 0", got)
+			}
+		})
 	}
 }

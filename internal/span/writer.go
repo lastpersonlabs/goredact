@@ -1,6 +1,9 @@
 package span
 
-import "io"
+import (
+	"errors"
+	"io"
+)
 
 // MaskStrategy selects how a redacted span's bytes are replaced in the
 // Writer's output.
@@ -256,13 +259,30 @@ func (w *Writer) writeMasked(src []byte) error {
 	return nil
 }
 
+// errInvalidWriteCount is returned when the underlying io.Writer reports
+// a byte count outside [0, len(p)] — impossible under the io.Writer
+// contract. Such counts are never added to bytesWritten.
+var errInvalidWriteCount = errors.New("span: Writer: invalid byte count from underlying Writer")
+
 func (w *Writer) writeAll(p []byte) error {
-	if len(p) == 0 {
-		return nil
+	for len(p) > 0 {
+		n, err := w.w.Write(p)
+		if n < 0 || n > len(p) {
+			return errInvalidWriteCount
+		}
+		w.bytesWritten += int64(n)
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			// A Write returning (0, nil) made no progress; looping would
+			// spin forever. The io.Writer contract requires a non-nil
+			// error for n < len(p), so this is a broken writer.
+			return io.ErrShortWrite
+		}
+		p = p[n:]
 	}
-	n, err := w.w.Write(p)
-	w.bytesWritten += int64(n)
-	return err
+	return nil
 }
 
 // BytesWritten returns the total number of bytes written to the
