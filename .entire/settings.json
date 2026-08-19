@@ -3,7 +3,7 @@
   "strategy_options": {
     "checkpoint_remote": {
       "provider": "github",
-      "repo": "lastpersonlabs/goredact-checkpoints"
+      "repo": "lastpersonlabs/checkpoints"
     }
   },
   "telemetry": false,
