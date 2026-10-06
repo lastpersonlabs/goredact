@@ -3,7 +3,7 @@ module github.com/lastpersonlabs/goredact
 go 1.26.6
 
 require (
-	github.com/klauspost/compress v1.20.0
+	github.com/klauspost/compress v1.20.1
 	github.com/spf13/cobra v1.10.2
 )
 
